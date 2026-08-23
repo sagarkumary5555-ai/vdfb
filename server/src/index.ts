@@ -9,6 +9,7 @@ import { StorageService } from './services/storage.service.js';
 import { SocketService } from './services/socket.service.js';
 import { DiscordBridgeService } from './services/discord.service.js';
 import { apiLimiter } from './middleware/rateLimit.middleware.js';
+import { ensureDatabaseReady } from './db/autoInit.js';
 
 import authRoutes from './routes/auth.routes.js';
 import messageRoutes from './routes/message.routes.js';
@@ -18,10 +19,13 @@ import systemRoutes from './routes/system.routes.js';
 const app = express();
 const server = http.createServer(app);
 
-// 1. Initialize Storage
+// 1. Trust Proxy (Render / Cloudflare / Nginx reverse proxy)
+app.set('trust proxy', 1);
+
+// 2. Initialize Storage
 StorageService.init();
 
-// 2. Middleware
+// 3. Middleware
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -41,7 +45,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Apply general API rate limiting to /api routes
 app.use('/api', apiLimiter);
 
-// 3. API Routes
+// 4. API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/uploads', uploadRoutes);
@@ -52,7 +56,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 4. Serve Frontend in Production / Hosting
+// 5. Serve Frontend in Production / Hosting
 let clientDistPath = path.resolve(process.cwd(), 'client/dist');
 if (!fs.existsSync(clientDistPath)) {
   clientDistPath = path.resolve(process.cwd(), '../client/dist');
@@ -76,21 +80,26 @@ if (fs.existsSync(clientDistPath)) {
   });
 }
 
-// 5. Initialize Real-Time WebSockets
+// 6. Initialize Real-Time WebSockets
 SocketService.init(server);
 
-// 6. Initialize Discord Bridge
-DiscordBridgeService.init().catch((err) => {
-  console.error('Failed to initialize Discord bridge:', err);
-});
+// 7. Initialize Database, Discord Bridge, and Start Server
+async function start() {
+  await ensureDatabaseReady();
 
-// 7. Start Server
-server.listen(config.port, () => {
-  console.log(`\n======================================================`);
-  console.log(`✨ Private Two-User Chat Server running on port ${config.port}`);
-  console.log(`🔒 Strictly restricted to: Sagar & Something`);
-  console.log(`🌐 Local Web: http://localhost:${config.port}`);
-  console.log(`======================================================\n`);
-});
+  DiscordBridgeService.init().catch((err) => {
+    console.error('Failed to initialize Discord bridge:', err);
+  });
+
+  server.listen(config.port, () => {
+    console.log(`\n======================================================`);
+    console.log(`✨ Private Two-User Chat Server running on port ${config.port}`);
+    console.log(`🔒 Strictly restricted to: Sagar & Something`);
+    console.log(`🌐 Local Web: http://localhost:${config.port}`);
+    console.log(`======================================================\n`);
+  });
+}
+
+start();
 
 export default app;
