@@ -12,7 +12,7 @@ interface StickerItem {
   id: string;
   name: string;
   badge: string;
-  content: string; // Special emoji combination or cute sticker text
+  content: string;
   caption: string;
 }
 
@@ -111,115 +111,129 @@ export const StickerAndEmojiPicker: React.FC<StickerAndEmojiPickerProps> = ({
   );
 
   return (
-    <div className="absolute bottom-16 left-2 sm:left-4 z-40 w-[320px] sm:w-[380px] glass-dropdown rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-slide-up select-none flex flex-col max-h-[380px]">
-      {/* Header Bar with Search and Tab Switcher */}
-      <div className="p-3 border-b border-white/10 bg-dark-950/80 space-y-2 flex-shrink-0">
-        <div className="flex items-center justify-between gap-2">
-          {/* Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-dark-900/90 rounded-2xl border border-white/10 flex-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('stickers')}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                activeTab === 'stickers'
-                  ? 'bg-gradient-to-r from-brand-rose to-brand-purple text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Gift className="w-3.5 h-3.5" />
-              <span>Stickers</span>
-            </button>
+    <>
+      {/* Backdrop for mobile */}
+      <div
+        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs sm:hidden"
+        onClick={onClose}
+      />
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('emojis')}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                activeTab === 'emojis'
-                  ? 'bg-gradient-to-r from-brand-rose to-brand-purple text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Smile className="w-3.5 h-3.5" />
-              <span>3D Emojis</span>
-            </button>
-          </div>
+      <div className="fixed inset-x-0 bottom-0 z-50 w-full sm:absolute sm:inset-x-auto sm:bottom-16 sm:left-4 sm:w-[380px] glass-dropdown rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/20 shadow-2xl overflow-hidden animate-slide-up select-none flex flex-col max-h-[60vh] sm:max-h-[380px]">
+        {/* Mobile Pull Handle Indicator */}
+        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mt-2 sm:hidden flex-shrink-0" />
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={activeTab === 'stickers' ? 'Search stickers...' : 'Search emojis...'}
-            className="w-full pl-8 pr-3 py-1.5 bg-dark-900/80 border border-white/10 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-brand-pink"
-          />
-        </div>
-      </div>
-
-      {/* Body: Stickers or Emojis */}
-      <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-        {activeTab === 'stickers' ? (
-          /* Stickers Grid */
-          <div className="grid grid-cols-2 gap-2">
-            {filteredStickers.map((sticker) => (
+        {/* Header Bar with Search and Tab Switcher */}
+        <div className="p-3 border-b border-white/10 bg-dark-950/80 space-y-2 flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            {/* Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-dark-900/90 rounded-2xl border border-white/10 flex-1">
               <button
-                key={sticker.id}
                 type="button"
-                onClick={() => handleStickerClick(sticker)}
-                className="p-3 rounded-2xl bg-dark-950/70 border border-white/10 hover:border-brand-pink/50 hover:bg-brand-rose/10 transition-all duration-200 text-left group flex items-center gap-2.5 active:scale-95 shadow-md"
+                onClick={() => setActiveTab('stickers')}
+                className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  activeTab === 'stickers'
+                    ? 'bg-gradient-to-r from-brand-rose to-brand-purple text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
               >
-                <span className="text-2xl group-hover:scale-125 transition-transform">
-                  {sticker.badge}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-slate-100 group-hover:text-white truncate">
-                    {sticker.name}
-                  </div>
-                  <div className="text-[10px] text-slate-400 group-hover:text-brand-pink truncate">
-                    {sticker.caption}
-                  </div>
-                </div>
+                <Gift className="w-3.5 h-3.5" />
+                <span>Stickers</span>
               </button>
-            ))}
-          </div>
-        ) : (
-          /* Emojis Grid with Sub-Category Pills */
-          <div className="space-y-3">
-            {/* Sub-Category Switcher */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1">
-              {EMOJI_SETS.map((cat) => {
-                const Icon = cat.icon;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setActiveCategory(cat.id)}
-                    className={`p-1.5 rounded-xl text-xs transition flex items-center gap-1 flex-shrink-0 ${
-                      activeCategory === cat.id
-                        ? 'bg-brand-rose/25 text-brand-pink border border-brand-rose/40 font-semibold'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                    }`}
-                    title={cat.name}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                  </button>
-                );
-              })}
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('emojis')}
+                className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  activeTab === 'emojis'
+                    ? 'bg-gradient-to-r from-brand-rose to-brand-purple text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Smile className="w-3.5 h-3.5" />
+                <span>3D Emojis</span>
+              </button>
             </div>
 
-            {/* Emojis Layout */}
-            {EMOJI_SETS.filter((set) => !searchQuery || set.id === activeCategory || set.name.toLowerCase().includes(searchQuery.toLowerCase())).map(
-              (set) => {
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition flex-shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={activeTab === 'stickers' ? 'Search stickers...' : 'Search emojis...'}
+              className="w-full pl-8 pr-3 py-1.5 bg-dark-900/80 border border-white/10 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-brand-pink"
+            />
+          </div>
+        </div>
+
+        {/* Body: Stickers or Emojis */}
+        <div className="p-3 overflow-y-auto flex-1 custom-scrollbar pb-safe">
+          {activeTab === 'stickers' ? (
+            /* Stickers Grid */
+            <div className="grid grid-cols-2 gap-2">
+              {filteredStickers.map((sticker) => (
+                <button
+                  key={sticker.id}
+                  type="button"
+                  onClick={() => handleStickerClick(sticker)}
+                  className="p-3 rounded-2xl bg-dark-950/70 border border-white/10 hover:border-brand-pink/50 hover:bg-brand-rose/10 transition-all duration-200 text-left group flex items-center gap-2.5 active:scale-95 shadow-md"
+                >
+                  <span className="text-2xl group-hover:scale-125 transition-transform">
+                    {sticker.badge}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-slate-100 group-hover:text-white truncate">
+                      {sticker.name}
+                    </div>
+                    <div className="text-[10px] text-slate-400 group-hover:text-brand-pink truncate">
+                      {sticker.caption}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* Emojis Grid with Sub-Category Pills */
+            <div className="space-y-3">
+              {/* Sub-Category Switcher */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                {EMOJI_SETS.map((cat) => {
+                  const Icon = cat.icon;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setActiveCategory(cat.id)}
+                      className={`p-2 rounded-xl text-xs transition flex items-center gap-1 flex-shrink-0 ${
+                        activeCategory === cat.id
+                          ? 'bg-brand-rose/25 text-brand-pink border border-brand-rose/40 font-semibold'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      }`}
+                      title={cat.name}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Emojis Layout */}
+              {EMOJI_SETS.filter(
+                (set) =>
+                  !searchQuery ||
+                  set.id === activeCategory ||
+                  set.name.toLowerCase().includes(searchQuery.toLowerCase())
+              ).map((set) => {
                 if (searchQuery && !set.name.toLowerCase().includes(searchQuery.toLowerCase())) {
                   return null;
                 }
@@ -238,7 +252,7 @@ export const StickerAndEmojiPicker: React.FC<StickerAndEmojiPickerProps> = ({
                           key={emoji}
                           type="button"
                           onClick={() => onSelectEmoji(emoji)}
-                          className="w-9 h-9 rounded-xl hover:bg-white/15 flex items-center justify-center text-xl hover:scale-130 active:scale-90 transition-all duration-150"
+                          className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl hover:bg-white/15 flex items-center justify-center text-2xl sm:text-xl active:scale-90 transition-all duration-150"
                         >
                           {emoji}
                         </button>
@@ -246,11 +260,11 @@ export const StickerAndEmojiPicker: React.FC<StickerAndEmojiPickerProps> = ({
                     </div>
                   </div>
                 );
-              }
-            )}
-          </div>
-        )}
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };

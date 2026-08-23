@@ -26,7 +26,6 @@ interface MessageItemProps {
 
 const POPULAR_REACTIONS = ['❤️', '🔥', '😂', '🥰', '🥺', '👍'];
 
-// Check if string contains only emojis (1 to 4 emojis for Jumbo display)
 const isJumboEmoji = (text: string): boolean => {
   if (!text) return false;
   const trimmed = text.trim();
@@ -53,7 +52,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 
   const isMe = message.senderId === user?.id || message.sender.username === user?.username;
   const isHighlighted = highlightedMessageId === message.id;
-  const isEmojiOnly = !message.isDeleted && isJumboEmoji(message.content) && (!message.attachments || message.attachments.length === 0);
+  const isEmojiOnly =
+    !message.isDeleted &&
+    isJumboEmoji(message.content) &&
+    (!message.attachments || message.attachments.length === 0);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -96,13 +98,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       return (
         <div
           key={att.id}
-          className="mt-2 overflow-hidden rounded-2xl border border-white/20 max-w-sm cursor-pointer group shadow-lg"
+          className="mt-1.5 overflow-hidden rounded-2xl border border-white/20 max-w-xs sm:max-w-sm cursor-pointer group shadow-lg"
         >
           <img
             src={fileUrl}
             alt={att.originalName}
             onClick={() => openLightbox(fileUrl, att.originalName)}
-            className="w-full max-h-64 sm:max-h-80 object-cover hover:scale-[1.02] transition-transform duration-200"
+            className="w-full max-h-56 sm:max-h-72 object-cover hover:scale-[1.02] transition-transform duration-200"
             loading="lazy"
           />
         </div>
@@ -112,8 +114,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     // Video
     if (mime.startsWith('video/')) {
       return (
-        <div key={att.id} className="mt-2 rounded-2xl overflow-hidden border border-white/20 max-w-md bg-black shadow-lg">
-          <video src={fileUrl} controls className="w-full max-h-64 sm:max-h-80" />
+        <div key={att.id} className="mt-1.5 rounded-2xl overflow-hidden border border-white/20 max-w-xs sm:max-w-md bg-black shadow-lg">
+          <video src={fileUrl} controls className="w-full max-h-56 sm:max-h-72" />
         </div>
       );
     }
@@ -137,10 +139,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         target="_blank"
         rel="noopener noreferrer"
         download={att.originalName}
-        className="mt-2 p-3 rounded-2xl bg-dark-950/90 border border-white/20 flex items-center justify-between gap-3 max-w-xs hover:border-brand-pink/50 transition group shadow-lg"
+        className="mt-1.5 p-2.5 sm:p-3 rounded-2xl bg-dark-950/90 border border-white/20 flex items-center justify-between gap-2.5 max-w-xs hover:border-brand-pink/50 transition group shadow-lg"
       >
-        <div className="flex items-center gap-2.5 truncate">
-          <div className="p-2 rounded-xl bg-brand-rose/20 text-brand-pink">
+        <div className="flex items-center gap-2 truncate">
+          <div className="p-1.5 rounded-xl bg-brand-rose/20 text-brand-pink flex-shrink-0">
             <FileText className="w-4 h-4" />
           </div>
           <div className="truncate">
@@ -150,7 +152,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             <div className="text-[10px] text-slate-400">{formatSize(att.size)}</div>
           </div>
         </div>
-        <div className="p-1.5 rounded-xl bg-white/10 text-slate-300 group-hover:text-white group-hover:bg-brand-rose/30 transition">
+        <div className="p-1 rounded-xl bg-white/10 text-slate-300 group-hover:text-white group-hover:bg-brand-rose/30 transition flex-shrink-0">
           <Download className="w-3.5 h-3.5" />
         </div>
       </a>
@@ -162,7 +164,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       id={`msg-${message.id}`}
       onDoubleClick={handleDoubleClick}
       onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-      className={`relative group flex gap-2.5 sm:gap-3 my-2 transition-all duration-300 ${
+      className={`relative group flex gap-2 sm:gap-3 my-1.5 sm:my-2.5 transition-all duration-300 ${
         isMe ? 'flex-row-reverse' : 'flex-row'
       } ${isHighlighted ? 'bg-brand-rose/20 py-2 rounded-2xl px-2 ring-2 ring-brand-pink/60' : ''}`}
     >
@@ -172,17 +174,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         username={message.sender.username}
         avatarUrl={message.sender.avatarUrl}
         size="sm"
-        className="mt-1"
+        className="mt-1 flex-shrink-0"
       />
 
       {/* Bubble Container */}
-      <div className={`relative max-w-[85%] sm:max-w-[72%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+      <div className={`relative max-w-[84%] sm:max-w-[72%] md:max-w-[65%] ${isMe ? 'items-end' : 'items-start'} flex flex-col min-w-0`}>
         {/* Header Name on Partner Messages */}
         {!isMe && (
-          <div className="text-[11px] font-bold text-slate-200 mb-1 px-1 flex items-center gap-1.5">
-            <span>{message.sender.displayName}</span>
+          <div className="text-[11px] font-bold text-slate-200 mb-0.5 px-1 flex items-center gap-1.5 truncate max-w-full">
+            <span className="truncate">{message.sender.displayName}</span>
             {message.source === 'discord' && (
-              <span className="inline-flex items-center gap-0.5 text-[9px] text-[#5865F2] bg-[#5865F2]/20 px-1.5 py-0.2 rounded-full font-medium">
+              <span className="inline-flex items-center gap-0.5 text-[9px] text-[#5865F2] bg-[#5865F2]/20 px-1.5 py-0.2 rounded-full font-medium flex-shrink-0">
                 <Bot className="w-2.5 h-2.5" />
                 Discord
               </span>
@@ -194,7 +196,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         {message.isPinned && (
           <div className="flex items-center gap-1 text-[10px] text-brand-pink bg-brand-rose/15 px-2 py-0.5 rounded-full border border-brand-rose/30 mb-1 font-semibold shadow-sm">
             <Pin className="w-2.5 h-2.5" />
-            Pinned Message
+            Pinned
           </div>
         )}
 
@@ -233,27 +235,27 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         ) : (
           /* Main Message Bubble */
           <div
-            className={`relative px-4 py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all shadow-xl ${
+            className={`relative px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all shadow-xl max-w-full overflow-hidden ${
               isMe
                 ? 'bg-gradient-to-r from-brand-rose via-brand-pink to-brand-purple text-white rounded-tr-xs border border-white/20 shadow-brand-rose/15'
                 : 'glass-panel text-slate-100 rounded-tl-xs border border-white/20'
             } ${message.isDeleted ? 'italic text-slate-400 bg-dark-950/80 border-dashed' : ''}`}
           >
             {/* Text Body */}
-            <div className="whitespace-pre-wrap break-words select-text font-normal drop-shadow-sm">
+            <div className="whitespace-pre-wrap break-words select-text font-normal drop-shadow-sm overflow-hidden">
               {message.content}
             </div>
 
             {/* Attachments */}
             {message.attachments && message.attachments.length > 0 && (
-              <div className="flex flex-col gap-1.5 mt-1">
+              <div className="flex flex-col gap-1.5 mt-1 max-w-full">
                 {message.attachments.map((att) => renderAttachment(att))}
               </div>
             )}
 
             {/* Footer Metadata */}
             <div
-              className={`flex items-center gap-1.5 text-[10px] mt-1.5 select-none font-medium ${
+              className={`flex items-center gap-1.5 text-[10px] mt-1 select-none font-medium ${
                 isMe ? 'justify-end text-white/85' : 'justify-start text-slate-400'
               }`}
             >
@@ -273,9 +275,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           </div>
         )}
 
-        {/* Reaction Badges Container */}
+        {/* Reaction Badges */}
         {message.reactions && message.reactions.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1 z-10">
+          <div className="flex flex-wrap gap-1 mt-1 z-10 max-w-full">
             {message.reactions.map((r) => {
               const hasReacted = user && r.users.includes(user.id);
               return (
@@ -303,11 +305,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       {/* Floating Action Menu */}
       {!message.isDeleted && (
         <div
-          className={`absolute -top-3.5 z-30 flex items-center gap-1 p-1 glass-dropdown rounded-2xl border border-white/20 shadow-2xl transition-all duration-200 ${
+          className={`absolute -top-3.5 z-30 flex items-center gap-0.5 p-1 glass-dropdown rounded-2xl border border-white/20 shadow-2xl transition-all duration-200 max-w-[calc(100vw-2rem)] overflow-x-auto ${
             mobileMenuOpen
-              ? 'opacity-100 scale-100'
+              ? 'opacity-100 scale-100 pointer-events-auto'
               : 'opacity-0 scale-95 pointer-events-none sm:group-hover:opacity-100 sm:group-hover:scale-100 sm:group-hover:pointer-events-auto'
-          } ${isMe ? 'right-12' : 'left-12'}`}
+          } ${isMe ? 'right-4 sm:right-12' : 'left-4 sm:left-12'}`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Quick Reaction Pills */}
@@ -316,7 +318,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               <button
                 key={emoji}
                 onClick={() => handleReaction(emoji)}
-                className="w-6 h-6 flex items-center justify-center rounded-lg text-sm hover:scale-135 active:scale-90 transition-transform"
+                className="w-7 h-7 sm:w-6 sm:h-6 flex items-center justify-center rounded-lg text-base sm:text-sm hover:scale-135 active:scale-90 transition-transform"
               >
                 {emoji}
               </button>
@@ -331,7 +333,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/15 transition active:scale-95"
             title="Reply"
           >
-            <Reply className="w-3.5 h-3.5" />
+            <Reply className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
 
           <button
@@ -346,7 +348,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             }`}
             title={message.isPinned ? 'Unpin' : 'Pin'}
           >
-            <Pin className="w-3.5 h-3.5" />
+            <Pin className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
 
           <button
@@ -354,7 +356,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/15 transition active:scale-95"
             title="Copy Text"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-400" /> : <Copy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
           </button>
 
           {isMe && (
@@ -366,7 +368,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/15 transition active:scale-95"
               title="Edit"
             >
-              <Edit2 className="w-3.5 h-3.5" />
+              <Edit2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             </button>
           )}
 
@@ -377,7 +379,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               className="p-1.5 rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-500/20 transition active:scale-95"
               title="Delete"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             </button>
           )}
         </div>

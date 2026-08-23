@@ -1,30 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { Search, X, Calendar, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, X, Calendar, User, ArrowRight, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { useChat } from '../../context/ChatContext.js';
+import { useAuth } from '../../context/AuthContext.js';
 import { messageApi } from '../../services/api.js';
 import { Message } from '../../types/index.js';
+import { Avatar } from '../Common/Avatar.js';
 
 export const SearchModal: React.FC = () => {
   const { isSearchOpen, setIsSearchOpen, jumpToMessage } = useChat();
+  const { user, partnerUser } = useAuth();
+
   const [query, setQuery] = useState('');
+  const [selectedSender, setSelectedSender] = useState<string>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [results, setResults] = useState<Message[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  useEffect(() => {
-    if (!isSearchOpen) {
-      setQuery('');
-      setResults([]);
-    }
-  }, [isSearchOpen]);
+  if (!isSearchOpen) return null;
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() && selectedSender === 'all' && !startDate && !endDate) return;
 
     setIsSearching(true);
+    setHasSearched(true);
+
     try {
-      const data = await messageApi.searchMessages({ query: query.trim() });
+      const data = await messageApi.searchMessages({
+        query: query.trim() || undefined,
+        senderId: selectedSender !== 'all' ? selectedSender : undefined,
+        startDate: startDate ? new Date(startDate).toISOString() : undefined,
+        endDate: endDate ? new Date(endDate).toISOString() : undefined,
+      });
       setResults(data.messages);
     } catch (err) {
       console.error('Search error:', err);
@@ -33,83 +43,168 @@ export const SearchModal: React.FC = () => {
     }
   };
 
-  if (!isSearchOpen) return null;
+  const handleSelectMessage = (messageId: string) => {
+    setIsSearchOpen(false);
+    jumpToMessage(messageId);
+  };
+
+  const clearFilters = () => {
+    setQuery('');
+    setSelectedSender('all');
+    setStartDate('');
+    setEndDate('');
+    setResults([]);
+    setHasSearched(false);
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-20 p-3 sm:p-4 bg-black/80 backdrop-blur-lg animate-fade-in select-none">
-      <div className="relative w-full max-w-xl glass-dropdown rounded-3xl border border-white/15 shadow-2xl overflow-hidden animate-slide-down">
-        {/* Search Input Bar */}
-        <form onSubmit={handleSearch} className="p-3.5 sm:p-4 border-b border-white/10 flex items-center gap-2.5">
-          <Search className="w-5 h-5 text-slate-400 flex-shrink-0" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search messages..."
-            autoFocus
-            className="flex-1 bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none"
-          />
-          {query && (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none">
+      <div className="relative w-full max-w-lg glass-dropdown rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/15 shadow-2xl overflow-hidden animate-slide-up max-h-[85vh] sm:max-h-[85vh] flex flex-col pb-safe">
+        {/* Mobile Pull Handle */}
+        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mt-2.5 sm:hidden flex-shrink-0" />
+
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <Search className="w-5 h-5 text-brand-pink" />
+            <h2 className="text-base sm:text-lg font-bold text-white">Search Messages</h2>
+          </div>
+          <button
+            onClick={() => setIsSearchOpen(false)}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Search & Filter Form */}
+        <form onSubmit={handleSearch} className="p-4 sm:p-5 border-b border-white/10 space-y-3 flex-shrink-0">
+          {/* Query Bar */}
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search keyword or text..."
+              autoFocus
+              className="w-full pl-10 pr-10 py-2.5 bg-dark-950/80 border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand-pink"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-3 top-3 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            {/* Sender Filter */}
+            <div className="flex items-center gap-2 bg-dark-950/60 p-2 rounded-xl border border-white/10">
+              <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <select
+                value={selectedSender}
+                onChange={(e) => setSelectedSender(e.target.value)}
+                className="bg-transparent text-slate-200 text-xs w-full focus:outline-none cursor-pointer"
+              >
+                <option value="all" className="bg-dark-950">All Senders</option>
+                {user && <option value={user.id} className="bg-dark-950">You ({user.displayName})</option>}
+                {partnerUser && (
+                  <option value={partnerUser.id} className="bg-dark-950">
+                    {partnerUser.displayName}
+                  </option>
+                )}
+              </select>
+            </div>
+
+            {/* Date Filter */}
+            <div className="flex items-center gap-2 bg-dark-950/60 p-2 rounded-xl border border-white/10">
+              <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent text-slate-200 text-xs w-full focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Submit & Reset Buttons */}
+          <div className="flex items-center justify-between pt-1">
             <button
               type="button"
-              onClick={() => {
-                setQuery('');
-                setResults([]);
-              }}
-              className="text-slate-400 hover:text-slate-200 text-xs px-1"
+              onClick={clearFilters}
+              className="text-xs text-slate-400 hover:text-white transition"
             >
-              Clear
+              Clear filters
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setIsSearchOpen(false)}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 active:scale-95"
-          >
-            <X className="w-4 h-4" />
-          </button>
+            <button
+              type="submit"
+              disabled={isSearching}
+              className="px-4 py-2 bg-gradient-to-r from-brand-rose to-brand-purple text-white text-xs font-semibold rounded-xl shadow-md hover:opacity-90 disabled:opacity-50 transition active:scale-95"
+            >
+              {isSearching ? 'Searching...' : 'Search'}
+            </button>
+          </div>
         </form>
 
         {/* Results List */}
-        <div className="max-h-[65vh] overflow-y-auto p-2.5 sm:p-3 space-y-1.5">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2.5 custom-scrollbar max-h-60 sm:max-h-72">
           {isSearching ? (
-            <div className="py-12 text-center text-xs text-slate-400">
+            <div className="py-8 text-center text-xs text-slate-400">
               <div className="w-5 h-5 border-2 border-brand-pink border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              Searching messages...
+              Searching message history...
             </div>
           ) : results.length > 0 ? (
-            results.map((msg) => (
-              <button
-                key={msg.id}
-                onClick={() => {
-                  setIsSearchOpen(false);
-                  jumpToMessage(msg.id);
-                }}
-                className="w-full text-left p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition flex items-center justify-between group active:scale-[0.99]"
+            results.map((message) => (
+              <div
+                key={message.id}
+                onClick={() => handleSelectMessage(message.id)}
+                className="p-3 rounded-2xl bg-dark-950/60 border border-white/10 hover:border-brand-pink/50 hover:bg-white/5 transition-all cursor-pointer group flex items-start justify-between gap-3"
               >
-                <div className="space-y-1 flex-1 pr-3 truncate">
-                  <div className="flex items-center gap-2 text-xs text-slate-300">
-                    <span className="font-semibold text-white">{msg.sender.displayName}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                      <Calendar className="w-3 h-3" />
-                      {format(new Date(msg.createdAt), 'MMM d, HH:mm')}
-                    </span>
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <Avatar
+                    name={message.sender.displayName}
+                    username={message.sender.username}
+                    avatarUrl={message.sender.avatarUrl}
+                    size="xs"
+                    className="mt-0.5 flex-shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-xs font-bold text-slate-200 truncate">
+                        {message.sender.displayName}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {format(new Date(message.createdAt), 'MMM d, HH:mm')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                      {message.content || (
+                        <span className="italic text-slate-400 flex items-center gap-1">
+                          <FileText className="w-3 h-3" /> [Attachment]
+                        </span>
+                      )}
+                    </p>
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-200 truncate">
-                    {msg.content || (msg.attachments.length ? `[Attachment: ${msg.attachments[0].originalName}]` : '')}
-                  </p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-brand-pink group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-              </button>
+
+                <div className="p-1 rounded-lg text-slate-400 group-hover:text-brand-pink group-hover:bg-brand-rose/20 transition flex-shrink-0 mt-1">
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </div>
             ))
-          ) : query ? (
-            <div className="py-12 text-center text-xs text-slate-400">
-              No matching messages found for "{query}"
+          ) : hasSearched ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              No matching messages found. Try another query or adjust date filters.
             </div>
           ) : (
-            <div className="py-10 text-center text-xs text-slate-400">
-              Type keyword and press search to find past messages.
+            <div className="py-8 text-center text-xs text-slate-400">
+              Enter keywords to search across all messages and shared attachments.
             </div>
           )}
         </div>
