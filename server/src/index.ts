@@ -1,0 +1,96 @@
+import http from 'http';
+import path from 'path';
+import fs from 'fs';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { config } from './config/index.js';
+import { StorageService } from './services/storage.service.js';
+import { SocketService } from './services/socket.service.js';
+import { DiscordBridgeService } from './services/discord.service.js';
+import { apiLimiter } from './middleware/rateLimit.middleware.js';
+
+import authRoutes from './routes/auth.routes.js';
+import messageRoutes from './routes/message.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
+import systemRoutes from './routes/system.routes.js';
+
+const app = express();
+const server = http.createServer(app);
+
+// 1. Initialize Storage
+StorageService.init();
+
+// 2. Middleware
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
+app.use(
+  cors({
+    origin: '*',
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Apply general API rate limiting to /api routes
+app.use('/api', apiLimiter);
+
+// 3. API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/uploads', uploadRoutes);
+app.use('/api/system', systemRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// 4. Serve Frontend in Production / Hosting
+let clientDistPath = path.resolve(process.cwd(), 'client/dist');
+if (!fs.existsSync(clientDistPath)) {
+  clientDistPath = path.resolve(process.cwd(), '../client/dist');
+}
+
+if (fs.existsSync(clientDistPath)) {
+  console.log(`📁 Serving client build from: ${clientDistPath}`);
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+} else {
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+      return next();
+    }
+    res.status(200).send('Private Duo Chat API Server is running. Client build not found in dist.');
+  });
+}
+
+// 5. Initialize Real-Time WebSockets
+SocketService.init(server);
+
+// 6. Initialize Discord Bridge
+DiscordBridgeService.init().catch((err) => {
+  console.error('Failed to initialize Discord bridge:', err);
+});
+
+// 7. Start Server
+server.listen(config.port, () => {
+  console.log(`\n======================================================`);
+  console.log(`✨ Private Two-User Chat Server running on port ${config.port}`);
+  console.log(`🔒 Strictly restricted to: Sagar & Something`);
+  console.log(`🌐 Local Web: http://localhost:${config.port}`);
+  console.log(`======================================================\n`);
+});
+
+export default app;

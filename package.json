@@ -1,0 +1,15 @@
+{
+  "name": "private-duo-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Private Two-User Chat Platform with Real-Time Bidirectional Discord Bridge for Sagar & Something",
+  "scripts": {
+    "setup": "cd server && npm install && npm run setup && cd ../client && npm install && npm run build",
+    "dev": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "build": "cd client && npm run build && cd ../server && npm run build",
+    "start": "cd server && node dist/index.js"
+  }
+}

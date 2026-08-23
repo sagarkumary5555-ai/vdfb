@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  passwordHash String
+  displayName  String
+  avatarUrl    String?
+  customStatus String?
+  lastSeen     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  messagesSent Message[]
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  name      String    @default("Sagar & Something")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+}
+
+model Message {
+  id               String       @id @default(uuid())
+  conversationId   String
+  senderId         String
+  content          String
+  source           String       @default("website") // 'website' | 'discord'
+  discordMessageId String?      @unique
+  discordChannelId String?
+  replyToId        String?
+  isEdited         Boolean      @default(false)
+  isDeleted        Boolean      @default(false)
+  isPinned         Boolean      @default(false)
+  reactions        String       @default("[]") // JSON array: [{ emoji: "❤️", users: ["userId1"] }]
+  status           String       @default("sent") // 'sent' | 'delivered' | 'read'
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?     @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]    @relation("MessageReplies")
+  attachments  Attachment[]
+
+  @@index([conversationId, createdAt])
+  @@index([discordMessageId])
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  messageId    String
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  storagePath  String
+  discordUrl   String?
+  createdAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+model SyncQueue {
+  id        String   @id @default(uuid())
+  messageId String
+  action    String   // 'create' | 'edit' | 'delete'
+  payload   String   // JSON string
+  attempts  Int      @default(0)
+  lastError String?
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
