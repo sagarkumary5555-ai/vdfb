@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Send, SquarePen } from 'lucide-react';
+import { MessageSquare, SquarePen } from 'lucide-react';
 import { useAuth } from './context/AuthContext.js';
 import { useChat } from './context/ChatContext.js';
 import { CallProvider } from './context/CallContext.js';
 import { Login } from './components/Auth/Login.js';
-import { InstagramNavRail } from './components/Navigation/InstagramNavRail.js';
 import { ChatSidebar } from './components/Chat/ChatSidebar.js';
 import { ChatHeader } from './components/Chat/ChatHeader.js';
 import { PinnedMessagesBanner } from './components/Chat/PinnedMessagesBanner.js';
@@ -81,16 +80,21 @@ const ChatContent: React.FC = () => {
   return (
     <div className="relative flex h-[100dvh] w-screen bg-black overflow-hidden font-sans select-none text-zinc-100">
       <div className="relative z-10 flex w-full h-full">
-        {/* Instagram Left Slim Navigation Rail (Desktop) */}
-        <InstagramNavRail />
-
-        {/* Instagram Messages Sidebar (Desktop always visible, Mobile conditional) */}
-        <div className={`${isSidebarOpen ? 'flex' : 'hidden'} lg:flex w-full lg:w-[350px] xl:w-[380px] h-full flex-shrink-0`}>
+        {/* Left Inbox Sidebar (Desktop always visible, Mobile conditional) */}
+        <div
+          className={`${
+            isSidebarOpen ? 'flex' : 'hidden'
+          } lg:flex w-full lg:w-[360px] xl:w-[400px] h-full flex-shrink-0`}
+        >
           <ChatSidebar />
         </div>
 
-        {/* Instagram Main Messenger Container */}
-        <main className={`${!isSidebarOpen ? 'flex' : 'hidden'} lg:flex relative flex-col flex-1 h-[100dvh] mx-auto w-full bg-black overflow-hidden`}>
+        {/* Main Chat Workspace */}
+        <main
+          className={`${
+            !isSidebarOpen ? 'flex' : 'hidden'
+          } lg:flex relative flex-col flex-1 h-[100dvh] mx-auto w-full bg-[#0a0a0c] overflow-hidden`}
+        >
           {activeConversation ? (
             <>
               <ChatHeader />
@@ -100,26 +104,28 @@ const ChatContent: React.FC = () => {
               <MessageComposer />
             </>
           ) : (
-            /* Instagram Empty Conversation State */
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none bg-black">
-              <div className="flex flex-col items-center max-w-sm space-y-3">
-                <div className="w-24 h-24 rounded-full border-2 border-white flex items-center justify-center mb-1">
-                  <Send className="w-12 h-12 stroke-[1.4] text-white rotate-12 -ml-1 mt-1" />
+            /* Clean Empty Conversation State */
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none bg-[#0a0a0c]">
+              <div className="flex flex-col items-center max-w-sm space-y-4">
+                <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center shadow-xl">
+                  <MessageSquare className="w-9 h-9 text-white stroke-[1.8]" />
                 </div>
 
-                <h2 className="text-xl font-bold text-white tracking-tight">
-                  Your Messages
-                </h2>
-                <p className="text-sm text-zinc-400 leading-normal">
-                  Send a message to start a chat.
-                </p>
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold text-white tracking-tight">
+                    Select a conversation
+                  </h2>
+                  <p className="text-xs text-zinc-400">
+                    Choose an existing conversation or start a new encrypted direct or group chat.
+                  </p>
+                </div>
 
                 <button
                   onClick={() => setIsNewChatModalOpen(true)}
-                  className="mt-2 px-4 py-2 bg-[#0095f6] hover:bg-[#1877f2] text-white text-sm font-semibold rounded-lg shadow transition active:scale-95 flex items-center gap-2"
+                  className="px-5 py-2.5 bg-white hover:bg-zinc-200 text-black text-xs font-bold rounded-xl shadow-lg transition active:scale-95 flex items-center gap-2"
                 >
                   <SquarePen className="w-4 h-4" />
-                  <span>Send message</span>
+                  <span>Start New Chat</span>
                 </button>
               </div>
             </div>
@@ -127,7 +133,7 @@ const ChatContent: React.FC = () => {
         </main>
       </div>
 
-      {/* Global Modals & Lightboxes */}
+      {/* Global Modals & Overlays */}
       <MediaLightbox />
       <SearchModal />
       <SettingsModal />
