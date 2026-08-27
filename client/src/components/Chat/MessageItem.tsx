@@ -42,10 +42,11 @@ const getGifUrl = (text: string): string | null => {
     return trimmed.slice(5, -1);
   }
   if (
-    /^https?:\/\/.*\.(gif|webp)(\?.*)?$/i.test(trimmed) ||
-    trimmed.includes('media.giphy.com') ||
-    trimmed.includes('tenor.com') ||
-    trimmed.includes('c.tenor.com')
+    /^https?:\/\/.*\.(gif|webp|png)(\?.*)?$/i.test(trimmed) &&
+    (trimmed.includes('Animated-Fluent-Emojis') ||
+      trimmed.includes('giphy.com') ||
+      trimmed.includes('tenor.com') ||
+      trimmed.includes('wikimedia.org'))
   ) {
     return trimmed;
   }
@@ -238,17 +239,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         )}
 
-        {/* 1. Animated GIF Display */}
+        {/* 1. Animated Sticker / GIF Display */}
         {gifUrl ? (
-          <div className="mt-1 overflow-hidden rounded-2xl border border-white/10 max-w-xs sm:max-w-sm cursor-pointer group shadow-xl">
+          <div className="mt-1 max-w-[180px] sm:max-w-[220px] cursor-pointer group select-none">
             <img
               src={gifUrl}
-              alt="Animated GIF"
-              onClick={() => openLightbox(gifUrl, 'Animated GIF')}
-              className="w-full max-h-64 sm:max-h-80 object-cover hover:scale-[1.015] transition-transform duration-200 rounded-2xl"
+              alt=""
+              onClick={() => openLightbox(gifUrl, 'Sticker')}
+              className="w-24 h-24 sm:w-32 sm:h-32 object-contain hover:scale-110 transition-transform duration-200"
               loading="lazy"
             />
-            <div className={`flex items-center gap-1 text-[10px] mt-1 select-none font-medium ${
+            <div className={`flex items-center gap-1 text-[10px] mt-0.5 select-none font-medium ${
               isMe ? 'justify-end text-zinc-400' : 'justify-start text-zinc-400'
             }`}>
               <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
@@ -269,7 +270,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           </div>
         ) : (
-          /* 3. Main Instagram Rounded Message Bubble */
+          /* 3. Main Message Bubble */
           <div
             className={`relative px-4 py-2.5 text-sm leading-relaxed transition-all max-w-full overflow-hidden ${
               isMe

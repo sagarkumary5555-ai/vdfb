@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import {
   Search,
-  SquarePen,
+  Plus,
+  Users,
   Settings,
   FolderArchive,
   X,
   MessageSquare,
+  UserPlus,
 } from 'lucide-react';
 import { format, isToday, isYesterday, formatDistanceToNowStrict } from 'date-fns';
 import { useAuth } from '../../context/AuthContext.js';
@@ -26,6 +28,7 @@ export const ChatSidebar: React.FC = () => {
   } = useChat();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterTab, setFilterTab] = useState<'all' | 'direct' | 'groups'>('all');
 
   const formatMessageTime = (dateStr: string) => {
     try {
@@ -39,6 +42,11 @@ export const ChatSidebar: React.FC = () => {
   };
 
   const filteredConversations = conversations.filter((c) => {
+    // Filter Tab Check
+    if (filterTab === 'direct' && c.isGroup) return false;
+    if (filterTab === 'groups' && !c.isGroup) return false;
+
+    // Search Query Check
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     const nameMatch = c.name?.toLowerCase().includes(q);
@@ -50,7 +58,7 @@ export const ChatSidebar: React.FC = () => {
 
   return (
     <aside className="w-full h-[100dvh] bg-[#0c0c0e] border-r border-white/10 flex flex-col select-none flex-shrink-0 z-20">
-      {/* Top Header: Brand + Current User Profile + Action Tools */}
+      {/* Top Header: Current User Profile + Action Tools */}
       <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#111114]">
         {/* User Monogram & Info */}
         <button
@@ -77,7 +85,7 @@ export const ChatSidebar: React.FC = () => {
         </button>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {/* Shared Media */}
           <button
             onClick={() => setIsSharedMediaOpen(true)}
@@ -85,15 +93,6 @@ export const ChatSidebar: React.FC = () => {
             title="Shared Files & Media"
           >
             <FolderArchive className="w-4.5 h-4.5" />
-          </button>
-
-          {/* New Chat / Group */}
-          <button
-            onClick={() => setIsNewChatModalOpen(true)}
-            className="p-2 rounded-xl text-white hover:bg-white/10 transition active:scale-95 bg-white/5 border border-white/10"
-            title="New Chat or Group"
-          >
-            <SquarePen className="w-4.5 h-4.5" />
           </button>
 
           {/* Settings */}
@@ -107,15 +106,35 @@ export const ChatSidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Clean Search Input */}
-      <div className="p-3 border-b border-white/5 bg-[#0e0e11]">
+      {/* Prominent Quick Actions: + New Chat & + New Group */}
+      <div className="p-3 border-b border-white/5 bg-[#0e0e11] space-y-2.5">
+        {/* 1-Tap Action Buttons */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setIsNewChatModalOpen(true)}
+            className="w-full py-2 px-3 bg-white hover:bg-zinc-200 active:scale-95 text-black rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1.5 transition"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span>New Chat</span>
+          </button>
+
+          <button
+            onClick={() => setIsNewChatModalOpen(true)}
+            className="w-full py-2 px-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white border border-white/10 rounded-xl text-xs font-semibold shadow flex items-center justify-center gap-1.5 transition"
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>New Group</span>
+          </button>
+        </div>
+
+        {/* Search Input */}
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-zinc-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search chats..."
+            placeholder="Search conversations..."
             className="w-full pl-10 pr-9 py-2 bg-black/60 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 transition"
           />
           {searchQuery && (
@@ -127,20 +146,50 @@ export const ChatSidebar: React.FC = () => {
             </button>
           )}
         </div>
+
+        {/* Filter Chips: All vs Direct vs Groups */}
+        <div className="flex items-center gap-1 pt-0.5">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'direct', label: 'Direct' },
+            { id: 'groups', label: 'Groups' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilterTab(tab.id as any)}
+              className={`flex-1 py-1 px-2 rounded-lg text-xs font-semibold transition ${
+                filterTab === tab.id
+                  ? 'bg-white/15 text-white border border-white/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
         {filteredConversations.length === 0 ? (
-          <div className="py-20 text-center text-xs text-zinc-500 px-4 space-y-3">
+          <div className="py-16 text-center text-xs text-zinc-500 px-4 space-y-3">
             <MessageSquare className="w-8 h-8 text-zinc-600 mx-auto" />
-            <p className="font-medium">No conversations found.</p>
-            <button
-              onClick={() => setIsNewChatModalOpen(true)}
-              className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95"
-            >
-              Start New Chat
-            </button>
+            <p className="font-medium">
+              {searchQuery
+                ? `No chats found matching "${searchQuery}"`
+                : filterTab === 'groups'
+                ? 'No groups yet. Click "New Group" to create one!'
+                : 'No conversations found.'}
+            </p>
+            <div className="flex items-center justify-center gap-2 pt-1">
+              <button
+                onClick={() => setIsNewChatModalOpen(true)}
+                className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Find Users</span>
+              </button>
+            </div>
           </div>
         ) : (
           filteredConversations.map((conv) => {

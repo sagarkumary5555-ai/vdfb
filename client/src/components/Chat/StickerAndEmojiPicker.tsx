@@ -7,7 +7,6 @@ import {
   Cat,
   ThumbsUp,
   X,
-  Gift,
   Film,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -18,139 +17,138 @@ interface StickerAndEmojiPickerProps {
   onClose: () => void;
 }
 
-interface StickerItem {
+interface AnimatedSticker {
   id: string;
   name: string;
-  badge: string;
-  content: string;
-  caption: string;
-}
-
-interface GifItem {
-  id: string;
-  title: string;
+  category: 'trending' | 'laugh' | 'love' | 'party' | 'gaming';
   url: string;
-  previewUrl: string;
-  category: string;
 }
 
-const CUSTOM_STICKERS: StickerItem[] = [
-  { id: 'vip_1', name: 'ChatUs VIP', badge: '💎', content: '💎 ChatUs VIP Member 💎', caption: 'VIP Status' },
-  { id: 'fire_1', name: 'Pure Fire', badge: '🔥', content: '🔥 That is absolute fire! ⚡', caption: 'Incredible' },
-  { id: 'spark_1', name: 'Good Vibes', badge: '✨', content: '✨ Sending good vibes only 🌟', caption: 'Positive Vibes' },
-  { id: 'win_1', name: 'Big Win', badge: '🏆', content: '🏆 That was a massive win! 🏆', caption: 'Champion' },
-  { id: 'talk_1', name: 'Let\'s Talk', badge: '💬', content: '💬 Hey, let\'s catch up! 💬', caption: 'Quick Chat' },
-  { id: 'cool_1', name: 'Super Chill', badge: '🕶️', content: '🕶️ Staying super cool & calm 🧊', caption: 'Chill Mood' },
-  { id: 'cheer_1', name: 'Celebrate', badge: '🎉', content: '🎉 Big congratulations! Let\'s celebrate! 🥳', caption: 'Party Time' },
-  { id: 'love_1', name: 'Big Love', badge: '❤️', content: '❤️ Much love & respect 🤝 ❤️', caption: 'Respect' },
-  { id: 'hustle_1', name: 'Grind Time', badge: '🚀', content: '🚀 To the moon! Hustle never stops ⚡', caption: 'Hustle' },
-  { id: 'night_1', name: 'Good Night', badge: '🌙', content: '🌙 Goodnight & take care ⭐ 😴', caption: 'Goodnight' },
-  { id: 'cozy_1', name: 'Coffee Break', badge: '☕', content: '☕ Coffee break time ✨', caption: 'Coffee Time' },
-  { id: 'star_1', name: 'Rockstar', badge: '⭐', content: '⭐ You are a true star! ⭐', caption: 'Rockstar' },
-];
-
-const CURATED_GIFS: GifItem[] = [
-  // Trending / Reactions
+const VERIFIED_ANIMATED_STICKERS: AnimatedSticker[] = [
+  // Trending / Hype
   {
-    id: 'g_trend_1',
-    title: 'Mind Blown',
+    id: 's_fire',
+    name: 'Pure Fire',
     category: 'trending',
-    url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/200w.gif',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Fire.png',
   },
   {
-    id: 'g_trend_2',
-    title: 'Laughing Cat',
+    id: 's_sparkle',
+    name: 'Sparkles',
     category: 'trending',
-    url: 'https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/ICOgUNjpvO0PC/200w.gif',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Sparkles.png',
   },
   {
-    id: 'g_trend_3',
-    title: 'Awesome Celebration',
+    id: 's_gem',
+    name: 'Diamond VIP',
     category: 'trending',
-    url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/200w.gif',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Gem%20Stone.png',
   },
   {
-    id: 'g_trend_4',
-    title: 'Thumbs Up Cool',
+    id: 's_mindblown',
+    name: 'Mind Blown',
     category: 'trending',
-    url: 'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/111ebonMs90YLu/200w.gif',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Exploding%20Head.png',
   },
-  // Reactions / Laugh
+  // Laugh & Fun
   {
-    id: 'g_react_1',
-    title: 'Popcorn Chill',
-    category: 'reactions',
-    url: 'https://media.giphy.com/media/hVTouq08miyGT52UKL/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/hVTouq08miyGT52UKL/200w.gif',
+    id: 's_rofl',
+    name: 'ROFL Laugh',
+    category: 'laugh',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Rolling%20on%20the%20Floor%20Laughing.png',
   },
   {
-    id: 'g_react_2',
-    title: 'Excited Dog',
-    category: 'reactions',
-    url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/200w.gif',
+    id: 's_joy',
+    name: 'Tears of Joy',
+    category: 'laugh',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20with%20Tears%20of%20Joy.png',
   },
   {
-    id: 'g_react_3',
-    title: 'Confused John Travolta',
-    category: 'reactions',
-    url: 'https://media.giphy.com/media/g01ZnwAUvutuK8GIQn/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/g01ZnwAUvutuK8GIQn/200w.gif',
+    id: 's_zany',
+    name: 'Crazy Fun',
+    category: 'laugh',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Zany%20Face.png',
   },
   {
-    id: 'g_react_4',
-    title: 'Shocked Face',
-    category: 'reactions',
-    url: 'https://media.giphy.com/media/5VKbvrjxpVJCM/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/5VKbvrjxpVJCM/200w.gif',
+    id: 's_cool',
+    name: 'Super Cool',
+    category: 'laugh',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Sunglasses.png',
   },
-  // Love & Vibes
+  // Love & Romance
   {
-    id: 'g_love_1',
-    title: 'Sending Hearts',
+    id: 's_redheart',
+    name: 'Red Heart',
     category: 'love',
-    url: 'https://media.giphy.com/media/26FLdmIp6wJr91JAI/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/26FLdmIp6wJr91JAI/200w.gif',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Red%20Heart.png',
   },
   {
-    id: 'g_love_2',
-    title: 'Bear Hug',
+    id: 's_hearteyes',
+    name: 'Heart Eyes',
     category: 'love',
-    url: 'https://media.giphy.com/media/l8ooTpH62ae15px6n8/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/l8ooTpH62ae15px6n8/200w.gif',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Heart-Eyes.png',
   },
   {
-    id: 'g_love_3',
-    title: 'Sparkle Hearts',
+    id: 's_heartarrow',
+    name: 'Cupid Heart',
     category: 'love',
-    url: 'https://media.giphy.com/media/M90mJvfWfd5mbUuULX/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/M90mJvfWfd5mbUuULX/200w.gif',
-  },
-  // Anime & Gaming
-  {
-    id: 'g_anime_1',
-    title: 'Anime Dance Party',
-    category: 'anime',
-    url: 'https://media.giphy.com/media/StqZt2cIl0ekw/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/StqZt2cIl0ekw/200w.gif',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Heart%20with%20Arrow.png',
   },
   {
-    id: 'g_anime_2',
-    title: 'Gamer Victory',
-    category: 'anime',
-    url: 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/200w.gif',
+    id: 's_iloveyou',
+    name: 'Love Sign',
+    category: 'love',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Love-You%20Gesture.png',
+  },
+  // Party & Celebration
+  {
+    id: 's_partyface',
+    name: 'Party Face',
+    category: 'party',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Partying%20Face.png',
   },
   {
-    id: 'g_anime_3',
-    title: 'Epic Anime Powerup',
-    category: 'anime',
-    url: 'https://media.giphy.com/media/cb9aF9tzoRjgQ/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/cb9aF9tzoRjgQ/200w.gif',
+    id: 's_starstruck',
+    name: 'Star Struck',
+    category: 'party',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Star-Struck.png',
+  },
+  {
+    id: 's_clap',
+    name: 'Clapping Hands',
+    category: 'party',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Clapping%20Hands.png',
+  },
+  {
+    id: 's_thumbsup',
+    name: 'Thumbs Up',
+    category: 'party',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Thumbs%20Up.png',
+  },
+  // Gaming & Victory
+  {
+    id: 's_game',
+    name: 'Video Game',
+    category: 'gaming',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Video%20Game.png',
+  },
+  {
+    id: 's_trophy',
+    name: 'Champion Trophy',
+    category: 'gaming',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Trophy.png',
+  },
+  {
+    id: 's_peace',
+    name: 'Victory Sign',
+    category: 'gaming',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Victory%20Hand.png',
+  },
+  {
+    id: 's_cat',
+    name: 'Cute Cat',
+    category: 'gaming',
+    url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Cat%20Face.png',
   },
 ];
 
@@ -208,72 +206,48 @@ export const StickerAndEmojiPicker: React.FC<StickerAndEmojiPickerProps> = ({
   onSendSticker,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'gifs' | 'stickers' | 'emojis'>('gifs');
+  const [activeTab, setActiveTab] = useState<'stickers' | 'emojis'>('stickers');
   const [activeCategory, setActiveCategory] = useState<string>('faces');
-  const [gifCategory, setGifCategory] = useState<string>('all');
+  const [stickerCategory, setStickerCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleStickerClick = (sticker: StickerItem) => {
+  const handleStickerClick = (sticker: AnimatedSticker) => {
     confetti({
       particleCount: 25,
       spread: 60,
       origin: { y: 0.85 },
       colors: ['#ffffff', '#a1a1aa', '#52525b'],
     });
-    onSendSticker(sticker.content);
+    onSendSticker(`[GIF:${sticker.url}]`);
     onClose();
   };
 
-  const handleGifClick = (gif: GifItem) => {
-    onSendSticker(`[GIF:${gif.url}]`);
-    onClose();
-  };
-
-  const filteredStickers = CUSTOM_STICKERS.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.caption.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredGifs = CURATED_GIFS.filter((g) => {
-    const matchCategory = gifCategory === 'all' || g.category === gifCategory;
+  const filteredStickers = VERIFIED_ANIMATED_STICKERS.filter((s) => {
+    const matchCategory = stickerCategory === 'all' || s.category === stickerCategory;
     const matchSearch =
       !searchQuery.trim() ||
-      g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.category.toLowerCase().includes(searchQuery.toLowerCase());
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCategory && matchSearch;
   });
 
   return (
     <>
-      {/* Backdrop for mobile */}
+      {/* Mobile Backdrop */}
       <div
         className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs sm:hidden"
         onClick={onClose}
       />
 
-      <div className="fixed inset-x-0 bottom-0 z-50 w-full sm:absolute sm:inset-x-auto sm:bottom-16 sm:left-4 sm:w-[400px] bg-[#121215] rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/15 shadow-2xl overflow-hidden animate-slide-up select-none flex flex-col max-h-[65vh] sm:max-h-[420px]">
-        {/* Mobile Pull Handle Indicator */}
+      <div className="fixed inset-x-0 bottom-0 z-50 w-full sm:absolute sm:inset-x-auto sm:bottom-16 sm:left-4 sm:w-[380px] bg-[#121215] rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/15 shadow-2xl overflow-hidden animate-slide-up select-none flex flex-col max-h-[65vh] sm:max-h-[420px]">
+        {/* Mobile Pull Handle */}
         <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mt-2 sm:hidden flex-shrink-0" />
 
-        {/* Header Bar with Search and Tab Switcher */}
+        {/* Header Bar */}
         <div className="p-3 border-b border-white/10 bg-[#0e0e11] space-y-2.5 flex-shrink-0">
           <div className="flex items-center justify-between gap-2">
-            {/* Tabs: GIFs, Stickers, Emojis */}
+            {/* Tabs: 3D Stickers vs Emojis */}
             <div className="flex items-center gap-1 p-1 bg-black/60 rounded-2xl border border-white/10 flex-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab('gifs')}
-                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  activeTab === 'gifs'
-                    ? 'bg-white text-black shadow-md'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Film className="w-3.5 h-3.5" />
-                <span>GIFs</span>
-              </button>
-
               <button
                 type="button"
                 onClick={() => setActiveTab('stickers')}
@@ -283,8 +257,8 @@ export const StickerAndEmojiPicker: React.FC<StickerAndEmojiPickerProps> = ({
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <Gift className="w-3.5 h-3.5" />
-                <span>Stickers</span>
+                <Film className="w-3.5 h-3.5" />
+                <span>3D Stickers & GIFs</span>
               </button>
 
               <button
@@ -318,10 +292,8 @@ export const StickerAndEmojiPicker: React.FC<StickerAndEmojiPickerProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={
-                activeTab === 'gifs'
-                  ? 'Search GIFs (reactions, anime, party)...'
-                  : activeTab === 'stickers'
-                  ? 'Search stickers...'
+                activeTab === 'stickers'
+                  ? 'Search 3D stickers (fire, laugh, love, trophy)...'
                   : 'Search emojis...'
               }
               className="w-full pl-8 pr-3 py-1.5 bg-black/60 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
@@ -329,26 +301,27 @@ export const StickerAndEmojiPicker: React.FC<StickerAndEmojiPickerProps> = ({
           </div>
         </div>
 
-        {/* Body: GIFs, Stickers or Emojis */}
+        {/* Body */}
         <div className="p-3 overflow-y-auto flex-1 custom-scrollbar pb-safe">
-          {/* TAB 1: GIFs BROWSER */}
-          {activeTab === 'gifs' && (
+          {/* TAB 1: 3D ANIMATED STICKERS & GIFS */}
+          {activeTab === 'stickers' && (
             <div className="space-y-3">
               {/* Category Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
                 {[
                   { id: 'all', name: 'All' },
-                  { id: 'trending', name: '🔥 Trending' },
-                  { id: 'reactions', name: '😂 Laugh' },
+                  { id: 'trending', name: '🔥 Hype' },
+                  { id: 'laugh', name: '😂 Laugh' },
                   { id: 'love', name: '❤️ Love' },
-                  { id: 'anime', name: '🎮 Anime' },
+                  { id: 'party', name: '🎉 Party' },
+                  { id: 'gaming', name: '🎮 Gaming' },
                 ].map((c) => (
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => setGifCategory(c.id)}
+                    onClick={() => setStickerCategory(c.id)}
                     className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition flex-shrink-0 ${
-                      gifCategory === c.id
+                      stickerCategory === c.id
                         ? 'bg-white text-black shadow'
                         : 'bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white'
                     }`}
@@ -358,59 +331,32 @@ export const StickerAndEmojiPicker: React.FC<StickerAndEmojiPickerProps> = ({
                 ))}
               </div>
 
-              {/* GIFs Masonry/Grid */}
-              <div className="grid grid-cols-2 gap-2">
-                {filteredGifs.map((gif) => (
+              {/* 3D Stickers Grid */}
+              <div className="grid grid-cols-4 gap-2.5">
+                {filteredStickers.map((sticker) => (
                   <button
-                    key={gif.id}
+                    key={sticker.id}
                     type="button"
-                    onClick={() => handleGifClick(gif)}
-                    className="relative rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 hover:border-white/40 group aspect-[4/3] focus:outline-none shadow-md transition-all duration-200 active:scale-95"
+                    onClick={() => handleStickerClick(sticker)}
+                    className="flex flex-col items-center justify-center p-2 rounded-2xl bg-zinc-900/90 border border-white/10 hover:border-white/40 hover:bg-white/10 transition-all duration-150 active:scale-90 group shadow-md"
+                    title={sticker.name}
                   >
                     <img
-                      src={gif.previewUrl}
-                      alt={gif.title}
+                      src={sticker.url}
+                      alt={sticker.name}
                       loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      className="w-12 h-12 object-contain group-hover:scale-115 transition-transform duration-200"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                      <span className="text-[10px] font-bold text-white truncate">
-                        {gif.title}
-                      </span>
-                    </div>
+                    <span className="text-[10px] text-zinc-400 mt-1 truncate max-w-full group-hover:text-zinc-200">
+                      {sticker.name}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* TAB 2: STICKERS GRID */}
-          {activeTab === 'stickers' && (
-            <div className="grid grid-cols-2 gap-2">
-              {filteredStickers.map((sticker) => (
-                <button
-                  key={sticker.id}
-                  type="button"
-                  onClick={() => handleStickerClick(sticker)}
-                  className="p-3 rounded-2xl bg-[#18181b] border border-white/10 hover:border-white/30 hover:bg-white/5 transition-all duration-200 text-left group flex items-center gap-2.5 active:scale-95 shadow-md"
-                >
-                  <span className="text-2xl group-hover:scale-125 transition-transform">
-                    {sticker.badge}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-zinc-100 group-hover:text-white truncate">
-                      {sticker.name}
-                    </div>
-                    <div className="text-[10px] text-zinc-400 group-hover:text-zinc-300 truncate">
-                      {sticker.caption}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* TAB 3: EMOJIS GRID */}
+          {/* TAB 2: EMOJIS GRID */}
           {activeTab === 'emojis' && (
             <div className="space-y-3">
               {/* Sub-Category Switcher */}
