@@ -90,6 +90,57 @@ export class SocketService {
         }
       }
 
+      // ==========================================
+      // WebRTC Live Voice & Video Calling Relays
+      // ==========================================
+      socket.on('call:initiate', (data: { type: 'audio' | 'video'; offer: any }) => {
+        console.log(`📞 Call initiated by ${displayName} (type: ${data.type})`);
+        socket.to('duo_room').emit('call:incoming', {
+          callerId: userId,
+          callerName: displayName,
+          callerUsername: username,
+          type: data.type,
+          offer: data.offer,
+        });
+      });
+
+      socket.on('call:accept', (data: { answer: any }) => {
+        console.log(`✅ Call accepted by ${displayName}`);
+        socket.to('duo_room').emit('call:accepted', {
+          acceptorId: userId,
+          answer: data.answer,
+        });
+      });
+
+      socket.on('call:reject', (data?: { reason?: string }) => {
+        console.log(`❌ Call rejected by ${displayName}`);
+        socket.to('duo_room').emit('call:rejected', {
+          rejectorId: userId,
+          reason: data?.reason || 'declined',
+        });
+      });
+
+      socket.on('call:end', () => {
+        console.log(`🔴 Call ended by ${displayName}`);
+        socket.to('duo_room').emit('call:ended', {
+          endedById: userId,
+        });
+      });
+
+      socket.on('call:ice-candidate', (data: { candidate: any }) => {
+        socket.to('duo_room').emit('call:ice-candidate', {
+          senderId: userId,
+          candidate: data.candidate,
+        });
+      });
+
+      socket.on('call:media-toggle', (data: { isMuted?: boolean; isVideoOff?: boolean; isScreenSharing?: boolean }) => {
+        socket.to('duo_room').emit('call:peer-media-toggle', {
+          senderId: userId,
+          ...data,
+        });
+      });
+
       // Typing
       socket.on('typing:start', () => {
         socket.to('duo_room').emit('typing:status', {

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { X, User, Key, Volume2, VolumeX, Bot, ShieldCheck, LogOut, CheckCircle2, AlertTriangle, Sliders } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, User, Key, Volume2, VolumeX, Bot, ShieldCheck, LogOut, CheckCircle2, AlertTriangle, Sliders, Sparkles, Mic, MicOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useChat } from '../../context/ChatContext.js';
 import { soundService } from '../../services/sound.js';
 import { systemApi } from '../../services/api.js';
+import { AudioDspService } from '../../services/audioDsp.js';
 import { BridgeStatus } from '../../types/index.js';
 import { Avatar } from '../Common/Avatar.js';
 
@@ -25,9 +26,18 @@ export const SettingsModal: React.FC = () => {
   const [blurLevel, setBlurLevel] = useState(() => localStorage.getItem('app_wallpaper_blur') || '3');
   const [tintLevel, setTintLevel] = useState(() => localStorage.getItem('app_wallpaper_tint') || '45');
 
+  // Audio Studio & Voice Isolation settings
+  const [voiceIsolation, setVoiceIsolation] = useState(() => localStorage.getItem('voice_isolation') !== 'false');
+  const [micTesting, setMicTesting] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
+
   const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const testStreamRef = useRef<MediaStream | null>(null);
+  const dspCleanupRef = useRef<(() => void) | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (isSettingsOpen) {
@@ -41,8 +51,74 @@ export const SettingsModal: React.FC = () => {
         .getStatus()
         .then((data) => setBridgeStatus(data.bridge))
         .catch(() => {});
+    } else {
+      stopMicTest();
     }
   }, [isSettingsOpen, user]);
+
+  const stopMicTest = () => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (dspCleanupRef.current) {
+      dspCleanupRef.current();
+      dspCleanupRef.current = null;
+    }
+    if (testStreamRef.current) {
+      testStreamRef.current.getTracks().forEach((t) => t.stop());
+      testStreamRef.current = null;
+    }
+    setMicTesting(false);
+    setMicLevel(0);
+  };
+
+  const startMicTest = async () => {
+    if (micTesting) {
+      stopMicTest();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+        },
+      });
+
+      testStreamRef.current = stream;
+      setMicTesting(true);
+
+      const dsp = AudioDspService.processMicrophoneStream(stream, {
+        enableIsolation: voiceIsolation,
+        enableCompressor: true,
+        enableVocalBoost: true,
+      });
+
+      dspCleanupRef.current = dsp.cleanup;
+
+      const updateMeter = () => {
+        setMicLevel(dsp.getVolumeLevel());
+        animFrameRef.current = requestAnimationFrame(updateMeter);
+      };
+      updateMeter();
+    } catch (err: any) {
+      alert(`Could not start mic test: ${err.message || 'Permission denied'}`);
+      stopMicTest();
+    }
+  };
+
+  const handleVoiceIsolationToggle = () => {
+    const nextVal = !voiceIsolation;
+    setVoiceIsolation(nextVal);
+    localStorage.setItem('voice_isolation', nextVal.toString());
+    if (micTesting) {
+      stopMicTest();
+    }
+  };
 
   const handleBlurChange = (val: string) => {
     setBlurLevel(val);
@@ -193,7 +269,70 @@ export const SettingsModal: React.FC = () => {
             </div>
           </form>
 
-          {/* Section 2: Wallpaper & Glass Visuals */}
+          {/* Section 2: Studio Voice Isolation & Microphone */}
+          <div className="pt-3 border-t border-white/10 space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-brand-pink" />
+              Studio Voice Isolation & DSP Microphone
+            </h3>
+
+            <div className="p-3.5 rounded-2xl bg-dark-950/70 border border-white/10 space-y-3 text-xs">
+              {/* Voice Isolation Switch */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-white flex items-center gap-1.5">
+                    <span>Studio Voice Isolation</span>
+                    <span className="text-[9px] text-emerald-400 bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-500/30">
+                      DSP AI
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    Cuts background room hum, fan noise & applies vocal presence boost
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleVoiceIsolationToggle}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                    voiceIsolation
+                      ? 'bg-gradient-to-r from-brand-rose to-brand-purple text-white shadow-md'
+                      : 'bg-slate-800 text-slate-400 border border-white/10'
+                  }`}
+                >
+                  {voiceIsolation ? 'Active' : 'Disabled'}
+                </button>
+              </div>
+
+              {/* Real-time Mic Test Meter */}
+              <div className="pt-2 border-t border-white/5 space-y-2">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="text-[11px]">Microphone Input Level Test</span>
+                  <button
+                    type="button"
+                    onClick={startMicTest}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1 transition ${
+                      micTesting
+                        ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                        : 'bg-white/10 hover:bg-white/20 text-white'
+                    }`}
+                  >
+                    {micTesting ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                    {micTesting ? 'Stop Test' : 'Test Mic'}
+                  </button>
+                </div>
+
+                {/* Level Bar */}
+                <div className="h-2 w-full bg-dark-900 rounded-full overflow-hidden border border-white/10 relative">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-brand-rose transition-all duration-75 rounded-full"
+                    style={{ width: `${micLevel}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Wallpaper & Glass Visuals */}
           <div className="pt-3 border-t border-white/10 space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5" />
@@ -235,7 +374,7 @@ export const SettingsModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 3: Preferences */}
+          {/* Section 4: Preferences */}
           <div className="pt-3 border-t border-white/10 space-y-2.5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Audio & Alerts
@@ -266,7 +405,7 @@ export const SettingsModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 4: Discord Bridge Diagnostics */}
+          {/* Section 5: Discord Bridge Diagnostics */}
           <div className="pt-3 border-t border-white/10 space-y-2.5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Bot className="w-3.5 h-3.5 text-[#5865F2]" />
@@ -312,7 +451,7 @@ export const SettingsModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 5: Security & Password */}
+          {/* Section 6: Security & Password */}
           <form onSubmit={handlePasswordChange} className="pt-3 border-t border-white/10 space-y-2.5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5" />

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Search, Settings, Image, Bot } from 'lucide-react';
+import { Search, Settings, Image, Bot, Phone, Video } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 import { useAuth } from '../../context/AuthContext.js';
 import { useSocket } from '../../context/SocketContext.js';
 import { useChat } from '../../context/ChatContext.js';
+import { useCall } from '../../context/CallContext.js';
 import { Avatar } from '../Common/Avatar.js';
 
 export const ChatHeader: React.FC = () => {
@@ -14,6 +15,7 @@ export const ChatHeader: React.FC = () => {
     setIsSettingsOpen,
     setIsSharedMediaOpen,
   } = useChat();
+  const { startCall, callState } = useCall();
 
   const partnerName = partnerUser?.displayName || (user?.username === 'sagar' ? 'Something ❤️' : 'Sagar');
   const partnerUsername = partnerUser?.username || (user?.username === 'sagar' ? 'something' : 'sagar');
@@ -86,6 +88,26 @@ export const ChatHeader: React.FC = () => {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+        {/* Voice Call Button */}
+        <button
+          onClick={() => startCall('audio')}
+          disabled={callState !== 'idle'}
+          className="p-2 sm:p-2.5 rounded-xl text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 active:scale-95 transition border border-emerald-500/20 disabled:opacity-40"
+          title="Start Live Voice Call"
+        >
+          <Phone className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+        </button>
+
+        {/* Video Call Button */}
+        <button
+          onClick={() => startCall('video')}
+          disabled={callState !== 'idle'}
+          className="p-2 sm:p-2.5 rounded-xl text-brand-pink bg-brand-rose/10 hover:bg-brand-rose/20 active:scale-95 transition border border-brand-rose/20 disabled:opacity-40"
+          title="Start Live Video Call"
+        >
+          <Video className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+        </button>
+
         <button
           onClick={() => setIsSharedMediaOpen(true)}
           className="p-2 sm:p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 transition"
@@ -109,16 +131,6 @@ export const ChatHeader: React.FC = () => {
         >
           <Settings className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
         </button>
-
-        {/* Current user badge on desktop */}
-        <div className="hidden sm:flex items-center gap-2 pl-2 ml-1 border-l border-white/10">
-          <Avatar
-            name={user?.displayName || 'User'}
-            username={user?.username}
-            avatarUrl={user?.avatarUrl}
-            size="sm"
-          />
-        </div>
       </div>
     </header>
   );

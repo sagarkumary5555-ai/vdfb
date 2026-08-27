@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext.js';
 import { useChat } from './context/ChatContext.js';
+import { CallProvider } from './context/CallContext.js';
 import { Login } from './components/Auth/Login.js';
 import { ChatSidebar } from './components/Chat/ChatSidebar.js';
 import { ChatHeader } from './components/Chat/ChatHeader.js';
@@ -13,10 +14,11 @@ import { SettingsModal } from './components/Chat/SettingsModal.js';
 import { SharedMediaModal } from './components/Chat/SharedMediaModal.js';
 import { ConnectionBanner } from './components/Chat/ConnectionBanner.js';
 import { DragDropOverlay } from './components/Chat/DragDropOverlay.js';
+import { CallModal } from './components/Chat/CallModal.js';
+import { IncomingCallDialog } from './components/Chat/IncomingCallDialog.js';
 import { uploadApi } from './services/api.js';
 
-export const ChatApp: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+const ChatContent: React.FC = () => {
   const { sendMessage } = useChat();
   const [isDragging, setIsDragging] = useState(false);
 
@@ -86,24 +88,6 @@ export const ChatApp: React.FC = () => {
     };
   }, [sendMessage]);
 
-  if (isLoading) {
-    return (
-      <div className="relative flex h-[100dvh] w-screen items-center justify-center app-bg overflow-hidden">
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
-        <div className="relative z-10 flex flex-col items-center gap-3">
-          <div className="w-9 h-9 border-3 border-brand-pink border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-semibold text-white/90 tracking-wide drop-shadow-md">
-            Opening private duo space...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
   const tintOpacity = parseInt(wallpaperTint, 10) / 100;
 
   return (
@@ -139,6 +123,38 @@ export const ChatApp: React.FC = () => {
       <SettingsModal />
       <SharedMediaModal />
       <DragDropOverlay isDragging={isDragging} />
+
+      {/* WebRTC Live Calling Overlays */}
+      <IncomingCallDialog />
+      <CallModal />
     </div>
+  );
+};
+
+export const ChatApp: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="relative flex h-[100dvh] w-screen items-center justify-center app-bg overflow-hidden">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
+        <div className="relative z-10 flex flex-col items-center gap-3">
+          <div className="w-9 h-9 border-3 border-brand-pink border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-semibold text-white/90 tracking-wide drop-shadow-md">
+            Opening private duo space...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return (
+    <CallProvider>
+      <ChatContent />
+    </CallProvider>
   );
 };
