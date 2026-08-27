@@ -9,7 +9,7 @@ interface SocketContextType {
   partnerStatus: 'online' | 'away' | 'offline';
   partnerLastSeen: string | null;
   isPartnerTyping: boolean;
-  emitTyping: (isTyping: boolean) => void;
+  emitTyping: (isTyping: boolean, conversationId?: string) => void;
   markMessagesRead: () => void;
 }
 
@@ -101,17 +101,17 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
   }, [user]);
 
-  const emitTyping = (isTyping: boolean) => {
+  const emitTyping = (isTyping: boolean, conversationId?: string) => {
     if (!socketRef.current || !isConnected) return;
     if (isTyping) {
-      socketRef.current.emit('typing:start');
+      socketRef.current.emit('typing:start', { conversationId });
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => {
-        socketRef.current?.emit('typing:stop');
+        socketRef.current?.emit('typing:stop', { conversationId });
       }, 3000);
     } else {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      socketRef.current.emit('typing:stop');
+      socketRef.current.emit('typing:stop', { conversationId });
     }
   };
 

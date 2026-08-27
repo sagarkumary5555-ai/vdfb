@@ -21,6 +21,7 @@ import { StickerAndEmojiPicker } from './StickerAndEmojiPicker.js';
 
 export const MessageComposer: React.FC = () => {
   const {
+    activeConversation,
     sendMessage,
     replyingTo,
     setReplyingTo,
@@ -63,7 +64,7 @@ export const MessageComposer: React.FC = () => {
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
-    emitTyping(e.target.value.length > 0);
+    emitTyping(e.target.value.length > 0, activeConversation?.id);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

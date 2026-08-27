@@ -1,50 +1,55 @@
-import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { prisma } from '../db/prisma.js';
 import { MessageService } from './message.service.js';
-import { MessageResponse } from '../types/index.js';
+import { UserJWTPayload, MessageResponse } from '../types/index.js';
 
 export class SocketService {
-  private static io: SocketIOServer | null = null;
+  private static io: Server | null = null;
   private static userSockets: Map<string, Set<string>> = new Map();
 
-  static init(server: HttpServer): SocketIOServer {
-    this.io = new SocketIOServer(server, {
+  static init(httpServer: HttpServer) {
+    this.io = new Server(httpServer, {
       cors: {
-        origin: '*',
-        methods: ['GET', 'POST'],
+        origin: config.clientUrl || true,
         credentials: true,
       },
-      pingTimeout: 60000,
-      pingInterval: 25000,
+      pingTimeout: 30000,
+      pingInterval: 10000,
     });
 
-    // Authenticate socket connections
+    // JWT Authentication Middleware for Socket.IO
     this.io.use(async (socket: Socket, next) => {
       try {
-        const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
-        if (!token) {
-          return next(new Error('Authentication error: Token required'));
+        const token =
+          socket.handshake.auth.token ||
+          socket.handshake.headers.authorization?.replace('Bearer ', '') ||
+          socket.handshake.query.token;
+
+        if (!token || typeof token !== 'string') {
+          return next(new Error('Authentication token required'));
         }
 
-        const decoded = jwt.verify(token, config.jwtSecret) as { userId: string; username: string };
-        const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+        const decoded = jwt.verify(token, config.jwtSecret) as UserJWTPayload;
+        const user = await prisma.user.findUnique({
+          where: { id: decoded.userId },
+        });
 
         if (!user) {
-          return next(new Error('Authentication error: User not found'));
+          return next(new Error('User not found'));
         }
 
         socket.data.user = user;
         next();
       } catch (err: any) {
-        next(new Error(`Authentication error: ${err.message}`));
+        next(new Error(`Authentication failed: ${err.message}`));
       }
     });
 
     this.setupEventHandlers();
-    return this.io;
+    console.log('⚡ Socket.IO real-time social gateway initialized');
   }
 
   private static setupEventHandlers() {
@@ -52,6 +57,8 @@ export class SocketService {
 
     this.io.on('connection', async (socket: Socket) => {
       const user = socket.data.user;
+      if (!user) return;
+
       const userId = user.id;
       const username = user.username;
       const displayName = user.displayName;
@@ -68,100 +75,168 @@ export class SocketService {
       socket.join(`user_${userId}`);
 
       // Update database status
-      await prisma.user.update({
-        where: { id: userId },
-        data: { lastSeen: new Date() },
-      });
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { lastSeen: new Date() },
+        });
+      } catch (err) {
+        // Safe ignore
+      }
 
       // Broadcast online presence
       this.broadcastPresence(userId, username, 'online');
 
       // Join a conversation room
       socket.on('conversation:join', (conversationId: string) => {
-        socket.join(`conv_${conversationId}`);
+        if (conversationId) {
+          socket.join(`conv_${conversationId}`);
+        }
       });
 
       // Leave a conversation room
       socket.on('conversation:leave', (conversationId: string) => {
-        socket.leave(`conv_${conversationId}`);
+        if (conversationId) {
+          socket.leave(`conv_${conversationId}`);
+        }
       });
 
       // ==========================================
       // WebRTC Direct Calling Signaling Events
       // ==========================================
       socket.on('call:initiate', (data) => {
-        const { targetUserId, type, offer } = data;
-        this.io?.to(`user_${targetUserId}`).emit('call:incoming', {
-          callerId: userId,
-          callerName: displayName,
-          callerUsername: username,
-          callerAvatar: user.avatarUrl,
-          type, // 'audio' | 'video'
-          offer,
-        });
+        try {
+          const { targetUserId, type, offer } = data || {};
+          if (targetUserId) {
+            this.io?.to(`user_${targetUserId}`).emit('call:incoming', {
+              callerId: userId,
+              callerName: displayName,
+              callerUsername: username,
+              callerAvatar: user.avatarUrl,
+              type, // 'audio' | 'video'
+              offer,
+            });
+          }
+        } catch (err) {
+          console.error('call:initiate error:', err);
+        }
       });
 
       socket.on('call:accept', (data) => {
-        const { callerId, answer } = data;
-        this.io?.to(`user_${callerId}`).emit('call:accepted', {
-          acceptorId: userId,
-          answer,
-        });
+        try {
+          const { callerId, answer } = data || {};
+          if (callerId) {
+            this.io?.to(`user_${callerId}`).emit('call:accepted', {
+              acceptorId: userId,
+              answer,
+            });
+          }
+        } catch (err) {
+          console.error('call:accept error:', err);
+        }
       });
 
       socket.on('call:reject', (data) => {
-        const { callerId, reason } = data;
-        this.io?.to(`user_${callerId}`).emit('call:rejected', {
-          rejectorId: userId,
-          reason: reason || 'declined',
-        });
+        try {
+          const { callerId, reason } = data || {};
+          if (callerId) {
+            this.io?.to(`user_${callerId}`).emit('call:rejected', {
+              rejectorId: userId,
+              reason: reason || 'declined',
+            });
+          }
+        } catch (err) {
+          console.error('call:reject error:', err);
+        }
       });
 
       socket.on('call:end', (data) => {
-        const { targetUserId } = data || {};
-        if (targetUserId) {
-          this.io?.to(`user_${targetUserId}`).emit('call:ended', { endedBy: userId });
+        try {
+          const { targetUserId } = data || {};
+          if (targetUserId) {
+            this.io?.to(`user_${targetUserId}`).emit('call:ended', { endedBy: userId });
+          }
+        } catch (err) {
+          console.error('call:end error:', err);
         }
       });
 
       socket.on('call:ice-candidate', (data) => {
-        const { targetUserId, candidate } = data;
-        this.io?.to(`user_${targetUserId}`).emit('call:ice-candidate', {
-          senderId: userId,
-          candidate,
-        });
+        try {
+          const { targetUserId, candidate } = data || {};
+          if (targetUserId && candidate) {
+            this.io?.to(`user_${targetUserId}`).emit('call:ice-candidate', {
+              senderId: userId,
+              candidate,
+            });
+          }
+        } catch (err) {
+          console.error('call:ice-candidate error:', err);
+        }
       });
 
       socket.on('call:media-toggle', (data) => {
-        const { targetUserId } = data;
-        this.io?.to(`user_${targetUserId}`).emit('call:peer-media-toggle', data);
+        try {
+          const { targetUserId } = data || {};
+          if (targetUserId) {
+            this.io?.to(`user_${targetUserId}`).emit('call:peer-media-toggle', data);
+          }
+        } catch (err) {
+          console.error('call:media-toggle error:', err);
+        }
       });
 
-      // Typing indicators for a conversation
-      socket.on('typing:start', (data: { conversationId: string }) => {
-        socket.to(`conv_${data.conversationId}`).emit('typing:status', {
-          conversationId: data.conversationId,
-          userId,
-          username,
-          displayName,
-          isTyping: true,
-        });
+      // Typing indicators for a conversation (Protected with null check!)
+      socket.on('typing:start', (data?: { conversationId?: string }) => {
+        try {
+          if (data?.conversationId) {
+            socket.to(`conv_${data.conversationId}`).emit('typing:status', {
+              conversationId: data.conversationId,
+              userId,
+              username,
+              displayName,
+              isTyping: true,
+            });
+          } else {
+            socket.broadcast.emit('typing:status', {
+              userId,
+              username,
+              displayName,
+              isTyping: true,
+            });
+          }
+        } catch (err) {
+          console.error('typing:start error:', err);
+        }
       });
 
-      socket.on('typing:stop', (data: { conversationId: string }) => {
-        socket.to(`conv_${data.conversationId}`).emit('typing:status', {
-          conversationId: data.conversationId,
-          userId,
-          username,
-          displayName,
-          isTyping: false,
-        });
+      socket.on('typing:stop', (data?: { conversationId?: string }) => {
+        try {
+          if (data?.conversationId) {
+            socket.to(`conv_${data.conversationId}`).emit('typing:status', {
+              conversationId: data.conversationId,
+              userId,
+              username,
+              displayName,
+              isTyping: false,
+            });
+          } else {
+            socket.broadcast.emit('typing:status', {
+              userId,
+              username,
+              displayName,
+              isTyping: false,
+            });
+          }
+        } catch (err) {
+          console.error('typing:stop error:', err);
+        }
       });
 
       // Send Message via Socket
       socket.on('message:send', async (data, callback) => {
         try {
-          const { content, conversationId, recipientId, replyToId, attachments } = data;
+          const { content, conversationId, recipientId, replyToId, attachments } = data || {};
 
           if (!content?.trim() && (!attachments || attachments.length === 0)) {
             if (callback) callback({ error: 'Message content or attachment is required' });
@@ -190,11 +265,13 @@ export class SocketService {
       // Message Reaction
       socket.on('message:react', async (data, callback) => {
         try {
-          const { messageId, emoji } = data;
-          const updated = await MessageService.toggleReaction(messageId, emoji, userId);
-          if (updated) {
-            if (callback) callback({ success: true, message: updated });
-            this.broadcastMessageEdit(updated);
+          const { messageId, emoji } = data || {};
+          if (messageId && emoji) {
+            const updated = await MessageService.toggleReaction(messageId, emoji, userId);
+            if (updated) {
+              if (callback) callback({ success: true, message: updated });
+              this.broadcastMessageEdit(updated);
+            }
           }
         } catch (err: any) {
           if (callback) callback({ error: err.message });
@@ -204,11 +281,13 @@ export class SocketService {
       // Message Pin Toggle
       socket.on('message:pin', async (data, callback) => {
         try {
-          const { messageId } = data;
-          const updated = await MessageService.togglePin(messageId);
-          if (updated) {
-            if (callback) callback({ success: true, message: updated });
-            this.broadcastMessageEdit(updated);
+          const { messageId } = data || {};
+          if (messageId) {
+            const updated = await MessageService.togglePin(messageId);
+            if (updated) {
+              if (callback) callback({ success: true, message: updated });
+              this.broadcastMessageEdit(updated);
+            }
           }
         } catch (err: any) {
           if (callback) callback({ error: err.message });
@@ -218,7 +297,7 @@ export class SocketService {
       // Message Edit
       socket.on('message:edit', async (data, callback) => {
         try {
-          const { messageId, newContent } = data;
+          const { messageId, newContent } = data || {};
           if (!newContent || !newContent.trim()) {
             if (callback) callback({ error: 'Content cannot be empty' });
             return;
@@ -241,15 +320,17 @@ export class SocketService {
       // Message Delete
       socket.on('message:delete', async (data, callback) => {
         try {
-          const { messageId } = data;
-          const updated = await MessageService.deleteMessage(messageId, userId);
-          if (!updated) {
-            if (callback) callback({ error: 'Cannot delete message' });
-            return;
-          }
+          const { messageId } = data || {};
+          if (messageId) {
+            const updated = await MessageService.deleteMessage(messageId, userId);
+            if (!updated) {
+              if (callback) callback({ error: 'Cannot delete message' });
+              return;
+            }
 
-          if (callback) callback({ success: true, message: updated });
-          this.broadcastMessageDelete(updated);
+            if (callback) callback({ success: true, message: updated });
+            this.broadcastMessageDelete(updated);
+          }
         } catch (err: any) {
           console.error('Socket message:delete error:', err);
           if (callback) callback({ error: err.message });
@@ -257,7 +338,7 @@ export class SocketService {
       });
 
       // Read Receipts
-      socket.on('messages:read', async (data: { conversationId?: string }) => {
+      socket.on('messages:read', async (data?: { conversationId?: string }) => {
         try {
           const readIds = await MessageService.markAllAsRead(userId, data?.conversationId);
           if (readIds.length > 0 && data?.conversationId) {
@@ -275,43 +356,59 @@ export class SocketService {
 
       // Disconnect
       socket.on('disconnect', async () => {
-        const userSocketSet = this.userSockets.get(userId);
-        if (userSocketSet) {
-          userSocketSet.delete(socket.id);
-          if (userSocketSet.size === 0) {
-            this.userSockets.delete(userId);
-            const now = new Date();
-            await prisma.user.update({
-              where: { id: userId },
-              data: { lastSeen: now },
-            });
-            this.broadcastPresence(userId, username, 'offline', now);
+        try {
+          const userSocketSet = this.userSockets.get(userId);
+          if (userSocketSet) {
+            userSocketSet.delete(socket.id);
+            if (userSocketSet.size === 0) {
+              this.userSockets.delete(userId);
+              const now = new Date();
+              await prisma.user.update({
+                where: { id: userId },
+                data: { lastSeen: now },
+              });
+              this.broadcastPresence(userId, username, 'offline', now);
+            }
           }
+          console.log(`🔌 Socket disconnected: ${displayName} [${socket.id}]`);
+        } catch (err) {
+          // Ignore
         }
-        console.log(`🔌 Socket disconnected: ${displayName} [${socket.id}]`);
       });
     });
   }
 
   static broadcastNewMessage(message: MessageResponse) {
     if (!this.io) return;
-    // Broadcast to the conversation room
-    this.io.to(`conv_${message.conversationId}`).emit('message:new', message);
-    // Also emit globally for conversation list inbox update
-    this.io.emit('conversation:activity', {
-      conversationId: message.conversationId,
-      message,
-    });
+    try {
+      // Broadcast to the conversation room
+      this.io.to(`conv_${message.conversationId}`).emit('message:new', message);
+      // Also emit globally for conversation list inbox update
+      this.io.emit('conversation:activity', {
+        conversationId: message.conversationId,
+        message,
+      });
+    } catch (err) {
+      console.error('broadcastNewMessage error:', err);
+    }
   }
 
   static broadcastMessageEdit(message: MessageResponse) {
     if (!this.io) return;
-    this.io.to(`conv_${message.conversationId}`).emit('message:updated', message);
+    try {
+      this.io.to(`conv_${message.conversationId}`).emit('message:updated', message);
+    } catch (err) {
+      console.error('broadcastMessageEdit error:', err);
+    }
   }
 
   static broadcastMessageDelete(message: MessageResponse) {
     if (!this.io) return;
-    this.io.to(`conv_${message.conversationId}`).emit('message:deleted', message);
+    try {
+      this.io.to(`conv_${message.conversationId}`).emit('message:deleted', message);
+    } catch (err) {
+      console.error('broadcastMessageDelete error:', err);
+    }
   }
 
   static broadcastPresence(
@@ -321,12 +418,16 @@ export class SocketService {
     lastSeen: Date | null = null
   ) {
     if (!this.io) return;
-    this.io.emit('presence:update', {
-      userId,
-      username,
-      status,
-      lastSeen: lastSeen ? lastSeen.toISOString() : null,
-    });
+    try {
+      this.io.emit('presence:update', {
+        userId,
+        username,
+        status,
+        lastSeen: lastSeen ? lastSeen.toISOString() : null,
+      });
+    } catch (err) {
+      console.error('broadcastPresence error:', err);
+    }
   }
 
   static isUserOnline(userId: string): boolean {
