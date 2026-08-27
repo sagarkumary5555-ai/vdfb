@@ -9,10 +9,9 @@ import {
   FileText,
   Mic,
   Square,
-  Heart,
   Sparkles,
+  Heart,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { useChat } from '../../context/ChatContext.js';
 import { useSocket } from '../../context/SocketContext.js';
 import { uploadApi } from '../../services/api.js';
@@ -72,17 +71,6 @@ export const MessageComposer: React.FC = () => {
       e.preventDefault();
       handleSend();
     }
-  };
-
-  // Quick Heart Burst
-  const triggerHeartBurst = () => {
-    confetti({
-      particleCount: 35,
-      spread: 70,
-      origin: { y: 0.9 },
-      colors: ['#e11d48', '#f43f5e', '#ec4899'],
-    });
-    sendMessage('❤️');
   };
 
   // Voice Recording with Studio Voice Isolation DSP
@@ -186,15 +174,6 @@ export const MessageComposer: React.FC = () => {
       return;
     }
 
-    if (trimmed.includes('❤️') || trimmed.includes('💖')) {
-      confetti({
-        particleCount: 30,
-        spread: 70,
-        origin: { y: 0.9 },
-        colors: ['#e11d48', '#f43f5e', '#ec4899'],
-      });
-    }
-
     let uploadedAttachments: Attachment[] = [];
     if (selectedFiles.length > 0) {
       setIsUploading(true);
@@ -245,34 +224,35 @@ export const MessageComposer: React.FC = () => {
   };
 
   return (
-    <div className="p-2.5 sm:p-4 glass-panel border-t border-white/10 select-none relative z-20 flex-shrink-0 pb-safe">
-      {/* Reply or Edit Banner */}
+    <div className="p-2.5 sm:p-4 bg-[#09090b] border-t border-white/10 select-none relative z-20 flex-shrink-0">
+      {/* Reply Banner */}
       {replyingTo && (
-        <div className="mb-2 px-3 py-1.5 rounded-xl bg-dark-950/95 border border-white/15 flex items-center justify-between animate-slide-up">
+        <div className="mb-2 px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 flex items-center justify-between animate-slide-up">
           <div className="flex items-center gap-2 truncate">
-            <div className="p-1 rounded-lg bg-brand-rose/20 text-brand-pink">
+            <div className="p-1 rounded-lg bg-white/10 text-white">
               <Reply className="w-3 h-3" />
             </div>
             <div className="text-xs truncate">
-              <span className="text-slate-400">Replying to </span>
-              <span className="font-semibold text-slate-200">{replyingTo.sender.displayName}</span>
-              <p className="text-slate-400 text-[10px] truncate">{replyingTo.content || '[Attachment]'}</p>
+              <span className="text-zinc-400">Replying to </span>
+              <span className="font-semibold text-white">{replyingTo.sender.displayName}</span>
+              <p className="text-zinc-400 text-[10px] truncate">{replyingTo.content || '[Attachment]'}</p>
             </div>
           </div>
           <button
             onClick={() => setReplyingTo(null)}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
+      {/* Editing Banner */}
       {editingMessage && (
-        <div className="mb-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-between animate-slide-up">
+        <div className="mb-2 px-3 py-1.5 rounded-xl bg-zinc-800 border border-white/20 flex items-center justify-between animate-slide-up">
           <div className="flex items-center gap-2">
-            <Edit2 className="w-3 h-3 text-amber-400" />
-            <div className="text-xs text-amber-200">
+            <Edit2 className="w-3 h-3 text-white" />
+            <div className="text-xs text-white">
               <span className="font-semibold">Editing message</span>
             </div>
           </div>
@@ -281,7 +261,7 @@ export const MessageComposer: React.FC = () => {
               setEditingMessage(null);
               setText('');
             }}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -294,13 +274,13 @@ export const MessageComposer: React.FC = () => {
           {selectedFiles.map((file, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-dark-950/90 border border-white/15 text-xs text-slate-200 shadow"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-zinc-900 border border-white/15 text-xs text-zinc-200 shadow"
             >
-              <FileText className="w-3 h-3 text-brand-pink flex-shrink-0" />
+              <FileText className="w-3 h-3 text-white flex-shrink-0" />
               <span className="truncate max-w-[120px] text-[11px]">{file.name}</span>
               <button
                 onClick={() => removeSelectedFile(idx)}
-                className="text-slate-400 hover:text-red-400 p-0.5"
+                className="text-zinc-400 hover:text-red-400 p-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -311,9 +291,9 @@ export const MessageComposer: React.FC = () => {
 
       {/* Upload Progress Bar */}
       {uploadProgress !== null && (
-        <div className="mb-2 w-full bg-dark-950 rounded-full h-1.5 overflow-hidden">
+        <div className="mb-2 w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
           <div
-            className="bg-gradient-to-r from-brand-rose to-brand-purple h-full transition-all duration-200"
+            className="bg-white h-full transition-all duration-200"
             style={{ width: `${uploadProgress}%` }}
           />
         </div>
@@ -330,15 +310,15 @@ export const MessageComposer: React.FC = () => {
 
       {/* Recording Mode Bar */}
       {isRecording ? (
-        <div className="flex items-center justify-between p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-2xl animate-fade-in shadow-lg">
+        <div className="flex items-center justify-between p-2.5 bg-zinc-900 border border-white/20 rounded-2xl animate-fade-in shadow-lg">
           <div className="flex items-center gap-3 px-2">
-            <div className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-rose-300 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-brand-pink" />
+              <span className="text-xs font-bold text-white flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-zinc-400" />
                 Recording: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
               </span>
-              <span className="text-[9px] text-slate-400">Studio Voice Isolation active</span>
+              <span className="text-[9px] text-zinc-400">Studio Voice Isolation active</span>
             </div>
           </div>
 
@@ -346,23 +326,23 @@ export const MessageComposer: React.FC = () => {
             <button
               type="button"
               onClick={cancelRecording}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 text-xs font-semibold"
+              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 text-xs font-semibold"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={stopRecording}
-              className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 text-xs font-bold shadow-lg active:scale-95 transition"
+              className="p-2 rounded-xl bg-white text-black flex items-center gap-1.5 text-xs font-bold shadow active:scale-95 transition"
             >
-              <Square className="w-3.5 h-3.5 fill-white" />
+              <Square className="w-3.5 h-3.5 fill-black" />
               <span>Send Voice</span>
             </button>
           </div>
         </div>
       ) : (
         /* Main Handcrafted Composer Input Box */
-        <div className="relative flex items-end gap-1.5 sm:gap-2 bg-dark-950/80 rounded-2xl border border-white/12 p-1.5 sm:p-2 focus-within:border-brand-pink/50 transition-all shadow-xl">
+        <div className="relative flex items-end gap-1.5 sm:gap-2 bg-zinc-900/90 rounded-2xl border border-white/10 p-1.5 sm:p-2 focus-within:border-white/30 transition-all shadow-xl">
           <input
             ref={fileInputRef}
             type="file"
@@ -374,7 +354,7 @@ export const MessageComposer: React.FC = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 sm:p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
+            className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
             title="Attach files (images, audio, video, docs)"
           >
             <Paperclip className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
@@ -384,9 +364,9 @@ export const MessageComposer: React.FC = () => {
             type="button"
             onClick={() => setShowPicker(!showPicker)}
             className={`p-2 sm:p-2.5 rounded-xl active:scale-95 transition flex-shrink-0 ${
-              showPicker ? 'text-brand-pink bg-brand-rose/20' : 'text-slate-400 hover:text-brand-pink hover:bg-white/10'
+              showPicker ? 'text-white bg-white/20' : 'text-zinc-400 hover:text-white hover:bg-white/10'
             }`}
-            title="Stickers & 3D Emojis"
+            title="Stickers & Emojis"
           >
             <Smile className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </button>
@@ -400,9 +380,9 @@ export const MessageComposer: React.FC = () => {
             placeholder={
               editingMessage
                 ? 'Update your message...'
-                : 'Write a message... (Enter to send)'
+                : 'Message... (Enter to send)'
             }
-            className="flex-1 max-h-32 py-2 px-1 bg-transparent text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none resize-none leading-relaxed"
+            className="flex-1 max-h-32 py-2 px-1 bg-transparent text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
           />
 
           {/* Voice Note Button or Quick Heart */}
@@ -411,19 +391,19 @@ export const MessageComposer: React.FC = () => {
               <button
                 type="button"
                 onClick={startRecording}
-                className="p-2 sm:p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
+                className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
                 title="Record studio voice note"
               >
-                <Mic className="w-4 h-4 text-slate-400 hover:text-brand-pink" />
+                <Mic className="w-4 h-4 text-zinc-400 hover:text-white" />
               </button>
 
               <button
                 type="button"
-                onClick={triggerHeartBurst}
-                className="p-2 sm:p-2.5 rounded-xl bg-brand-rose/15 hover:bg-brand-rose/25 text-brand-pink border border-brand-rose/25 active:scale-90 transition flex-shrink-0 shadow-sm"
-                title="Send Heart"
+                onClick={() => sendMessage('❤️')}
+                className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-90 transition flex-shrink-0"
+                title="Like / Heart"
               >
-                <Heart className="w-4 h-4 fill-brand-pink" />
+                <Heart className="w-4 h-4" />
               </button>
             </div>
           ) : (
@@ -431,7 +411,7 @@ export const MessageComposer: React.FC = () => {
               type="button"
               onClick={handleSend}
               disabled={isUploading}
-              className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-tr from-brand-rose via-brand-pink to-brand-purple hover:opacity-90 text-white shadow-md disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-90 flex-shrink-0"
+              className="p-2 sm:p-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black shadow-md disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-90 flex-shrink-0"
               title="Send message (Enter)"
             >
               <Send className="w-4 h-4" />

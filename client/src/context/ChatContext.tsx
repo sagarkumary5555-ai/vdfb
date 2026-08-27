@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Message, QueuedMessage, Attachment } from '../types/index.js';
+import { Message, QueuedMessage, Attachment, ConversationItem, User } from '../types/index.js';
 import { messageApi } from '../services/api.js';
 import { useAuth } from './AuthContext.js';
 import { useSocket } from './SocketContext.js';
 import { soundService } from '../services/sound.js';
 
 interface ChatContextType {
+  conversations: ConversationItem[];
+  activeConversation: ConversationItem | null;
+  activePartner: User | null;
   messages: Message[];
   pinnedMessages: Message[];
   isLoading: boolean;
@@ -20,6 +23,8 @@ interface ChatContextType {
   closeLightbox: () => void;
   isSearchOpen: boolean;
   setIsSearchOpen: (open: boolean) => void;
+  isNewChatModalOpen: boolean;
+  setIsNewChatModalOpen: (open: boolean) => void;
   isSettingsOpen: boolean;
   setIsSettingsOpen: (open: boolean) => void;
   isSharedMediaOpen: boolean;
@@ -29,6 +34,8 @@ interface ChatContextType {
   highlightedMessageId: string | null;
   setHighlightedMessageId: (id: string | null) => void;
   offlineQueue: QueuedMessage[];
+  selectConversation: (conv: ConversationItem) => void;
+  startDirectChatWithUser: (user: User) => Promise<void>;
   sendMessage: (content: string, attachments?: Attachment[]) => Promise<void>;
   editMessage: (messageId: string, newContent: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
@@ -36,13 +43,17 @@ interface ChatContextType {
   togglePin: (messageId: string) => Promise<void>;
   loadMoreMessages: () => Promise<void>;
   jumpToMessage: (messageId: string) => void;
+  refreshConversations: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const { socket, isConnected, markMessagesRead } = useSocket();
+  const { socket, isConnected } = useSocket();
+
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [activeConversation, setActiveConversation] = useState<ConversationItem | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -54,12 +65,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [isNewChatModalOpen, setIsNewChatModalOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSharedMediaOpen, setIsSharedMediaOpen] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
-  const [offlineQueue, setOfflineQueue] = useState<QueuedMessage[]>(() => {
+  const [offlineQueue] = useState<QueuedMessage[]>(() => {
     try {
       const saved = localStorage.getItem('offline_queued_messages');
       return saved ? JSON.parse(saved) : [];
@@ -68,35 +80,99 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   });
 
-  useEffect(() => {
-    localStorage.setItem('offline_queued_messages', JSON.stringify(offlineQueue));
-  }, [offlineQueue]);
+  // Fetch all user conversations
+  const refreshConversations = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await messageApi.getConversations();
+      setConversations(res.conversations);
 
-  const fetchInitialMessages = useCallback(async () => {
+      // Auto-select first conversation if none selected
+      if (!activeConversation && res.conversations.length > 0) {
+        setActiveConversation(res.conversations[0]);
+      }
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+    }
+  }, [user, activeConversation]);
+
+  useEffect(() => {
+    refreshConversations();
+  }, [refreshConversations]);
+
+  // Fetch messages when active conversation changes
+  const fetchMessagesForActiveConv = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      const data = await messageApi.getMessages(50);
+      const convId = activeConversation?.id;
+      const data = await messageApi.getMessages(convId, 50);
       setMessages(data.messages);
       setNextCursor(data.nextCursor);
       setHasMore(data.hasMore);
-      markMessagesRead();
+
+      if (convId) {
+        messageApi.markRead(convId).catch(() => {});
+        if (socket) {
+          socket.emit('conversation:join', convId);
+          socket.emit('messages:read', { conversationId: convId });
+        }
+      }
     } catch (err) {
-      console.error('Failed to load initial messages:', err);
+      console.error('Failed to load messages for conversation:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [user, markMessagesRead]);
+  }, [user, activeConversation?.id, socket]);
 
   useEffect(() => {
-    fetchInitialMessages();
-  }, [fetchInitialMessages]);
+    fetchMessagesForActiveConv();
+  }, [fetchMessagesForActiveConv]);
+
+  const selectConversation = (conv: ConversationItem) => {
+    if (activeConversation?.id === conv.id) return;
+    if (socket && activeConversation?.id) {
+      socket.emit('conversation:leave', activeConversation.id);
+    }
+    setActiveConversation(conv);
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const startDirectChatWithUser = async (targetUser: User) => {
+    try {
+      const res = await messageApi.getOrCreateDirect(targetUser.id);
+      const convId = res.conversation.id;
+
+      const newConvItem: ConversationItem = {
+        id: convId,
+        name: targetUser.displayName,
+        isGroup: false,
+        otherUser: targetUser,
+        lastMessage: null,
+        unreadCount: 0,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setConversations((prev) => {
+        const exists = prev.find((c) => c.id === convId);
+        if (exists) return prev;
+        return [newConvItem, ...prev];
+      });
+
+      selectConversation(newConvItem);
+      setIsNewChatModalOpen(false);
+    } catch (err: any) {
+      alert(`Could not start chat: ${err.message || 'Error'}`);
+    }
+  };
 
   const loadMoreMessages = async () => {
     if (!hasMore || isLoadingMore || !nextCursor) return;
     setIsLoadingMore(true);
     try {
-      const data = await messageApi.getMessages(50, nextCursor);
+      const data = await messageApi.getMessages(activeConversation?.id, 50, nextCursor);
       setMessages((prev) => [...data.messages, ...prev]);
       setNextCursor(data.nextCursor);
       setHasMore(data.hasMore);
@@ -107,50 +183,41 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Offline queue resend
-  useEffect(() => {
-    if (isConnected && offlineQueue.length > 0 && socket) {
-      const queueToProcess = [...offlineQueue];
-      setOfflineQueue([]);
-
-      queueToProcess.forEach(async (queued) => {
-        try {
-          socket.emit('message:send', {
-            content: queued.content,
-            replyToId: queued.replyToId,
-            attachments: queued.attachments,
-          });
-        } catch (err) {
-          console.error('Failed to send queued message:', err);
-        }
-      });
-    }
-  }, [isConnected, socket, offlineQueue]);
-
   // Socket event listeners
   useEffect(() => {
     if (!socket) return;
 
     const handleNewMessage = (newMsg: Message) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
+      if (!activeConversation || newMsg.conversationId === activeConversation.id) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      }
+
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => c.id === newMsg.conversationId);
+        if (idx !== -1) {
+          const updatedConv = {
+            ...prev[idx],
+            lastMessage: newMsg,
+            updatedAt: newMsg.createdAt,
+            unreadCount:
+              newMsg.senderId !== user?.id && (!activeConversation || activeConversation.id !== newMsg.conversationId)
+                ? prev[idx].unreadCount + 1
+                : prev[idx].unreadCount,
+          };
+          const nextList = [...prev];
+          nextList.splice(idx, 1);
+          return [updatedConv, ...nextList];
+        }
+        return prev;
       });
 
       if (newMsg.senderId !== user?.id) {
         soundService.playIncomingMessageSound();
-        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-          try {
-            new Notification(newMsg.sender.displayName, {
-              body: newMsg.content || 'Sent an attachment',
-              icon: newMsg.sender.avatarUrl || undefined,
-            });
-          } catch {
-            // Ignore
-          }
-        }
-        if (!document.hidden) {
-          markMessagesRead();
+        if (activeConversation && newMsg.conversationId === activeConversation.id) {
+          socket.emit('messages:read', { conversationId: activeConversation.id });
         }
       } else {
         soundService.playSentMessageSound();
@@ -186,66 +253,44 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       socket.off('message:deleted', handleMessageDeleted);
       socket.off('messages:status_updated', handleStatusUpdated);
     };
-  }, [socket, user, markMessagesRead]);
+  }, [socket, user, activeConversation]);
 
   // Send message
   const sendMessage = async (content: string, attachments: Attachment[] = []) => {
     if (!content.trim() && attachments.length === 0) return;
 
     const replyId = replyingTo?.id || null;
+    const convId = activeConversation?.id;
+    const recipientId = activeConversation?.otherUser?.id;
     setReplyingTo(null);
 
+    const mappedAttachments = attachments.map((a) => ({
+      filename: a.filename,
+      originalName: a.originalName,
+      mimeType: a.mimeType,
+      size: a.size,
+      storagePath: a.filename,
+    }));
+
     if (!isConnected || !socket) {
-      const localId = `local_${Date.now()}_${Math.random()}`;
-      const queuedItem: QueuedMessage = {
-        localId,
+      await messageApi.sendMessage({
+        conversationId: convId,
+        recipientId,
         content: content.trim(),
         replyToId: replyId,
-        attachments,
-        createdAt: new Date().toISOString(),
-      };
-      setOfflineQueue((prev) => [...prev, queuedItem]);
-
-      if (user) {
-        const optimisticMsg: Message = {
-          id: localId,
-          conversationId: 'duo_conversation',
-          senderId: user.id,
-          sender: user,
-          content: content.trim(),
-          source: 'website',
-          discordMessageId: null,
-          replyToId: replyId,
-          replyTo: replyingTo
-            ? {
-                id: replyingTo.id,
-                sender: {
-                  displayName: replyingTo.sender.displayName,
-                  username: replyingTo.sender.username,
-                },
-                content: replyingTo.content,
-              }
-            : null,
-          isEdited: false,
-          isDeleted: false,
-          isPinned: false,
-          reactions: [],
-          status: 'sending',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          attachments,
-        };
-        setMessages((prev) => [...prev, optimisticMsg]);
-      }
+        attachments: mappedAttachments,
+      });
       return;
     }
 
     socket.emit(
       'message:send',
       {
+        conversationId: convId,
+        recipientId,
         content: content.trim(),
         replyToId: replyId,
-        attachments,
+        attachments: mappedAttachments,
       },
       (res: any) => {
         if (res?.error) {
@@ -255,7 +300,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
-  // Edit message
   const editMessage = async (messageId: string, newContent: string) => {
     if (!newContent.trim()) return;
     setEditingMessage(null);
@@ -267,7 +311,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Delete message
   const deleteMessage = async (messageId: string) => {
     if (socket && isConnected) {
       socket.emit('message:delete', { messageId });
@@ -276,7 +319,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Toggle reaction
   const toggleReaction = async (messageId: string, emoji: string) => {
     if (socket && isConnected) {
       socket.emit('message:react', { messageId, emoji });
@@ -285,7 +327,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Toggle pin
   const togglePin = async (messageId: string) => {
     if (socket && isConnected) {
       socket.emit('message:pin', { messageId });
@@ -314,10 +355,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const pinnedMessages = messages.filter((m) => m.isPinned && !m.isDeleted);
+  const activePartner = activeConversation?.otherUser || null;
 
   return (
     <ChatContext.Provider
       value={{
+        conversations,
+        activeConversation,
+        activePartner,
         messages,
         pinnedMessages,
         isLoading,
@@ -332,6 +377,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         closeLightbox,
         isSearchOpen,
         setIsSearchOpen,
+        isNewChatModalOpen,
+        setIsNewChatModalOpen,
         isSettingsOpen,
         setIsSettingsOpen,
         isSharedMediaOpen,
@@ -341,6 +388,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         highlightedMessageId,
         setHighlightedMessageId,
         offlineQueue,
+        selectConversation,
+        startDirectChatWithUser,
         sendMessage,
         editMessage,
         deleteMessage,
@@ -348,6 +397,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         togglePin,
         loadMoreMessages,
         jumpToMessage,
+        refreshConversations,
       }}
     >
       {children}

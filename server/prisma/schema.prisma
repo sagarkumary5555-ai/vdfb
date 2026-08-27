@@ -14,12 +14,14 @@ model User {
   displayName  String
   avatarUrl    String?
   customStatus String?
+  bio          String?
   lastSeen     DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  messagesSent Message[]
-  sessions     Session[]
+  messagesSent   Message[]
+  sessions       Session[]
+  participations ConversationParticipant[]
 }
 
 model Session {
@@ -35,11 +37,28 @@ model Session {
 }
 
 model Conversation {
-  id        String    @id @default(uuid())
-  name      String    @default("Sagar & Something")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  messages  Message[]
+  id           String                    @id @default(uuid())
+  name         String?                   @default("Direct Message")
+  isGroup      Boolean                   @default(false)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  messages     Message[]
+  participants ConversationParticipant[]
+}
+
+model ConversationParticipant {
+  id             String   @id @default(uuid())
+  conversationId String
+  userId         String
+  role           String   @default("member")
+  lastReadAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
 }
 
 model Message {
@@ -47,15 +66,15 @@ model Message {
   conversationId   String
   senderId         String
   content          String
-  source           String       @default("website") // 'website' | 'discord'
+  source           String       @default("website")
   discordMessageId String?      @unique
   discordChannelId String?
   replyToId        String?
   isEdited         Boolean      @default(false)
   isDeleted        Boolean      @default(false)
   isPinned         Boolean      @default(false)
-  reactions        String       @default("[]") // JSON array: [{ emoji: "❤️", users: ["userId1"] }]
-  status           String       @default("sent") // 'sent' | 'delivered' | 'read'
+  reactions        String       @default("[]")
+  status           String       @default("sent")
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -66,7 +85,6 @@ model Message {
   attachments  Attachment[]
 
   @@index([conversationId, createdAt])
-  @@index([discordMessageId])
 }
 
 model Attachment {
@@ -88,8 +106,8 @@ model Attachment {
 model SyncQueue {
   id        String   @id @default(uuid())
   messageId String
-  action    String   // 'create' | 'edit' | 'delete'
-  payload   String   // JSON string
+  action    String
+  payload   String
   attempts  Int      @default(0)
   lastError String?
   status    String   @default("pending")

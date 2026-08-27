@@ -6,6 +6,8 @@ const router = Router();
 
 router.use(requireAuth);
 
+router.get('/conversations', MessageController.getConversations);
+router.post('/conversations/direct', MessageController.getOrCreateDirect);
 router.get('/', MessageController.getMessages);
 router.get('/pinned', MessageController.getPinned);
 router.get('/media', MessageController.getSharedMedia);

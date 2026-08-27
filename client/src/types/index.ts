@@ -4,7 +4,18 @@ export interface User {
   displayName: string;
   avatarUrl: string | null;
   customStatus: string | null;
+  bio?: string | null;
   lastSeen: string | null;
+}
+
+export interface ConversationItem {
+  id: string;
+  name: string;
+  isGroup: boolean;
+  otherUser: User | null;
+  lastMessage: Message | null;
+  unreadCount: number;
+  updatedAt: string;
 }
 
 export interface Attachment {
@@ -63,15 +74,6 @@ export interface SharedMediaItem {
   createdAt: string;
   sender: User;
   messageId: string;
-}
-
-export interface BridgeStatus {
-  discordEnabled: boolean;
-  sagarBotReady: boolean;
-  somethingBotReady: boolean;
-  channelAccessible: boolean;
-  channelId: string | null;
-  pendingSyncCount: number;
 }
 
 export interface QueuedMessage {

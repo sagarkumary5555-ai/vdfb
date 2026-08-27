@@ -21,7 +21,7 @@ export async function ensureDatabaseReady() {
     }
   }
 
-  // 2. High-Performance Relational Schema Creation
+  // 2. High-Performance Multi-User Social Schema Creation
   const schemaStatements = [
     `CREATE TABLE IF NOT EXISTS "User" (
       "id" TEXT NOT NULL PRIMARY KEY,
@@ -30,11 +30,14 @@ export async function ensureDatabaseReady() {
       "displayName" TEXT NOT NULL,
       "avatarUrl" TEXT,
       "customStatus" TEXT,
+      "bio" TEXT,
       "lastSeen" DATETIME,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );`,
     `CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key" ON "User"("username");`,
+    `CREATE INDEX IF NOT EXISTS "User_displayName_idx" ON "User"("displayName");`,
+
     `CREATE TABLE IF NOT EXISTS "Session" (
       "id" TEXT NOT NULL PRIMARY KEY,
       "userId" TEXT NOT NULL,
@@ -46,12 +49,28 @@ export async function ensureDatabaseReady() {
       CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
     );`,
     `CREATE UNIQUE INDEX IF NOT EXISTS "Session_token_key" ON "Session"("token");`,
+
     `CREATE TABLE IF NOT EXISTS "Conversation" (
       "id" TEXT NOT NULL PRIMARY KEY,
-      "name" TEXT NOT NULL DEFAULT 'Sagar & Something',
+      "name" TEXT,
+      "isGroup" BOOLEAN NOT NULL DEFAULT false,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );`,
+
+    `CREATE TABLE IF NOT EXISTS "ConversationParticipant" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "conversationId" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "role" TEXT NOT NULL DEFAULT 'member',
+      "lastReadAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "ConversationParticipant_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "Conversation" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "ConversationParticipant_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    );`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "ConversationParticipant_conv_user" ON "ConversationParticipant"("conversationId", "userId");`,
+    `CREATE INDEX IF NOT EXISTS "ConversationParticipant_userId_idx" ON "ConversationParticipant"("userId");`,
+
     `CREATE TABLE IF NOT EXISTS "Message" (
       "id" TEXT NOT NULL PRIMARY KEY,
       "conversationId" TEXT NOT NULL,
@@ -72,9 +91,9 @@ export async function ensureDatabaseReady() {
       CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
       CONSTRAINT "Message_replyToId_fkey" FOREIGN KEY ("replyToId") REFERENCES "Message" ("id") ON DELETE SET NULL ON UPDATE CASCADE
     );`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS "Message_discordMessageId_key" ON "Message"("discordMessageId");`,
     `CREATE INDEX IF NOT EXISTS "Message_createdAt_idx" ON "Message"("createdAt");`,
     `CREATE INDEX IF NOT EXISTS "Message_conversationId_createdAt_idx" ON "Message"("conversationId", "createdAt");`,
+
     `CREATE TABLE IF NOT EXISTS "Attachment" (
       "id" TEXT NOT NULL PRIMARY KEY,
       "messageId" TEXT NOT NULL,
@@ -104,62 +123,42 @@ export async function ensureDatabaseReady() {
     try {
       await prisma.$executeRawUnsafe(sql);
     } catch (err) {
-      console.error('Schema SQL error:', err);
+      console.error('Schema SQL notice:', err);
     }
   }
 
-  // Seed default Sagar and Something accounts with customized passwords
+  // Seed default sample accounts if empty
   try {
-    const sagarPasswordHash = await bcrypt.hash('99313935287549051214', 10);
-    const somethingPasswordHash = await bcrypt.hash('<yaade>', 10);
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      console.log('🌱 Seeding initial demo users for social discovery...');
+      const defaultPassHash = await bcrypt.hash('password123', 10);
 
-    const sagar = await prisma.user.findUnique({ where: { username: 'sagar' } });
-    if (!sagar) {
-      console.log('🌱 Seeding Sagar account with custom password...');
       await prisma.user.create({
         data: {
           username: 'sagar',
-          passwordHash: sagarPasswordHash,
+          passwordHash: defaultPassHash,
           displayName: 'Sagar',
-          avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sagar&backgroundColor=1e293b',
-          customStatus: 'Coding & Building ✨',
+          avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sagar&backgroundColor=18181b',
+          customStatus: 'Building next-gen platforms ⚡',
+          bio: 'Software engineer & builder.',
         },
       });
-    } else {
-      await prisma.user.update({
-        where: { username: 'sagar' },
-        data: { passwordHash: sagarPasswordHash },
-      });
-      console.log('🔒 Password for Sagar updated.');
-    }
 
-    const something = await prisma.user.findUnique({ where: { username: 'something' } });
-    if (!something) {
-      console.log('🌱 Seeding Something account with <yaade> password...');
       await prisma.user.create({
         data: {
           username: 'something',
-          passwordHash: somethingPasswordHash,
-          displayName: 'Something ❤️',
-          avatarUrl: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Something&backgroundColor=31102f',
-          customStatus: 'In my own little world 🌸',
+          passwordHash: defaultPassHash,
+          displayName: 'Something',
+          avatarUrl: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Something&backgroundColor=18181b',
+          customStatus: 'Vibing & creating 🌸',
+          bio: 'Designer & digital creator.',
         },
       });
-    } else {
-      await prisma.user.update({
-        where: { username: 'something' },
-        data: { passwordHash: somethingPasswordHash },
-      });
-      console.log('🔒 Password for Something updated to <yaade>.');
-    }
 
-    let conv = await prisma.conversation.findFirst();
-    if (!conv) {
-      await prisma.conversation.create({
-        data: { name: 'Sagar & Something' },
-      });
+      console.log('✅ Demo accounts seeded!');
     }
   } catch (err) {
-    console.error('Seeding / password update notice:', err);
+    console.error('Seeding notice:', err);
   }
 }

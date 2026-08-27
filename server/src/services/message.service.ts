@@ -4,17 +4,108 @@ import { AuthService } from './auth.service.js';
 
 export class MessageService {
   /**
-   * Get or create the single duo conversation
+   * Get all conversations for a specific user (Instagram-style DM inbox)
    */
-  static async getOrCreateConversation() {
-    let conversation = await prisma.conversation.findFirst();
-    if (!conversation) {
-      conversation = await prisma.conversation.create({
-        data: {
-          name: 'Sagar & Something',
+  static async getUserConversations(userId: string) {
+    const participations = await prisma.conversationParticipant.findMany({
+      where: { userId },
+      include: {
+        conversation: {
+          include: {
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              include: { sender: true },
+            },
+          },
         },
-      });
+      },
+    });
+
+    const conversationList = await Promise.all(
+      participations.map(async (p: any) => {
+        const conv = p.conversation;
+
+        const otherParticipantRecord = await prisma.conversationParticipant.findFirst({
+          where: {
+            conversationId: conv.id,
+            userId: { not: userId },
+          },
+          include: { user: true },
+        });
+
+        const lastMsg = conv.messages[0] || null;
+
+        const unreadCount = await prisma.message.count({
+          where: {
+            conversationId: conv.id,
+            senderId: { not: userId },
+            createdAt: { gt: p.lastReadAt },
+          },
+        });
+
+        const otherUser = otherParticipantRecord ? AuthService.formatUser(otherParticipantRecord.user) : null;
+
+        return {
+          id: conv.id,
+          name: conv.name || otherUser?.displayName || 'Direct Message',
+          isGroup: conv.isGroup,
+          otherUser,
+          lastMessage: lastMsg ? this.formatMessage(lastMsg) : null,
+          unreadCount,
+          updatedAt: lastMsg?.createdAt || conv.updatedAt,
+        };
+      })
+    );
+
+    return conversationList.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  /**
+   * Get or create a direct 1-on-1 conversation between two users
+   */
+  static async getOrCreateDirectConversation(user1Id: string, user2Id: string) {
+    if (user1Id === user2Id) {
+      throw new Error('Cannot create conversation with yourself');
     }
+
+    const user1Convs = await prisma.conversationParticipant.findMany({
+      where: { userId: user1Id },
+      select: { conversationId: true },
+    });
+    const convIds = user1Convs.map((c: any) => c.conversationId);
+
+    const existing = await prisma.conversationParticipant.findFirst({
+      where: {
+        userId: user2Id,
+        conversationId: { in: convIds },
+      },
+      include: {
+        conversation: true,
+      },
+    });
+
+    if (existing) {
+      return existing.conversation;
+    }
+
+    const user2 = await prisma.user.findUnique({ where: { id: user2Id } });
+    if (!user2) throw new Error('User does not exist');
+
+    const conversation = await prisma.conversation.create({
+      data: {
+        isGroup: false,
+        name: user2.displayName,
+      },
+    });
+
+    await prisma.conversationParticipant.createMany({
+      data: [
+        { conversationId: conversation.id, userId: user1Id },
+        { conversationId: conversation.id, userId: user2Id },
+      ],
+    });
+
     return conversation;
   }
 
@@ -22,11 +113,11 @@ export class MessageService {
    * Create a new message
    */
   static async createMessage(params: {
+    conversationId?: string;
     senderId: string;
+    recipientId?: string;
     content: string;
     source?: 'website' | 'discord';
-    discordMessageId?: string | null;
-    discordChannelId?: string | null;
     replyToId?: string | null;
     status?: 'sent' | 'delivered' | 'read';
     attachments?: Array<{
@@ -38,16 +129,42 @@ export class MessageService {
       discordUrl?: string | null;
     }>;
   }): Promise<MessageResponse> {
-    const conversation = await this.getOrCreateConversation();
+    let convId: string = params.conversationId || '';
+
+    if (!convId) {
+      if (params.recipientId) {
+        const conv = await this.getOrCreateDirectConversation(params.senderId, params.recipientId);
+        convId = conv.id;
+      } else {
+        let fallback = await prisma.conversation.findFirst();
+        if (!fallback) {
+          fallback = await prisma.conversation.create({ data: { name: 'General', isGroup: true } });
+        }
+        convId = fallback.id;
+      }
+    }
+
+    const isParticipant = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId: convId,
+          userId: params.senderId,
+        },
+      },
+    });
+
+    if (!isParticipant) {
+      await prisma.conversationParticipant.create({
+        data: { conversationId: convId, userId: params.senderId },
+      });
+    }
 
     const message = await prisma.message.create({
       data: {
-        conversationId: conversation.id,
+        conversationId: convId,
         senderId: params.senderId,
         content: params.content,
         source: params.source || 'website',
-        discordMessageId: params.discordMessageId,
-        discordChannelId: params.discordChannelId,
         replyToId: params.replyToId,
         status: params.status || 'sent',
         reactions: '[]',
@@ -73,19 +190,31 @@ export class MessageService {
       },
     });
 
+    await prisma.conversation.update({
+      where: { id: convId },
+      data: { updatedAt: new Date() },
+    });
+
     return this.formatMessage(message);
   }
 
   /**
-   * Get paginated messages
+   * Get paginated messages in a conversation
    */
   static async getMessages(options: {
+    conversationId?: string;
     limit?: number;
     cursor?: string;
   }): Promise<{ messages: MessageResponse[]; nextCursor: string | null; hasMore: boolean }> {
     const limit = Math.min(options.limit || 50, 100);
 
+    const where: any = {};
+    if (options.conversationId) {
+      where.conversationId = options.conversationId;
+    }
+
     const queryOptions: any = {
+      where,
       take: limit + 1,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -140,13 +269,11 @@ export class MessageService {
 
     if (existingEmojiGroup) {
       if (existingEmojiGroup.users.includes(userId)) {
-        // Remove reaction
         existingEmojiGroup.users = existingEmojiGroup.users.filter((id) => id !== userId);
         if (existingEmojiGroup.users.length === 0) {
           reactions = reactions.filter((r) => r.emoji !== emoji);
         }
       } else {
-        // Add user to reaction
         existingEmojiGroup.users.push(userId);
       }
     } else {
@@ -181,9 +308,12 @@ export class MessageService {
   /**
    * Get all pinned messages
    */
-  static async getPinnedMessages(): Promise<MessageResponse[]> {
+  static async getPinnedMessages(conversationId?: string): Promise<MessageResponse[]> {
+    const where: any = { isPinned: true, isDeleted: false };
+    if (conversationId) where.conversationId = conversationId;
+
     const pinned = await prisma.message.findMany({
-      where: { isPinned: true, isDeleted: false },
+      where,
       orderBy: { createdAt: 'desc' },
       include: { sender: true, replyTo: { include: { sender: true } }, attachments: true },
     });
@@ -194,8 +324,14 @@ export class MessageService {
   /**
    * Get all shared media/attachments
    */
-  static async getSharedMedia(): Promise<any[]> {
+  static async getSharedMedia(conversationId?: string): Promise<any[]> {
+    const where: any = {};
+    if (conversationId) {
+      where.message = { conversationId };
+    }
+
     const attachments = await prisma.attachment.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       take: 100,
       include: {
@@ -212,7 +348,6 @@ export class MessageService {
       mimeType: att.mimeType,
       size: att.size,
       url: `/api/uploads/${att.filename}`,
-      discordUrl: att.discordUrl,
       createdAt: att.createdAt,
       sender: AuthService.formatUser(att.message.sender),
       messageId: att.messageId,
@@ -224,15 +359,18 @@ export class MessageService {
    */
   static async searchMessages(params: {
     query?: string;
+    conversationId?: string;
     senderId?: string;
-    startDate?: string;
-    endDate?: string;
     limit?: number;
   }): Promise<MessageResponse[]> {
     const limit = Math.min(params.limit || 50, 100);
     const where: any = {
       isDeleted: false,
     };
+
+    if (params.conversationId) {
+      where.conversationId = params.conversationId;
+    }
 
     if (params.query && params.query.trim()) {
       where.content = {
@@ -242,12 +380,6 @@ export class MessageService {
 
     if (params.senderId) {
       where.senderId = params.senderId;
-    }
-
-    if (params.startDate || params.endDate) {
-      where.createdAt = {};
-      if (params.startDate) where.createdAt.gte = new Date(params.startDate);
-      if (params.endDate) where.createdAt.lte = new Date(params.endDate);
     }
 
     const messages = await prisma.message.findMany({
@@ -333,35 +465,18 @@ export class MessageService {
   }
 
   /**
-   * Find message by Discord message ID
+   * Mark all unread messages in a conversation as read by recipient
    */
-  static async findByDiscordId(discordMessageId: string): Promise<MessageResponse | null> {
-    const message = await prisma.message.findUnique({
-      where: { discordMessageId },
-      include: {
-        sender: true,
-        replyTo: {
-          include: {
-            sender: true,
-          },
-        },
-        attachments: true,
-      },
-    });
+  static async markAllAsRead(userId: string, conversationId?: string): Promise<string[]> {
+    const where: any = {
+      senderId: { not: userId },
+      status: { not: 'read' },
+    };
+    if (conversationId) where.conversationId = conversationId;
 
-    return message ? this.formatMessage(message) : null;
-  }
-
-  /**
-   * Mark all unread messages as read by recipient
-   */
-  static async markAllAsRead(recipientId: string): Promise<string[]> {
     const unread = await prisma.message.findMany({
-      where: {
-        senderId: { not: recipientId },
-        status: { not: 'read' },
-      },
-      select: { id: true },
+      where,
+      select: { id: true, conversationId: true },
     });
 
     const ids = unread.map((u) => u.id);
@@ -369,6 +484,13 @@ export class MessageService {
       await prisma.message.updateMany({
         where: { id: { in: ids } },
         data: { status: 'read' },
+      });
+    }
+
+    if (conversationId) {
+      await prisma.conversationParticipant.updateMany({
+        where: { conversationId, userId },
+        data: { lastReadAt: new Date() },
       });
     }
 
@@ -393,14 +515,14 @@ export class MessageService {
       sender: AuthService.formatUser(message.sender),
       content: message.content,
       source: message.source as 'website' | 'discord',
-      discordMessageId: message.discordMessageId,
+      discordMessageId: message.discordMessageId || null,
       replyToId: message.replyToId,
       replyTo: message.replyTo
         ? {
             id: message.replyTo.id,
             sender: {
-              displayName: message.replyTo.sender?.displayName || 'Unknown',
-              username: message.replyTo.sender?.username || 'unknown',
+              displayName: message.replyTo.sender?.displayName || 'User',
+              username: message.replyTo.sender?.username || 'user',
             },
             content: message.replyTo.content,
           }
@@ -420,7 +542,6 @@ export class MessageService {
         mimeType: att.mimeType,
         size: att.size,
         url: `/api/uploads/${att.filename}`,
-        discordUrl: att.discordUrl,
         createdAt: att.createdAt,
       })),
     };

@@ -64,8 +64,8 @@ export class SocketService {
       }
       this.userSockets.get(userId)!.add(socket.id);
 
-      // Join the single duo room
-      socket.join('duo_room');
+      // Join user's personal notification room
+      socket.join(`user_${userId}`);
 
       // Update database status
       await prisma.user.update({
@@ -76,63 +76,71 @@ export class SocketService {
       // Broadcast online presence
       this.broadcastPresence(userId, username, 'online');
 
-      // Send initial presence state to the newly connected socket
-      for (const [uid, sockets] of this.userSockets.entries()) {
-        if (sockets.size > 0) {
-          socket.emit('presence:update', {
-            userId: uid,
-            status: 'online',
-          });
-        }
-      }
+      // Join a conversation room
+      socket.on('conversation:join', (conversationId: string) => {
+        socket.join(`conv_${conversationId}`);
+      });
+
+      // Leave a conversation room
+      socket.on('conversation:leave', (conversationId: string) => {
+        socket.leave(`conv_${conversationId}`);
+      });
 
       // ==========================================
-      // WebRTC Live Calling Signaling Events
+      // WebRTC Direct Calling Signaling Events
       // ==========================================
       socket.on('call:initiate', (data) => {
-        socket.to('duo_room').emit('call:incoming', {
+        const { targetUserId, type, offer } = data;
+        this.io?.to(`user_${targetUserId}`).emit('call:incoming', {
           callerId: userId,
           callerName: displayName,
           callerUsername: username,
-          type: data.type, // 'audio' | 'video'
-          offer: data.offer,
+          callerAvatar: user.avatarUrl,
+          type, // 'audio' | 'video'
+          offer,
         });
       });
 
       socket.on('call:accept', (data) => {
-        socket.to('duo_room').emit('call:accepted', {
+        const { callerId, answer } = data;
+        this.io?.to(`user_${callerId}`).emit('call:accepted', {
           acceptorId: userId,
-          answer: data.answer,
+          answer,
         });
       });
 
       socket.on('call:reject', (data) => {
-        socket.to('duo_room').emit('call:rejected', {
+        const { callerId, reason } = data;
+        this.io?.to(`user_${callerId}`).emit('call:rejected', {
           rejectorId: userId,
-          reason: data.reason || 'declined',
+          reason: reason || 'declined',
         });
       });
 
-      socket.on('call:end', () => {
-        socket.to('duo_room').emit('call:ended', {
-          endedBy: userId,
-        });
+      socket.on('call:end', (data) => {
+        const { targetUserId } = data || {};
+        if (targetUserId) {
+          this.io?.to(`user_${targetUserId}`).emit('call:ended', { endedBy: userId });
+        }
       });
 
       socket.on('call:ice-candidate', (data) => {
-        socket.to('duo_room').emit('call:ice-candidate', {
+        const { targetUserId, candidate } = data;
+        this.io?.to(`user_${targetUserId}`).emit('call:ice-candidate', {
           senderId: userId,
-          candidate: data.candidate,
+          candidate,
         });
       });
 
       socket.on('call:media-toggle', (data) => {
-        socket.to('duo_room').emit('call:peer-media-toggle', data);
+        const { targetUserId } = data;
+        this.io?.to(`user_${targetUserId}`).emit('call:peer-media-toggle', data);
       });
 
-      // Typing indicators
-      socket.on('typing:start', () => {
-        socket.to('duo_room').emit('typing:status', {
+      // Typing indicators for a conversation
+      socket.on('typing:start', (data: { conversationId: string }) => {
+        socket.to(`conv_${data.conversationId}`).emit('typing:status', {
+          conversationId: data.conversationId,
           userId,
           username,
           displayName,
@@ -140,8 +148,9 @@ export class SocketService {
         });
       });
 
-      socket.on('typing:stop', () => {
-        socket.to('duo_room').emit('typing:status', {
+      socket.on('typing:stop', (data: { conversationId: string }) => {
+        socket.to(`conv_${data.conversationId}`).emit('typing:status', {
+          conversationId: data.conversationId,
           userId,
           username,
           displayName,
@@ -152,7 +161,7 @@ export class SocketService {
       // Send Message via Socket
       socket.on('message:send', async (data, callback) => {
         try {
-          const { content, replyToId, attachments } = data;
+          const { content, conversationId, recipientId, replyToId, attachments } = data;
 
           if (!content?.trim() && (!attachments || attachments.length === 0)) {
             if (callback) callback({ error: 'Message content or attachment is required' });
@@ -160,7 +169,9 @@ export class SocketService {
           }
 
           const savedMessage = await MessageService.createMessage({
+            conversationId,
             senderId: userId,
+            recipientId,
             content: content?.trim() || '',
             source: 'website',
             replyToId,
@@ -246,11 +257,12 @@ export class SocketService {
       });
 
       // Read Receipts
-      socket.on('messages:read', async () => {
+      socket.on('messages:read', async (data: { conversationId?: string }) => {
         try {
-          const readIds = await MessageService.markAllAsRead(userId);
-          if (readIds.length > 0) {
-            this.io?.to('duo_room').emit('messages:status_updated', {
+          const readIds = await MessageService.markAllAsRead(userId, data?.conversationId);
+          if (readIds.length > 0 && data?.conversationId) {
+            this.io?.to(`conv_${data.conversationId}`).emit('messages:status_updated', {
+              conversationId: data.conversationId,
               messageIds: readIds,
               status: 'read',
               readByUserId: userId,
@@ -283,17 +295,23 @@ export class SocketService {
 
   static broadcastNewMessage(message: MessageResponse) {
     if (!this.io) return;
-    this.io.to('duo_room').emit('message:new', message);
+    // Broadcast to the conversation room
+    this.io.to(`conv_${message.conversationId}`).emit('message:new', message);
+    // Also emit globally for conversation list inbox update
+    this.io.emit('conversation:activity', {
+      conversationId: message.conversationId,
+      message,
+    });
   }
 
   static broadcastMessageEdit(message: MessageResponse) {
     if (!this.io) return;
-    this.io.to('duo_room').emit('message:updated', message);
+    this.io.to(`conv_${message.conversationId}`).emit('message:updated', message);
   }
 
   static broadcastMessageDelete(message: MessageResponse) {
     if (!this.io) return;
-    this.io.to('duo_room').emit('message:deleted', message);
+    this.io.to(`conv_${message.conversationId}`).emit('message:deleted', message);
   }
 
   static broadcastPresence(
@@ -303,20 +321,11 @@ export class SocketService {
     lastSeen: Date | null = null
   ) {
     if (!this.io) return;
-    this.io.to('duo_room').emit('presence:update', {
+    this.io.emit('presence:update', {
       userId,
       username,
       status,
       lastSeen: lastSeen ? lastSeen.toISOString() : null,
-    });
-  }
-
-  static broadcastTyping(userId: string, username: string, isTyping: boolean) {
-    if (!this.io) return;
-    this.io.to('duo_room').emit('typing:status', {
-      userId,
-      username,
-      isTyping,
     });
   }
 

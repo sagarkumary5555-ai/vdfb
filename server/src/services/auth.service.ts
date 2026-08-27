@@ -6,45 +6,62 @@ import { UserJWTPayload, UserResponse } from '../types/index.js';
 
 export class AuthService {
   /**
-   * Authenticate a user (strictly 'sagar' or 'something')
+   * Register a new user account (Multi-user open registration)
    */
-  static async login(
-    usernameInput: string,
-    passwordInput: string,
+  static async register(
+    params: {
+      username: string;
+      password: string;
+      displayName?: string;
+      avatarUrl?: string;
+      bio?: string;
+    },
     metadata?: { userAgent?: string; ipAddress?: string }
   ) {
-    const normalizedUsername = usernameInput.trim().toLowerCase();
+    const normalizedUsername = params.username.trim().toLowerCase();
 
-    // Check if user is one of the two authorized accounts
-    if (
-      normalizedUsername !== config.authorizedUsers.sagar &&
-      normalizedUsername !== config.authorizedUsers.something
-    ) {
-      throw new Error('Access denied: Unauthorized user.');
+    // Validate username syntax (alphanumeric, underscores, dots)
+    const usernameRegex = /^[a-z0-9_.]+$/;
+    if (normalizedUsername.length < 3 || normalizedUsername.length > 30 || !usernameRegex.test(normalizedUsername)) {
+      throw new Error('Username must be 3-30 characters long and contain only lowercase letters, numbers, underscores, or dots.');
     }
 
-    const user = await prisma.user.findUnique({
+    if (!params.password || params.password.length < 4) {
+      throw new Error('Password must be at least 4 characters long.');
+    }
+
+    const existingUser = await prisma.user.findUnique({
       where: { username: normalizedUsername },
     });
 
-    if (!user) {
-      throw new Error('Invalid credentials.');
+    if (existingUser) {
+      throw new Error('Username is already taken. Please choose another.');
     }
 
-    const isPasswordValid = await bcrypt.compare(passwordInput, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new Error('Invalid credentials.');
-    }
+    const passwordHash = await bcrypt.hash(params.password, 10);
+    const displayName = params.displayName?.trim() || params.username.trim();
+    const avatarUrl =
+      params.avatarUrl?.trim() ||
+      `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(normalizedUsername)}&backgroundColor=18181b`;
 
-    // Session duration: 30 days
+    const user = await prisma.user.create({
+      data: {
+        username: normalizedUsername,
+        passwordHash,
+        displayName,
+        avatarUrl,
+        customStatus: 'Available',
+      },
+    });
+
+    // Create session in DB
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    // Create session in DB
     const session = await prisma.session.create({
       data: {
         userId: user.id,
-        token: '', // Placeholder updated right after signing
+        token: '',
         userAgent: metadata?.userAgent,
         ipAddress: metadata?.ipAddress,
         expiresAt,
@@ -60,13 +77,68 @@ export class AuthService {
 
     const token = jwt.sign(payload, config.jwtSecret, { expiresIn: '30d' });
 
-    // Store token in session record
     await prisma.session.update({
       where: { id: session.id },
       data: { token },
     });
 
-    // Update user lastSeen
+    return {
+      token,
+      user: this.formatUser(user),
+    };
+  }
+
+  /**
+   * Authenticate any registered user
+   */
+  static async login(
+    usernameInput: string,
+    passwordInput: string,
+    metadata?: { userAgent?: string; ipAddress?: string }
+  ) {
+    const normalizedUsername = usernameInput.trim().toLowerCase();
+
+    const user = await prisma.user.findUnique({
+      where: { username: normalizedUsername },
+    });
+
+    if (!user) {
+      throw new Error('User not found. Please register an account.');
+    }
+
+    const isPasswordValid = await bcrypt.compare(passwordInput, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new Error('Incorrect password.');
+    }
+
+    // Session duration: 30 days
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const session = await prisma.session.create({
+      data: {
+        userId: user.id,
+        token: '',
+        userAgent: metadata?.userAgent,
+        ipAddress: metadata?.ipAddress,
+        expiresAt,
+      },
+    });
+
+    const payload: UserJWTPayload = {
+      userId: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      sessionId: session.id,
+    };
+
+    const token = jwt.sign(payload, config.jwtSecret, { expiresIn: '30d' });
+
+    await prisma.session.update({
+      where: { id: session.id },
+      data: { token },
+    });
+
     await prisma.user.update({
       where: { id: user.id },
       data: { lastSeen: new Date() },
@@ -113,6 +185,40 @@ export class AuthService {
   }
 
   /**
+   * Search users for Instagram-style DM discovery
+   */
+  static async searchUsers(query: string, currentUserId: string): Promise<UserResponse[]> {
+    const q = query.trim().toLowerCase().replace(/^@/, '');
+    if (!q) {
+      // Return top active recent users
+      const users = await prisma.user.findMany({
+        where: { id: { not: currentUserId } },
+        take: 20,
+        orderBy: { updatedAt: 'desc' },
+      });
+      return users.map((u) => this.formatUser(u));
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        AND: [
+          { id: { not: currentUserId } },
+          {
+            OR: [
+              { username: { contains: q } },
+              { displayName: { contains: q } },
+            ],
+          },
+        ],
+      },
+      take: 20,
+      orderBy: { username: 'asc' },
+    });
+
+    return users.map((u) => this.formatUser(u));
+  }
+
+  /**
    * Update user profile
    */
   static async updateProfile(
@@ -139,8 +245,8 @@ export class AuthService {
     currentPassword: string,
     newPassword: string
   ): Promise<void> {
-    if (!newPassword || newPassword.length < 6) {
-      throw new Error('New password must be at least 6 characters.');
+    if (!newPassword || newPassword.length < 4) {
+      throw new Error('New password must be at least 4 characters.');
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -157,7 +263,7 @@ export class AuthService {
   }
 
   /**
-   * Get all authorized users (Sagar & Something)
+   * Get all users
    */
   static async getAllUsers(): Promise<UserResponse[]> {
     const users = await prisma.user.findMany({

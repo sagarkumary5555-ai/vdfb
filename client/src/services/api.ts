@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, Message, Attachment, BridgeStatus, SharedMediaItem } from '../types/index.js';
+import { User, Message, Attachment, SharedMediaItem, ConversationItem } from '../types/index.js';
 
 const api = axios.create({
   baseURL: '/api',
@@ -14,6 +14,17 @@ api.interceptors.request.use((config) => {
 });
 
 export const authApi = {
+  register: async (data: {
+    username: string;
+    password: string;
+    displayName?: string;
+    avatarUrl?: string;
+    bio?: string;
+  }): Promise<{ token: string; user: User }> => {
+    const res = await api.post('/auth/register', data);
+    return res.data;
+  },
+
   login: async (username: string, password: string): Promise<{ token: string; user: User }> => {
     const res = await api.post('/auth/login', { username, password });
     return res.data;
@@ -32,13 +43,18 @@ export const authApi = {
     }
   },
 
+  searchUsers: async (query: string): Promise<{ users: User[] }> => {
+    const res = await api.get(`/auth/users/search?q=${encodeURIComponent(query)}`);
+    return res.data;
+  },
+
   updateProfile: async (data: { displayName?: string; avatarUrl?: string; customStatus?: string }): Promise<{ user: User }> => {
-    const res = await api.patch('/auth/profile', data);
+    const res = await api.put('/auth/profile', data);
     return res.data;
   },
 
   changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
-    await api.post('/auth/change-password', { currentPassword, newPassword });
+    await api.put('/auth/password', { currentPassword, newPassword });
   },
 
   getUsers: async (): Promise<{ users: User[] }> => {
@@ -48,11 +64,23 @@ export const authApi = {
 };
 
 export const messageApi = {
+  getConversations: async (): Promise<{ conversations: ConversationItem[] }> => {
+    const res = await api.get('/messages/conversations');
+    return res.data;
+  },
+
+  getOrCreateDirect: async (targetUserId: string): Promise<{ conversation: any }> => {
+    const res = await api.post('/messages/conversations/direct', { targetUserId });
+    return res.data;
+  },
+
   getMessages: async (
+    conversationId?: string,
     limit = 50,
     cursor?: string
   ): Promise<{ messages: Message[]; nextCursor: string | null; hasMore: boolean }> => {
     const params = new URLSearchParams();
+    if (conversationId) params.append('conversationId', conversationId);
     if (limit) params.append('limit', String(limit));
     if (cursor) params.append('cursor', cursor);
 
@@ -60,13 +88,15 @@ export const messageApi = {
     return res.data;
   },
 
-  getPinnedMessages: async (): Promise<{ pinned: Message[] }> => {
-    const res = await api.get('/messages/pinned');
+  getPinnedMessages: async (conversationId?: string): Promise<{ pinned: Message[] }> => {
+    const url = conversationId ? `/messages/pinned?conversationId=${conversationId}` : '/messages/pinned';
+    const res = await api.get(url);
     return res.data;
   },
 
-  getSharedMedia: async (): Promise<{ media: SharedMediaItem[] }> => {
-    const res = await api.get('/messages/media');
+  getSharedMedia: async (conversationId?: string): Promise<{ media: SharedMediaItem[] }> => {
+    const url = conversationId ? `/messages/media?conversationId=${conversationId}` : '/messages/media';
+    const res = await api.get(url);
     return res.data;
   },
 
@@ -82,6 +112,7 @@ export const messageApi = {
 
   searchMessages: async (params: {
     query?: string;
+    conversationId?: string;
     senderId?: string;
     startDate?: string;
     endDate?: string;
@@ -89,6 +120,7 @@ export const messageApi = {
   }): Promise<{ messages: Message[] }> => {
     const queryParams = new URLSearchParams();
     if (params.query) queryParams.append('q', params.query);
+    if (params.conversationId) queryParams.append('conversationId', params.conversationId);
     if (params.senderId) queryParams.append('senderId', params.senderId);
     if (params.startDate) queryParams.append('startDate', params.startDate);
     if (params.endDate) queryParams.append('endDate', params.endDate);
@@ -99,6 +131,8 @@ export const messageApi = {
   },
 
   sendMessage: async (data: {
+    conversationId?: string;
+    recipientId?: string;
     content: string;
     replyToId?: string | null;
     attachments?: Array<{
@@ -123,8 +157,8 @@ export const messageApi = {
     return res.data;
   },
 
-  markRead: async (): Promise<{ success: boolean; count: number }> => {
-    const res = await api.post('/messages/read');
+  markRead: async (conversationId?: string): Promise<{ success: boolean; count: number }> => {
+    const res = await api.post('/messages/read', { conversationId });
     return res.data;
   },
 };
@@ -157,19 +191,5 @@ export const uploadApi = {
   getProtectedFileUrl: (filename: string): string => {
     const token = localStorage.getItem('auth_token');
     return `/api/uploads/${filename}?token=${encodeURIComponent(token || '')}`;
-  },
-};
-
-export const systemApi = {
-  getStatus: async (): Promise<{
-    status: string;
-    uptime: number;
-    database: string;
-    totalMessages: number;
-    totalUsers: number;
-    bridge: BridgeStatus;
-  }> => {
-    const res = await api.get('/system/status');
-    return res.data;
   },
 };

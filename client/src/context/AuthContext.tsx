@@ -8,6 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  register: (data: { username: string; password: string; displayName?: string; avatarUrl?: string; bio?: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: { displayName?: string; avatarUrl?: string; customStatus?: string }) => Promise<void>;
   changePassword: (current: string, next: string) => Promise<void>;
@@ -57,6 +58,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const register = async (regData: { username: string; password: string; displayName?: string; avatarUrl?: string; bio?: string }) => {
+    const data = await authApi.register(regData);
+    localStorage.setItem('auth_token', data.token);
+    setUser(data.user);
+    try {
+      const usersData = await authApi.getUsers();
+      setAllUsers(usersData.users);
+    } catch {
+      // Ignore
+    }
+  };
+
   const logout = async () => {
     await authApi.logout();
     localStorage.removeItem('auth_token');
@@ -66,7 +79,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateProfile = async (data: { displayName?: string; avatarUrl?: string; customStatus?: string }) => {
     const updated = await authApi.updateProfile(data);
     setUser(updated.user);
-    // Also update allUsers
     setAllUsers((prev) => prev.map((u) => (u.id === updated.user.id ? updated.user : u)));
   };
 
@@ -83,7 +95,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Find partner user (if Sagar -> Something; if Something -> Sagar)
   const partnerUser = allUsers.find((u) => u.id !== user?.id) || null;
 
   return (
@@ -94,6 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: Boolean(user),
         isLoading,
         login,
+        register,
         logout,
         updateProfile,
         changePassword,

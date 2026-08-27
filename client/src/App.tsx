@@ -12,6 +12,7 @@ import { MediaLightbox } from './components/Chat/MediaLightbox.js';
 import { SearchModal } from './components/Chat/SearchModal.js';
 import { SettingsModal } from './components/Chat/SettingsModal.js';
 import { SharedMediaModal } from './components/Chat/SharedMediaModal.js';
+import { NewChatModal } from './components/Chat/NewChatModal.js';
 import { ConnectionBanner } from './components/Chat/ConnectionBanner.js';
 import { DragDropOverlay } from './components/Chat/DragDropOverlay.js';
 import { CallModal } from './components/Chat/CallModal.js';
@@ -19,21 +20,8 @@ import { IncomingCallDialog } from './components/Chat/IncomingCallDialog.js';
 import { uploadApi } from './services/api.js';
 
 const ChatContent: React.FC = () => {
-  const { sendMessage } = useChat();
+  const { sendMessage, isSidebarOpen } = useChat();
   const [isDragging, setIsDragging] = useState(false);
-
-  // Dynamic wallpaper appearance state
-  const [wallpaperBlur, setWallpaperBlur] = useState(() => localStorage.getItem('app_wallpaper_blur') || '3');
-  const [wallpaperTint, setWallpaperTint] = useState(() => localStorage.getItem('app_wallpaper_tint') || '45');
-
-  useEffect(() => {
-    const handleSettingsChanged = () => {
-      setWallpaperBlur(localStorage.getItem('app_wallpaper_blur') || '3');
-      setWallpaperTint(localStorage.getItem('app_wallpaper_tint') || '45');
-    };
-    window.addEventListener('wallpaper-settings-changed', handleSettingsChanged);
-    return () => window.removeEventListener('wallpaper-settings-changed', handleSettingsChanged);
-  }, []);
 
   // Global Drag & Drop Handler
   useEffect(() => {
@@ -88,27 +76,16 @@ const ChatContent: React.FC = () => {
     };
   }, [sendMessage]);
 
-  const tintOpacity = parseInt(wallpaperTint, 10) / 100;
-
   return (
-    <div className="relative flex h-[100dvh] w-screen app-bg overflow-hidden font-sans select-none">
-      {/* Dynamic Ambient Glassmorphic Tint Overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none transition-all duration-300"
-        style={{
-          backgroundColor: `rgba(6, 9, 15, ${tintOpacity})`,
-          backdropFilter: `blur(${wallpaperBlur}px)`,
-          WebkitBackdropFilter: `blur(${wallpaperBlur}px)`,
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-dark-950/60 via-transparent to-dark-950/20 pointer-events-none" />
-
+    <div className="relative flex h-[100dvh] w-screen bg-[#000000] overflow-hidden font-sans select-none text-zinc-100">
       <div className="relative z-10 flex w-full h-full">
-        {/* Left Desktop Sidebar */}
-        <ChatSidebar />
+        {/* Left Sidebar (Desktop always visible, Mobile conditional) */}
+        <div className={`${isSidebarOpen ? 'flex' : 'hidden'} lg:flex w-full lg:w-80 h-full flex-shrink-0`}>
+          <ChatSidebar />
+        </div>
 
         {/* Center Main Messenger Container */}
-        <main className="relative flex flex-col flex-1 h-[100dvh] mx-auto w-full md:bg-dark-950/35 md:backdrop-blur-xl shadow-2xl overflow-hidden">
+        <main className={`${!isSidebarOpen ? 'flex' : 'hidden'} lg:flex relative flex-col flex-1 h-[100dvh] mx-auto w-full bg-[#0a0a0c] overflow-hidden`}>
           <ChatHeader />
           <ConnectionBanner />
           <PinnedMessagesBanner />
@@ -122,6 +99,7 @@ const ChatContent: React.FC = () => {
       <SearchModal />
       <SettingsModal />
       <SharedMediaModal />
+      <NewChatModal />
       <DragDropOverlay isDragging={isDragging} />
 
       {/* WebRTC Live Calling Overlays */}
@@ -136,12 +114,11 @@ export const ChatApp: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="relative flex h-[100dvh] w-screen items-center justify-center app-bg overflow-hidden">
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
+      <div className="relative flex h-[100dvh] w-screen items-center justify-center bg-black overflow-hidden">
         <div className="relative z-10 flex flex-col items-center gap-3">
-          <div className="w-9 h-9 border-3 border-brand-pink border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-semibold text-white/90 tracking-wide drop-shadow-md">
-            Opening private duo space...
+          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-semibold text-zinc-300 tracking-wide">
+            Connecting...
           </span>
         </div>
       </div>

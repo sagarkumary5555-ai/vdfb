@@ -5,6 +5,8 @@ import { SocketService } from '../services/socket.service.js';
 import { AuthRequest } from '../middleware/auth.middleware.js';
 
 const sendMessageSchema = z.object({
+  conversationId: z.string().optional(),
+  recipientId: z.string().optional(),
   content: z.string().max(4000).default(''),
   replyToId: z.string().optional().nullable(),
   attachments: z
@@ -15,7 +17,6 @@ const sendMessageSchema = z.object({
         mimeType: z.string(),
         size: z.number(),
         storagePath: z.string(),
-        discordUrl: z.string().optional().nullable(),
       })
     )
     .optional(),
@@ -23,14 +24,53 @@ const sendMessageSchema = z.object({
 
 export class MessageController {
   /**
-   * Get messages
+   * Get user's conversation list (Instagram-style inbox)
+   */
+  static async getConversations(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      const conversations = await MessageService.getUserConversations(req.user.id);
+      res.json({ conversations });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch conversations' });
+    }
+  }
+
+  /**
+   * Start or get direct conversation with a specific user
+   */
+  static async getOrCreateDirect(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      const { targetUserId } = req.body;
+      if (!targetUserId) {
+        res.status(400).json({ error: 'targetUserId is required' });
+        return;
+      }
+
+      const conversation = await MessageService.getOrCreateDirectConversation(req.user.id, targetUserId);
+      res.json({ conversation });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to start conversation' });
+    }
+  }
+
+  /**
+   * Get messages in a conversation
    */
   static async getMessages(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const conversationId = req.query.conversationId as string | undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
       const cursor = req.query.cursor as string | undefined;
 
-      const result = await MessageService.getMessages({ limit, cursor });
+      const result = await MessageService.getMessages({ conversationId, limit, cursor });
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch messages' });
@@ -42,7 +82,8 @@ export class MessageController {
    */
   static async getPinned(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const pinned = await MessageService.getPinnedMessages();
+      const conversationId = req.query.conversationId as string | undefined;
+      const pinned = await MessageService.getPinnedMessages(conversationId);
       res.json({ pinned });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch pinned messages' });
@@ -54,7 +95,8 @@ export class MessageController {
    */
   static async getSharedMedia(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const media = await MessageService.getSharedMedia();
+      const conversationId = req.query.conversationId as string | undefined;
+      const media = await MessageService.getSharedMedia(conversationId);
       res.json({ media });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch media' });
@@ -67,16 +109,14 @@ export class MessageController {
   static async searchMessages(req: AuthRequest, res: Response): Promise<void> {
     try {
       const query = req.query.q as string | undefined;
+      const conversationId = req.query.conversationId as string | undefined;
       const senderId = req.query.senderId as string | undefined;
-      const startDate = req.query.startDate as string | undefined;
-      const endDate = req.query.endDate as string | undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
 
       const messages = await MessageService.searchMessages({
         query,
+        conversationId,
         senderId,
-        startDate,
-        endDate,
         limit,
       });
 
@@ -102,7 +142,7 @@ export class MessageController {
         return;
       }
 
-      const { content, replyToId, attachments } = parsed.data;
+      const { content, conversationId, recipientId, replyToId, attachments } = parsed.data;
 
       if (!content.trim() && (!attachments || attachments.length === 0)) {
         res.status(400).json({ error: 'Message content or attachment is required' });
@@ -110,7 +150,9 @@ export class MessageController {
       }
 
       const message = await MessageService.createMessage({
+        conversationId,
         senderId: req.user.id,
+        recipientId,
         content: content.trim(),
         source: 'website',
         replyToId,
@@ -247,7 +289,8 @@ export class MessageController {
         return;
       }
 
-      const readIds = await MessageService.markAllAsRead(req.user.id);
+      const conversationId = req.body.conversationId as string | undefined;
+      const readIds = await MessageService.markAllAsRead(req.user.id, conversationId);
       res.json({ success: true, count: readIds.length });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to mark read' });
