@@ -13,15 +13,14 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useCall } from '../../context/CallContext.js';
-import { useAuth } from '../../context/AuthContext.js';
 import { Avatar } from '../Common/Avatar.js';
 
 export const CallModal: React.FC = () => {
-  const { user } = useAuth();
   const {
     callState,
     callType,
     callerInfo,
+    activePartnerInfo,
     localStream,
     remoteStream,
     isMuted,
@@ -42,7 +41,7 @@ export const CallModal: React.FC = () => {
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteAudioFallbackRef = useRef<HTMLAudioElement | null>(null);
+  const modalAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Attach local media stream
   useEffect(() => {
@@ -51,24 +50,24 @@ export const CallModal: React.FC = () => {
     }
   }, [localStream, isPip]);
 
-  // Attach remote media stream to both video (if video call) and audio fallback
+  // Attach remote media stream
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch(() => {});
     }
-    if (remoteAudioFallbackRef.current && remoteStream) {
-      remoteAudioFallbackRef.current.srcObject = remoteStream;
-      remoteAudioFallbackRef.current.volume = 1.0;
-      remoteAudioFallbackRef.current.play().catch(() => {});
+    if (modalAudioRef.current && remoteStream) {
+      modalAudioRef.current.srcObject = remoteStream;
+      modalAudioRef.current.volume = 1.0;
+      modalAudioRef.current.play().catch(() => {});
     }
   }, [remoteStream, isPip]);
 
   if (callState === 'idle' || callState === 'incoming') return null;
 
-  const partnerName = callerInfo?.callerName || (user?.username === 'sagar' ? 'Something' : 'Sagar');
-  const partnerUsername = callerInfo?.callerUsername || (user?.username === 'sagar' ? 'something' : 'sagar');
-  const partnerAvatar = callerInfo?.callerAvatar || null;
+  const partnerName = activePartnerInfo?.displayName || callerInfo?.callerName || 'Friend';
+  const partnerUsername = activePartnerInfo?.username || callerInfo?.callerUsername || 'user';
+  const partnerAvatar = activePartnerInfo?.avatarUrl || callerInfo?.callerAvatar || null;
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -82,8 +81,7 @@ export const CallModal: React.FC = () => {
   if (isPip) {
     return (
       <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 w-64 sm:w-72 bg-[#121215] rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-slide-up flex flex-col select-none">
-        {/* Hidden Guaranteed Audio Receiver */}
-        <audio ref={remoteAudioFallbackRef} autoPlay playsInline />
+        <audio ref={modalAudioRef} autoPlay playsInline />
 
         {/* PiP Video or Audio Header */}
         <div className="relative h-36 bg-[#09090b] flex items-center justify-center overflow-hidden">
@@ -96,15 +94,13 @@ export const CallModal: React.FC = () => {
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-3">
-              <div className="relative">
-                <Avatar
-                  name={partnerName}
-                  username={partnerUsername}
-                  avatarUrl={partnerAvatar}
-                  size="md"
-                  className="ring-2 ring-white/30 animate-pulse"
-                />
-              </div>
+              <Avatar
+                name={partnerName}
+                username={partnerUsername}
+                avatarUrl={partnerAvatar}
+                size="lg"
+                className="shadow-lg"
+              />
               <div className="text-xs font-bold text-white mt-1.5 truncate max-w-[180px]">
                 {partnerName}
               </div>
@@ -168,8 +164,7 @@ export const CallModal: React.FC = () => {
   // ========================================================
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-2xl animate-fade-in select-none">
-      {/* Hidden Guaranteed Audio Receiver */}
-      <audio ref={remoteAudioFallbackRef} autoPlay playsInline />
+      <audio ref={modalAudioRef} autoPlay playsInline />
 
       <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-3xl sm:aspect-[16/10] bg-[#09090b] rounded-none sm:rounded-3xl border-0 sm:border border-white/15 shadow-2xl overflow-hidden flex flex-col">
         {/* Remote Video Stream / Full Background */}
@@ -185,22 +180,23 @@ export const CallModal: React.FC = () => {
         ) : (
           /* Voice Call Visualizer */
           <div className="relative flex-1 w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#121215] via-[#09090b] to-black">
-            {/* Glowing Partner Avatar */}
-            <div className="relative my-4">
+            {/* Circular Partner Avatar (No square box) */}
+            <div className="my-5 flex items-center justify-center">
               <Avatar
                 name={partnerName}
                 username={partnerUsername}
                 avatarUrl={partnerAvatar}
-                size="lg"
-                className="relative z-10 w-28 h-28 ring-4 ring-white/20 shadow-2xl"
+                size="3xl"
+                className="shadow-2xl ring-4 ring-white/15"
               />
             </div>
 
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight drop-shadow-md">
               {partnerName}
             </h2>
+            <p className="text-xs text-zinc-400 mt-0.5">@{partnerUsername}</p>
 
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300 mt-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300 mt-2">
               {callState === 'calling' ? (
                 <span className="flex items-center gap-1.5 text-zinc-400">
                   <span className="w-2 h-2 rounded-full bg-white animate-ping" />

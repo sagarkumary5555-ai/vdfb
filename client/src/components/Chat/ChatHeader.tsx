@@ -110,7 +110,14 @@ export const ChatHeader: React.FC = () => {
         {!isGroup && activePartner && (
           <>
             <button
-              onClick={() => startCall('audio', activePartner.id)}
+              onClick={() =>
+                startCall('audio', {
+                  id: activePartner.id,
+                  displayName: activePartner.displayName,
+                  username: activePartner.username,
+                  avatarUrl: activePartner.avatarUrl,
+                })
+              }
               disabled={callState !== 'idle'}
               className="p-2 sm:p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/15 active:scale-95 transition border border-white/10 disabled:opacity-30"
               title={`Voice Call with ${activePartner.displayName}`}
@@ -119,7 +126,14 @@ export const ChatHeader: React.FC = () => {
             </button>
 
             <button
-              onClick={() => startCall('video', activePartner.id)}
+              onClick={() =>
+                startCall('video', {
+                  id: activePartner.id,
+                  displayName: activePartner.displayName,
+                  username: activePartner.username,
+                  avatarUrl: activePartner.avatarUrl,
+                })
+              }
               disabled={callState !== 'idle'}
               className="p-2 sm:p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/15 active:scale-95 transition border border-white/10 disabled:opacity-30"
               title={`Video Call with ${activePartner.displayName}`}

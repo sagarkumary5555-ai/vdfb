@@ -7,7 +7,7 @@ export const config = {
   port: parseInt(process.env.PORT || '4000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
-  jwtSecret: process.env.JWT_SECRET || 'fallback_secret_sagar_something_duo_private_2026',
+  jwtSecret: process.env.JWT_SECRET || 'chatus_pro_super_secure_universal_jwt_secret_token_key_2026',
   uploadDir: path.resolve(process.env.UPLOAD_DIR || './uploads'),
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '50', 10),
   

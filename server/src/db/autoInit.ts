@@ -123,7 +123,28 @@ export async function ensureDatabaseReady() {
     try {
       await prisma.$executeRawUnsafe(sql);
     } catch (err) {
-      console.error('Schema SQL notice:', err);
+      // Safe ignore
+    }
+  }
+
+  // Safe progressive column migrations
+  const alterStatements = [
+    `ALTER TABLE "User" ADD COLUMN "bio" TEXT;`,
+    `ALTER TABLE "User" ADD COLUMN "customStatus" TEXT;`,
+    `ALTER TABLE "User" ADD COLUMN "avatarUrl" TEXT;`,
+    `ALTER TABLE "Message" ADD COLUMN "reactions" TEXT NOT NULL DEFAULT '[]';`,
+    `ALTER TABLE "Message" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'sent';`,
+    `ALTER TABLE "Message" ADD COLUMN "isPinned" BOOLEAN NOT NULL DEFAULT false;`,
+    `ALTER TABLE "Message" ADD COLUMN "isEdited" BOOLEAN NOT NULL DEFAULT false;`,
+    `ALTER TABLE "Message" ADD COLUMN "isDeleted" BOOLEAN NOT NULL DEFAULT false;`,
+    `ALTER TABLE "Conversation" ADD COLUMN "isGroup" BOOLEAN NOT NULL DEFAULT false;`,
+  ];
+
+  for (const alterSql of alterStatements) {
+    try {
+      await prisma.$executeRawUnsafe(alterSql);
+    } catch {
+      // Ignored if column already exists in SQLite
     }
   }
 

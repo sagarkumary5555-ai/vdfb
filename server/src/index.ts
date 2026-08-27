@@ -88,8 +88,8 @@ async function start() {
 
   server.listen(config.port, () => {
     console.log(`\n======================================================`);
-    console.log(`✨ Private Standalone Duo Chat Server running on port ${config.port}`);
-    console.log(`🔒 Strictly restricted to: Sagar & Something`);
+    console.log(`🚀 ChatUs PRO Social Messenger Server running on port ${config.port}`);
+    console.log(`✨ Universal Multi-User Platform Ready with HD WebRTC Voice & Video`);
     console.log(`🌐 Local Web: http://localhost:${config.port}`);
     console.log(`======================================================\n`);
   });

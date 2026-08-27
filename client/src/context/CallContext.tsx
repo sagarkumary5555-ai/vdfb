@@ -6,6 +6,13 @@ import { AudioDspService } from '../services/audioDsp.js';
 export type CallState = 'idle' | 'calling' | 'incoming' | 'connected' | 'ended';
 export type CallType = 'audio' | 'video';
 
+export interface ActivePartnerInfo {
+  id: string;
+  displayName: string;
+  username: string;
+  avatarUrl?: string | null;
+}
+
 interface CallerInfo {
   callerId: string;
   callerName: string;
@@ -25,6 +32,7 @@ interface CallContextType {
   callState: CallState;
   callType: CallType;
   callerInfo: CallerInfo | null;
+  activePartnerInfo: ActivePartnerInfo | null;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
   isMuted: boolean;
@@ -34,7 +42,7 @@ interface CallContextType {
   voiceIsolation: boolean;
   peerMedia: PeerMediaState;
   callDuration: number;
-  startCall: (type: CallType, targetUserId: string) => Promise<void>;
+  startCall: (type: CallType, targetUser: ActivePartnerInfo) => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
   endCall: () => void;
@@ -54,7 +62,19 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    {
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp'
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
   ],
+  iceCandidatePoolSize: 10,
 };
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
@@ -65,6 +85,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [callState, setCallState] = useState<CallState>('idle');
   const [callType, setCallType] = useState<CallType>('audio');
   const [callerInfo, setCallerInfo] = useState<CallerInfo | null>(null);
+  const [activePartnerInfo, setActivePartnerInfo] = useState<ActivePartnerInfo | null>(null);
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -136,6 +157,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       remoteAudioRef.current.srcObject = null;
     }
     targetUserIdRef.current = null;
+    setActivePartnerInfo(null);
+    setCallerInfo(null);
     setIsMuted(false);
     setIsVideoOff(false);
     setIsScreenSharing(false);
@@ -156,6 +179,12 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       targetUserIdRef.current = data.callerId;
       pendingCandidatesRef.current = [];
       setCallerInfo(data);
+      setActivePartnerInfo({
+        id: data.callerId,
+        displayName: data.callerName,
+        username: data.callerUsername,
+        avatarUrl: data.callerAvatar,
+      });
       setCallType(data.type);
       setCallState('incoming');
       callSound.playIncomingRing();
@@ -266,12 +295,21 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       remoteStreamRef.current = stream;
       setRemoteStream(stream);
 
-      // Connect to audio element so voice ALWAYS plays loudly and clearly
+      // Play audio on remoteAudioRef
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = stream;
         remoteAudioRef.current.volume = 1.0;
         remoteAudioRef.current.muted = false;
-        remoteAudioRef.current.play().catch((e) => console.log('Audio autoplay trigger:', e));
+        remoteAudioRef.current.play().catch((err) => {
+          console.warn('Audio play error, retrying on user click:', err);
+          const resumeAudio = () => {
+            remoteAudioRef.current?.play().catch(() => {});
+            window.removeEventListener('click', resumeAudio);
+            window.removeEventListener('touchstart', resumeAudio);
+          };
+          window.addEventListener('click', resumeAudio, { once: true });
+          window.addEventListener('touchstart', resumeAudio, { once: true });
+        });
       }
     };
 
@@ -326,18 +364,19 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Start outgoing call
-  const startCall = async (type: CallType, targetUserId: string) => {
+  const startCall = async (type: CallType, targetUser: ActivePartnerInfo) => {
     if (!socket || !isConnected) {
       alert('Cannot start call: Not connected to chat server.');
       return;
     }
-    if (!targetUserId) {
+    if (!targetUser || !targetUser.id) {
       alert('Cannot start call: No recipient selected.');
       return;
     }
 
     try {
-      targetUserIdRef.current = targetUserId;
+      targetUserIdRef.current = targetUser.id;
+      setActivePartnerInfo(targetUser);
       pendingCandidatesRef.current = [];
       setCallType(type);
       setCallState('calling');
@@ -350,14 +389,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const pc = createPeerConnection();
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: type === 'video',
-      });
+      const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
       socket.emit('call:initiate', {
-        targetUserId,
+        targetUserId: targetUser.id,
         type,
         offer,
       });
@@ -598,6 +634,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         callState,
         callType,
         callerInfo,
+        activePartnerInfo,
         localStream,
         remoteStream,
         isMuted,
