@@ -1,67 +1,70 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding initial data for Sagar & Something...');
+  console.log('🌱 Seeding database with Sagar and Something accounts...');
 
-  // Default avatars with stylish modern SVG data URIs
-  const sagarAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=Sagar&backgroundColor=1e293b';
-  const somethingAvatar = 'https://api.dicebear.com/7.x/lorelei/svg?seed=Something&backgroundColor=31102f';
+  const sagarPass = '99313935287549051214';
+  const somethingPass = '<yaade>';
 
-  const sagarPasswordHash = await bcrypt.hash('99313935287549051214', 10);
-  const somethingPasswordHash = await bcrypt.hash('<yaade>', 10);
+  const sagarHash = await bcrypt.hash(sagarPass, 10);
+  const somethingHash = await bcrypt.hash(somethingPass, 10);
 
-  // 1. Create or update Sagar user with password '99313935287549051214'
   const sagar = await prisma.user.upsert({
     where: { username: 'sagar' },
     update: {
-      passwordHash: sagarPasswordHash,
+      passwordHash: sagarHash,
+      displayName: 'Sagar',
     },
     create: {
       username: 'sagar',
-      passwordHash: sagarPasswordHash,
+      passwordHash: sagarHash,
       displayName: 'Sagar',
-      avatarUrl: sagarAvatar,
-      customStatus: 'Coding & Building ✨',
+      avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sagar&backgroundColor=18181b',
+      customStatus: 'Available',
     },
   });
 
-  // 2. Create or update Something user with exact password '<yaade>'
   const something = await prisma.user.upsert({
     where: { username: 'something' },
     update: {
-      passwordHash: somethingPasswordHash,
+      passwordHash: somethingHash,
+      displayName: 'Something',
     },
     create: {
       username: 'something',
-      passwordHash: somethingPasswordHash,
-      displayName: 'Something ❤️',
-      avatarUrl: somethingAvatar,
-      customStatus: 'In my own little world 🌸',
+      passwordHash: somethingHash,
+      displayName: 'Something',
+      avatarUrl: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Something&backgroundColor=18181b',
+      customStatus: 'Available',
     },
   });
 
-  // 3. Ensure single conversation exists
-  let conversation = await prisma.conversation.findFirst();
-  if (!conversation) {
-    conversation = await prisma.conversation.create({
+  let conv = await prisma.conversation.findFirst();
+  if (!conv) {
+    conv = await prisma.conversation.create({
       data: {
-        name: 'Sagar & Something',
+        name: 'Direct Message',
+        isGroup: false,
       },
     });
-    console.log(`Created default conversation with ID: ${conversation.id}`);
+
+    await prisma.conversationParticipant.createMany({
+      data: [
+        { conversationId: conv.id, userId: sagar.id },
+        { conversationId: conv.id, userId: something.id },
+      ],
+    });
   }
 
-  console.log('✅ Seeding completed successfully!');
-  console.log(`- User 1: Sagar (username: sagar, password: 99313935287549051214)`);
-  console.log(`- User 2: Something (username: something, password: <yaade>)`);
+  console.log('✅ Sagar & Something accounts ready!');
 }
 
 main()
   .catch((e) => {
-    console.error('Seed error:', e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

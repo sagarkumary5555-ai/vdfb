@@ -127,37 +127,70 @@ export async function ensureDatabaseReady() {
     }
   }
 
-  // Seed default sample accounts if empty
+  // Guarantee that Sagar and Something accounts always exist with their exact requested passwords
   try {
-    const userCount = await prisma.user.count();
-    if (userCount === 0) {
-      console.log('🌱 Seeding initial demo users for social discovery...');
-      const defaultPassHash = await bcrypt.hash('password123', 10);
+    console.log('🔒 Guaranteeing Sagar & Something accounts with exact passwords...');
+    const sagarPassHash = await bcrypt.hash('99313935287549051214', 10);
+    const somethingPassHash = await bcrypt.hash('<yaade>', 10);
 
-      await prisma.user.create({
+    const sagarUser = await prisma.user.upsert({
+      where: { username: 'sagar' },
+      update: {
+        passwordHash: sagarPassHash,
+        displayName: 'Sagar',
+      },
+      create: {
+        username: 'sagar',
+        passwordHash: sagarPassHash,
+        displayName: 'Sagar',
+        avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sagar&backgroundColor=18181b',
+        customStatus: 'Available',
+        bio: 'Software engineer & builder.',
+      },
+    });
+
+    const somethingUser = await prisma.user.upsert({
+      where: { username: 'something' },
+      update: {
+        passwordHash: somethingPassHash,
+        displayName: 'Something',
+      },
+      create: {
+        username: 'something',
+        passwordHash: somethingPassHash,
+        displayName: 'Something',
+        avatarUrl: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Something&backgroundColor=18181b',
+        customStatus: 'Available',
+        bio: 'Designer & digital creator.',
+      },
+    });
+
+    // Ensure their direct conversation exists
+    const existingConv = await prisma.conversation.findFirst({
+      where: {
+        participants: {
+          some: { userId: sagarUser.id },
+        },
+      },
+    });
+
+    if (!existingConv) {
+      const createdConv = await prisma.conversation.create({
         data: {
-          username: 'sagar',
-          passwordHash: defaultPassHash,
-          displayName: 'Sagar',
-          avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sagar&backgroundColor=18181b',
-          customStatus: 'Building next-gen platforms ⚡',
-          bio: 'Software engineer & builder.',
+          name: 'Direct Message',
+          isGroup: false,
         },
       });
 
-      await prisma.user.create({
-        data: {
-          username: 'something',
-          passwordHash: defaultPassHash,
-          displayName: 'Something',
-          avatarUrl: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Something&backgroundColor=18181b',
-          customStatus: 'Vibing & creating 🌸',
-          bio: 'Designer & digital creator.',
-        },
+      await prisma.conversationParticipant.createMany({
+        data: [
+          { conversationId: createdConv.id, userId: sagarUser.id },
+          { conversationId: createdConv.id, userId: somethingUser.id },
+        ],
       });
-
-      console.log('✅ Demo accounts seeded!');
     }
+
+    console.log('✅ Accounts for Sagar (pass: 99313935287549051214) & Something (pass: <yaade>) are active!');
   } catch (err) {
     console.error('Seeding notice:', err);
   }

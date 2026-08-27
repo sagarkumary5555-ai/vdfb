@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Key, Volume2, VolumeX, ShieldCheck, LogOut, Sliders, Sparkles, Mic, MicOff, Waves } from 'lucide-react';
+import { X, User, Key, Volume2, VolumeX, ShieldCheck, LogOut, Sliders, Sparkles, Mic, MicOff, Waves, Upload, Camera } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useChat } from '../../context/ChatContext.js';
 import { soundService } from '../../services/sound.js';
@@ -13,6 +13,7 @@ export const SettingsModal: React.FC = () => {
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [customStatus, setCustomStatus] = useState(user?.customStatus || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
+  const [isAvatarDragging, setIsAvatarDragging] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -36,6 +37,7 @@ export const SettingsModal: React.FC = () => {
   const testStreamRef = useRef<MediaStream | null>(null);
   const dspCleanupRef = useRef<(() => void) | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isSettingsOpen) {
@@ -48,6 +50,18 @@ export const SettingsModal: React.FC = () => {
       stopMicTest();
     }
   }, [isSettingsOpen, user]);
+
+  const processAvatarFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setProfileMsg({ type: 'error', text: 'Please select an image file (PNG, JPG, WebP)' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAvatarUrl(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const stopMicTest = () => {
     if (animFrameRef.current) {
@@ -174,30 +188,30 @@ export const SettingsModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-lg glass-dropdown rounded-3xl border border-white/15 shadow-2xl overflow-hidden animate-slide-up max-h-[92vh] flex flex-col">
+      <div className="relative w-full max-w-lg bg-[#121214] rounded-3xl border border-white/12 shadow-2xl overflow-hidden animate-slide-up max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <span>Room Settings</span>
-            <span className="text-[10px] text-brand-pink font-normal bg-brand-rose/15 px-2 py-0.5 rounded-full border border-brand-rose/20">
-              Private Space
+            <span>Settings</span>
+            <span className="text-[10px] text-zinc-400 font-normal bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
+              Account & Audio
             </span>
           </h2>
           <button
             onClick={() => setIsSettingsOpen(false)}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar text-zinc-100">
           {/* Section 1: Profile */}
           <form onSubmit={handleProfileSave} className="space-y-3.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5" />
-              Profile Details
+              Profile Photo & Details
             </h3>
 
             {profileMsg && (
@@ -213,44 +227,90 @@ export const SettingsModal: React.FC = () => {
               </div>
             )}
 
-            <div className="flex items-center gap-3.5">
-              <Avatar
-                name={displayName || 'User'}
-                username={user?.username}
-                avatarUrl={avatarUrl}
-                size="lg"
+            {/* Drag & Drop Avatar Uploader */}
+            <div className="flex items-center gap-4 p-3 bg-zinc-900/90 rounded-2xl border border-white/10">
+              <input
+                ref={avatarFileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => e.target.files?.[0] && processAvatarFile(e.target.files[0])}
+                className="hidden"
               />
+
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsAvatarDragging(true);
+                }}
+                onDragLeave={() => setIsAvatarDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsAvatarDragging(false);
+                  if (e.dataTransfer.files?.[0]) processAvatarFile(e.dataTransfer.files[0]);
+                }}
+                onClick={() => avatarFileInputRef.current?.click()}
+                className={`relative w-20 h-20 rounded-full border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition overflow-hidden group flex-shrink-0 ${
+                  isAvatarDragging
+                    ? 'border-white bg-white/20 scale-105'
+                    : 'border-white/20 bg-zinc-950 hover:border-white/50'
+                }`}
+              >
+                {avatarUrl ? (
+                  <>
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition">
+                      <Camera className="w-4 h-4 text-white mb-0.5" />
+                      <span className="text-[8px] text-white">Change</span>
+                    </div>
+                  </>
+                ) : (
+                  <Avatar
+                    name={displayName || 'User'}
+                    username={user?.username}
+                    size="lg"
+                  />
+                )}
+              </div>
+
               <div className="flex-1 min-w-0">
-                <label className="block text-[11px] text-slate-400 mb-1">Avatar Image URL</label>
-                <input
-                  type="text"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 bg-dark-950/80 border border-white/15 rounded-xl text-xs text-white focus:outline-none focus:border-brand-pink"
-                />
+                <div className="text-xs font-semibold text-white mb-0.5">Profile Photo</div>
+                <div className="text-[11px] text-zinc-400 leading-relaxed mb-2">
+                  Drag & drop image from PC, or browse device files.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Image</span>
+                </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Display Name</label>
+                <label className="block text-[11px] text-zinc-400 mb-1">Display Name</label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-950/80 border border-white/15 rounded-xl text-xs text-white focus:outline-none focus:border-brand-pink"
+                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
                   required
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Custom Status</label>
+                <label className="block text-[11px] text-zinc-400 mb-1">Custom Status</label>
                 <input
                   type="text"
                   value={customStatus}
                   onChange={(e) => setCustomStatus(e.target.value)}
-                  placeholder="e.g. In my own little world 🌸"
-                  className="w-full px-3 py-2 bg-dark-950/80 border border-white/15 rounded-xl text-xs text-white focus:outline-none focus:border-brand-pink"
+                  placeholder="e.g. Available"
+                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
                 />
               </div>
             </div>
@@ -259,7 +319,7 @@ export const SettingsModal: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl border border-white/15 transition active:scale-95"
+                className="px-4 py-2 bg-white text-black hover:bg-zinc-200 text-xs font-bold rounded-xl transition active:scale-95"
               >
                 Save Profile
               </button>
@@ -268,13 +328,12 @@ export const SettingsModal: React.FC = () => {
 
           {/* Section 2: Studio Voice Isolation & Dynamic Noise Gate */}
           <div className="pt-3 border-t border-white/10 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-brand-pink" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
               Studio Voice Isolation & Noise Suppression
             </h3>
 
-            <div className="p-3.5 rounded-2xl bg-dark-950/70 border border-white/10 space-y-3 text-xs">
-              {/* Voice Isolation Switch */}
+            <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-white/10 space-y-3 text-xs">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-semibold text-white flex items-center gap-1.5">
@@ -283,7 +342,7 @@ export const SettingsModal: React.FC = () => {
                       PRO DSP
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[10px] text-zinc-400">
                     Cuts AC drone, fan hum, keyboard clicks, and room echo
                   </div>
                 </div>
@@ -292,24 +351,23 @@ export const SettingsModal: React.FC = () => {
                   onClick={handleVoiceIsolationToggle}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
                     voiceIsolation
-                      ? 'bg-gradient-to-r from-brand-rose to-brand-purple text-white shadow-md'
-                      : 'bg-slate-800 text-slate-400 border border-white/10'
+                      ? 'bg-white text-black shadow'
+                      : 'bg-zinc-800 text-zinc-400 border border-white/10'
                   }`}
                 >
                   {voiceIsolation ? 'Active' : 'Disabled'}
                 </button>
               </div>
 
-              {/* Noise Gate Sensitivity Threshold Slider */}
               {voiceIsolation && (
                 <div className="pt-2 border-t border-white/5 space-y-1.5">
-                  <div className="flex items-center justify-between text-slate-300">
+                  <div className="flex items-center justify-between text-zinc-300">
                     <span className="text-[11px] flex items-center gap-1">
-                      <Waves className="w-3 h-3 text-brand-pink" />
+                      <Waves className="w-3 h-3 text-white" />
                       Noise Gate Cutoff Strength
                     </span>
-                    <span className="text-[10px] font-bold text-brand-pink">
-                      {parseInt(noiseGateStrength, 10) < 15 ? 'Soft' : parseInt(noiseGateStrength, 10) < 30 ? 'Balanced (Recommended)' : 'Aggressive Studio'}
+                    <span className="text-[10px] font-bold text-white">
+                      {parseInt(noiseGateStrength, 10) < 15 ? 'Soft' : parseInt(noiseGateStrength, 10) < 30 ? 'Balanced (Recommended)' : 'Deep Isolation'}
                     </span>
                   </div>
                   <input
@@ -319,9 +377,9 @@ export const SettingsModal: React.FC = () => {
                     step="5"
                     value={noiseGateStrength}
                     onChange={(e) => handleNoiseGateChange(e.target.value)}
-                    className="w-full accent-brand-pink cursor-pointer"
+                    className="w-full accent-white cursor-pointer"
                   />
-                  <div className="flex justify-between text-[9px] text-slate-500">
+                  <div className="flex justify-between text-[9px] text-zinc-500">
                     <span>Gentle</span>
                     <span>Standard</span>
                     <span>Deep Isolation</span>
@@ -331,7 +389,7 @@ export const SettingsModal: React.FC = () => {
 
               {/* Real-time Mic Test Meter */}
               <div className="pt-2 border-t border-white/5 space-y-2">
-                <div className="flex items-center justify-between text-slate-300">
+                <div className="flex items-center justify-between text-zinc-300">
                   <span className="text-[11px]">Live Microphone Level Test</span>
                   <button
                     type="button"
@@ -347,10 +405,9 @@ export const SettingsModal: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Level Bar */}
-                <div className="h-2.5 w-full bg-dark-900 rounded-full overflow-hidden border border-white/10 relative">
+                <div className="h-2 w-full bg-zinc-950 rounded-full overflow-hidden border border-white/10 relative">
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-brand-rose transition-all duration-75 rounded-full"
+                    className="h-full bg-white transition-all duration-75 rounded-full"
                     style={{ width: `${micLevel}%` }}
                   />
                 </div>
@@ -360,16 +417,16 @@ export const SettingsModal: React.FC = () => {
 
           {/* Section 3: Wallpaper & Glass Visuals */}
           <div className="pt-3 border-t border-white/10 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5" />
-              Wallpaper Glass & Atmosphere
+              Atmosphere & Blur
             </h3>
 
-            <div className="space-y-3 p-3.5 rounded-2xl bg-dark-950/70 border border-white/10 text-xs">
+            <div className="space-y-3 p-3.5 rounded-2xl bg-zinc-900/90 border border-white/10 text-xs">
               <div>
-                <div className="flex items-center justify-between text-slate-300 mb-1.5">
+                <div className="flex items-center justify-between text-zinc-300 mb-1.5">
                   <span>Background Blur</span>
-                  <span className="font-bold text-brand-pink">{blurLevel}px</span>
+                  <span className="font-bold text-white">{blurLevel}px</span>
                 </div>
                 <input
                   type="range"
@@ -378,14 +435,14 @@ export const SettingsModal: React.FC = () => {
                   step="1"
                   value={blurLevel}
                   onChange={(e) => handleBlurChange(e.target.value)}
-                  className="w-full accent-brand-pink cursor-pointer"
+                  className="w-full accent-white cursor-pointer"
                 />
               </div>
 
               <div>
-                <div className="flex items-center justify-between text-slate-300 mb-1.5">
+                <div className="flex items-center justify-between text-zinc-300 mb-1.5">
                   <span>Tint Darkness</span>
-                  <span className="font-bold text-brand-pink">{tintLevel}%</span>
+                  <span className="font-bold text-white">{tintLevel}%</span>
                 </div>
                 <input
                   type="range"
@@ -394,7 +451,7 @@ export const SettingsModal: React.FC = () => {
                   step="5"
                   value={tintLevel}
                   onChange={(e) => handleTintChange(e.target.value)}
-                  className="w-full accent-brand-pink cursor-pointer"
+                  className="w-full accent-white cursor-pointer"
                 />
               </div>
             </div>
@@ -402,19 +459,19 @@ export const SettingsModal: React.FC = () => {
 
           {/* Section 4: Preferences */}
           <div className="pt-3 border-t border-white/10 space-y-2.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
               Audio & Alerts
             </h3>
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-dark-950/70 border border-white/10">
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-900/90 border border-white/10">
               <div className="flex items-center gap-2.5">
                 {isMuted ? (
-                  <VolumeX className="w-5 h-5 text-slate-500" />
+                  <VolumeX className="w-5 h-5 text-zinc-500" />
                 ) : (
-                  <Volume2 className="w-5 h-5 text-brand-pink" />
+                  <Volume2 className="w-5 h-5 text-white" />
                 )}
                 <div>
                   <div className="text-xs font-medium text-white">Notification Sounds</div>
-                  <div className="text-[10px] text-slate-400">Chime for incoming and sent messages</div>
+                  <div className="text-[10px] text-zinc-400">Chime for incoming and sent messages</div>
                 </div>
               </div>
               <button
@@ -422,8 +479,8 @@ export const SettingsModal: React.FC = () => {
                 onClick={toggleSound}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition active:scale-95 ${
                   isMuted
-                    ? 'bg-slate-800 text-slate-400 border border-white/10'
-                    : 'bg-brand-rose/20 text-brand-pink border border-brand-rose/30'
+                    ? 'bg-zinc-800 text-zinc-400 border border-white/10'
+                    : 'bg-white text-black'
                 }`}
               >
                 {isMuted ? 'Muted' : 'Enabled'}
@@ -433,7 +490,7 @@ export const SettingsModal: React.FC = () => {
 
           {/* Section 5: Security & Password */}
           <form onSubmit={handlePasswordChange} className="pt-3 border-t border-white/10 space-y-2.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5" />
               Change Password
             </h3>
@@ -453,22 +510,22 @@ export const SettingsModal: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Current Password</label>
+                <label className="block text-[11px] text-zinc-400 mb-1">Current Password</label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-950/80 border border-white/15 rounded-xl text-xs text-white focus:outline-none focus:border-brand-pink"
+                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
                   required
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">New Password</label>
+                <label className="block text-[11px] text-zinc-400 mb-1">New Password</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-950/80 border border-white/15 rounded-xl text-xs text-white focus:outline-none focus:border-brand-pink"
+                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
                   required
                 />
               </div>
@@ -478,7 +535,7 @@ export const SettingsModal: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl border border-white/15 transition active:scale-95"
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold rounded-xl border border-white/15 transition active:scale-95"
               >
                 Update Password
               </button>
@@ -487,10 +544,10 @@ export const SettingsModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-3.5 sm:p-4 border-t border-white/10 flex items-center justify-between bg-dark-950/80 flex-shrink-0">
-          <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-brand-emerald" />
-            <span>Private Space</span>
+        <div className="p-3.5 sm:p-4 border-t border-white/10 flex items-center justify-between bg-[#0e0e10] flex-shrink-0">
+          <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-white" />
+            <span>Encrypted Room</span>
           </div>
 
           <button
