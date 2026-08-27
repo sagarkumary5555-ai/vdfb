@@ -26,16 +26,37 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be smaller than 10MB');
-      return;
-    }
-
     setError(null);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setAvatarPreview(result);
+      const img = document.createElement('img');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 400;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          setAvatarPreview(canvas.toDataURL('image/jpeg', 0.92));
+        } else {
+          setAvatarPreview(e.target?.result as string);
+        }
+      };
+      img.src = e.target?.result as string;
     };
     reader.readAsDataURL(file);
   };

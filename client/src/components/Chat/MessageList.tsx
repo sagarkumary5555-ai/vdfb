@@ -1,12 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { isSameDay } from 'date-fns';
-import { Lock, Heart } from 'lucide-react';
 import { useChat } from '../../context/ChatContext.js';
 import { MessageItem } from './MessageItem.js';
 import { DateSeparator } from './DateSeparator.js';
+import { Avatar } from '../Common/Avatar.js';
 
 export const MessageList: React.FC = () => {
-  const { messages, isLoading, isLoadingMore, hasMore, loadMoreMessages } = useChat();
+  const {
+    messages,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMoreMessages,
+    activeConversation,
+    activePartner,
+    sendMessage,
+  } = useChat();
+
   const listContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef<number>(0);
@@ -44,28 +54,76 @@ export const MessageList: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
-        <div className="w-7 h-7 border-2 border-brand-pink border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-medium tracking-wide text-slate-300">Opening private space...</span>
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-zinc-400">
+        <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-medium tracking-wide text-zinc-300">Loading conversation...</span>
       </div>
     );
   }
 
+  const isGroup = Boolean(activeConversation?.isGroup);
+  const partnerName = isGroup
+    ? (activeConversation?.name || 'Group Chat')
+    : (activePartner?.displayName || activeConversation?.name || 'Friend');
+  const partnerUsername = activePartner?.username || 'user';
+  const partnerAvatar = isGroup ? null : activePartner?.avatarUrl;
+
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 select-none">
-        <div className="max-w-sm text-center p-6 sm:p-8 rounded-3xl glass-panel border border-white/15 shadow-2xl backdrop-blur-2xl">
-          <div className="inline-flex p-3 rounded-2xl bg-brand-rose/15 border border-brand-rose/30 mb-3 shadow-inner">
-            <Lock className="w-6 h-6 text-brand-pink" />
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 select-none bg-[#09090b]">
+        <div className="max-w-md w-full text-center p-6 sm:p-8 rounded-3xl bg-[#111114] border border-white/10 shadow-2xl space-y-4 animate-fade-in">
+          {/* Avatar Header */}
+          <div className="flex justify-center">
+            <Avatar
+              name={partnerName}
+              username={partnerUsername}
+              avatarUrl={partnerAvatar}
+              size="xl"
+              isGroup={isGroup}
+              status={!isGroup && activePartner?.lastSeen ? 'online' : null}
+            />
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-white mb-1 drop-shadow-sm">Private Duo Space</h2>
-          <p className="text-xs text-slate-300 mb-5 leading-relaxed">
-            Encrypted conversation between <span className="font-semibold text-white">Sagar</span> &{' '}
-            <span className="font-semibold text-white">Something</span>.
-          </p>
-          <div className="inline-flex items-center gap-2 text-xs font-semibold text-brand-pink bg-brand-rose/15 px-3.5 py-1.5 rounded-full border border-brand-rose/30 shadow-sm">
-            <Heart className="w-3.5 h-3.5 fill-brand-pink" />
-            <span>Say hello to start chatting ❤️</span>
+
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+              {partnerName}
+            </h2>
+            {!isGroup && (
+              <p className="text-xs text-zinc-400 mt-0.5">@{partnerUsername}</p>
+            )}
+            {activePartner?.customStatus && !isGroup && (
+              <div className="inline-block mt-2 px-3 py-1 rounded-full bg-zinc-900 border border-white/10 text-[11px] text-zinc-300">
+                {activePartner.customStatus}
+              </div>
+            )}
+            {isGroup && (
+              <p className="text-xs text-zinc-400 mt-1">Group Conversation</p>
+            )}
+          </div>
+
+          <div className="p-3.5 bg-zinc-900/80 rounded-2xl border border-white/5 space-y-1.5">
+            <div className="text-xs text-zinc-300 font-medium">
+              Start the conversation
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              Messages and calls in this conversation are end-to-end encrypted.
+            </p>
+          </div>
+
+          {/* Quick Starter Pills */}
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <button
+              onClick={() => sendMessage('Hey! 👋')}
+              className="px-3.5 py-1.5 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5"
+            >
+              <span>Say Hello 👋</span>
+            </button>
+            <button
+              onClick={() => sendMessage('How are you doing today? ✨')}
+              className="px-3.5 py-1.5 bg-zinc-900 border border-white/10 hover:border-white/25 text-white text-xs font-semibold rounded-xl transition active:scale-95"
+            >
+              <span>How are you? ✨</span>
+            </button>
           </div>
         </div>
       </div>
@@ -76,12 +134,12 @@ export const MessageList: React.FC = () => {
     <div
       ref={listContainerRef}
       onScroll={handleScroll}
-      className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 space-y-0.5 custom-scrollbar"
+      className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 space-y-0.5 custom-scrollbar bg-[#09090b]"
     >
       {/* Top Loading Indicator */}
       {isLoadingMore && (
-        <div className="py-2 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-          <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+        <div className="py-2 text-center text-xs text-zinc-400 flex items-center justify-center gap-2">
+          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
           <span>Loading older messages...</span>
         </div>
       )}
