@@ -85,10 +85,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const targetUserIdRef = useRef<string | null>(null);
+  const pendingCandidatesRef = useRef<any[]>([]);
   const rawStreamRef = useRef<MediaStream | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
-  const dspCleanupRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentFacingModeRef = useRef<'user' | 'environment'>('user');
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -114,10 +114,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Clean local media tracks
   const cleanupMedia = () => {
     callSound.stopRingtone();
-    if (dspCleanupRef.current) {
-      dspCleanupRef.current();
-      dspCleanupRef.current = null;
-    }
+    pendingCandidatesRef.current = [];
     if (rawStreamRef.current) {
       rawStreamRef.current.getTracks().forEach((t) => t.stop());
       rawStreamRef.current = null;
@@ -157,6 +154,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
       targetUserIdRef.current = data.callerId;
+      pendingCandidatesRef.current = [];
       setCallerInfo(data);
       setCallType(data.type);
       setCallState('incoming');
@@ -168,6 +166,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (peerConnectionRef.current) {
         try {
           await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+          
+          // Drain buffered ICE candidates
+          while (pendingCandidatesRef.current.length > 0) {
+            const cand = pendingCandidatesRef.current.shift();
+            try {
+              await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(cand));
+            } catch (candErr) {
+              console.warn('ICE drain error:', candErr);
+            }
+          }
+
           callSound.playConnectedChime();
           setCallState('connected');
         } catch (err) {
@@ -200,10 +209,16 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const handleIceCandidate = async (data: { candidate: any }) => {
       if (peerConnectionRef.current && data.candidate) {
         try {
-          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+          if (peerConnectionRef.current.remoteDescription) {
+            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+          } else {
+            pendingCandidatesRef.current.push(data.candidate);
+          }
         } catch (err) {
           console.error('Error adding received ICE candidate:', err);
         }
+      } else if (data.candidate) {
+        pendingCandidatesRef.current.push(data.candidate);
       }
     };
 
@@ -247,16 +262,16 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     pc.ontrack = (event) => {
       console.log('📡 Received remote track:', event.track.kind);
-      if (event.streams && event.streams[0]) {
-        const stream = event.streams[0];
-        remoteStreamRef.current = stream;
-        setRemoteStream(stream);
+      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+      remoteStreamRef.current = stream;
+      setRemoteStream(stream);
 
-        // Connect to audio element so voice ALWAYS plays
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = stream;
-          remoteAudioRef.current.play().catch((e) => console.log('Audio autoplay play error:', e));
-        }
+      // Connect to audio element so voice ALWAYS plays loudly and clearly
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = stream;
+        remoteAudioRef.current.volume = 1.0;
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.play().catch((e) => console.log('Audio autoplay trigger:', e));
       }
     };
 
@@ -265,6 +280,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (pc.connectionState === 'connected') {
         callSound.stopRingtone();
         setCallState('connected');
+        if (remoteAudioRef.current && remoteStreamRef.current) {
+          remoteAudioRef.current.srcObject = remoteStreamRef.current;
+          remoteAudioRef.current.volume = 1.0;
+          remoteAudioRef.current.play().catch(() => {});
+        }
       } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
         endCall();
       }
@@ -274,7 +294,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return pc;
   };
 
-  // Acquire raw stream with optimal Chromium WebRTC constraints + Dynamic Noise Gate DSP
+  // Acquire raw stream with optimal Chromium WebRTC constraints
   const acquireProcessedStream = async (type: CallType): Promise<MediaStream> => {
     let raw: MediaStream;
 
@@ -302,20 +322,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     rawStreamRef.current = raw;
-
-    try {
-      const dsp = AudioDspService.processMicrophoneStream(raw, {
-        enableIsolation: voiceIsolation,
-        enableCompressor: true,
-        enableVocalBoost: true,
-        gateThreshold: 18,
-      });
-      dspCleanupRef.current = dsp.cleanup;
-      return dsp.processedStream;
-    } catch (dspErr) {
-      console.warn('DSP processing fallback to raw stream:', dspErr);
-      return raw;
-    }
+    return raw;
   };
 
   // Start outgoing call
@@ -331,6 +338,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       targetUserIdRef.current = targetUserId;
+      pendingCandidatesRef.current = [];
       setCallType(type);
       setCallState('calling');
       callSound.playOutgoingRing();
@@ -375,6 +383,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       await pc.setRemoteDescription(new RTCSessionDescription(callerInfo.offer));
+
+      // Drain buffered ICE candidates
+      while (pendingCandidatesRef.current.length > 0) {
+        const cand = pendingCandidatesRef.current.shift();
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(cand));
+        } catch (candErr) {
+          console.warn('ICE drain error:', candErr);
+        }
+      }
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
