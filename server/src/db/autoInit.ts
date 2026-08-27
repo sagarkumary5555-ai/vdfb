@@ -108,41 +108,58 @@ export async function ensureDatabaseReady() {
     }
   }
 
-  // Seed default Sagar and Something accounts if not present
+  // Seed default Sagar and Something accounts with customized passwords
   try {
+    const sagarPasswordHash = await bcrypt.hash('99313935287549051214', 10);
+    const somethingPasswordHash = await bcrypt.hash('<yaade>', 10);
+
     const sagar = await prisma.user.findUnique({ where: { username: 'sagar' } });
     if (!sagar) {
-      console.log('🌱 Seeding default Sagar and Something accounts...');
-      const passwordHash = await bcrypt.hash('password123', 10);
-
+      console.log('🌱 Seeding Sagar account with custom password...');
       await prisma.user.create({
         data: {
           username: 'sagar',
-          passwordHash,
+          passwordHash: sagarPasswordHash,
           displayName: 'Sagar',
           avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sagar&backgroundColor=1e293b',
           customStatus: 'Coding & Building ✨',
         },
       });
+    } else {
+      await prisma.user.update({
+        where: { username: 'sagar' },
+        data: { passwordHash: sagarPasswordHash },
+      });
+      console.log('🔒 Password for Sagar updated.');
+    }
 
+    const something = await prisma.user.findUnique({ where: { username: 'something' } });
+    if (!something) {
+      console.log('🌱 Seeding Something account with <yaade> password...');
       await prisma.user.create({
         data: {
           username: 'something',
-          passwordHash,
+          passwordHash: somethingPasswordHash,
           displayName: 'Something ❤️',
           avatarUrl: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Something&backgroundColor=31102f',
           customStatus: 'In my own little world 🌸',
         },
       });
+    } else {
+      await prisma.user.update({
+        where: { username: 'something' },
+        data: { passwordHash: somethingPasswordHash },
+      });
+      console.log('🔒 Password for Something updated to <yaade>.');
+    }
 
+    let conv = await prisma.conversation.findFirst();
+    if (!conv) {
       await prisma.conversation.create({
         data: { name: 'Sagar & Something' },
       });
-      console.log('✅ Sagar and Something accounts seeded successfully!');
-    } else {
-      console.log('✅ High-performance database verified: Sagar & Something ready.');
     }
   } catch (err) {
-    console.error('Seeding notice:', err);
+    console.error('Seeding / password update notice:', err);
   }
 }

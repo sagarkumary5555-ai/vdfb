@@ -89,6 +89,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const dspCleanupRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentFacingModeRef = useRef<'user' | 'environment'>('user');
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Call duration counter
   useEffect(() => {
@@ -131,6 +132,9 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
     }
     setIsMuted(false);
     setIsVideoOff(false);
@@ -237,8 +241,15 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     pc.ontrack = (event) => {
       console.log('📡 Received remote track:', event.track.kind);
       if (event.streams && event.streams[0]) {
-        remoteStreamRef.current = event.streams[0];
-        setRemoteStream(event.streams[0]);
+        const stream = event.streams[0];
+        remoteStreamRef.current = stream;
+        setRemoteStream(stream);
+
+        // Connect to invisible audio element so voice ALWAYS plays
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = stream;
+          remoteAudioRef.current.play().catch((e) => console.log('Audio autoplay play error:', e));
+        }
       }
     };
 
@@ -256,28 +267,55 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return pc;
   };
 
-  // Acquire raw stream and pass through Studio DSP Voice Isolation
+  // Acquire raw stream with robust fallback constraints
   const acquireProcessedStream = async (type: CallType): Promise<MediaStream> => {
-    const raw = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: 48000,
-      },
-      video: type === 'video' ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : false,
-    });
+    let raw: MediaStream;
+
+    try {
+      // 1. Try optimal HD constraints
+      raw = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: type === 'video' ? { facingMode: 'user' } : false,
+      });
+    } catch (firstErr: any) {
+      console.warn('Initial getUserMedia attempt failed, trying basic fallback:', firstErr);
+      try {
+        // 2. Try basic generic constraints
+        raw = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: type === 'video' ? true : false,
+        });
+      } catch (secondErr: any) {
+        // 3. If video source failed (camera blocked or in use), fallback gracefully to audio-only!
+        if (type === 'video') {
+          console.warn('Video camera completely unavailable, falling back to voice call...');
+          raw = await navigator.mediaDevices.getUserMedia({ audio: true });
+          setCallType('audio');
+        } else {
+          throw secondErr;
+        }
+      }
+    }
 
     rawStreamRef.current = raw;
 
-    const dsp = AudioDspService.processMicrophoneStream(raw, {
-      enableIsolation: voiceIsolation,
-      enableCompressor: true,
-      enableVocalBoost: true,
-    });
-
-    dspCleanupRef.current = dsp.cleanup;
-    return dsp.processedStream;
+    try {
+      // Pass microphone stream through Voice Isolation DSP
+      const dsp = AudioDspService.processMicrophoneStream(raw, {
+        enableIsolation: voiceIsolation,
+        enableCompressor: true,
+        enableVocalBoost: true,
+      });
+      dspCleanupRef.current = dsp.cleanup;
+      return dsp.processedStream;
+    } catch (dspErr) {
+      console.warn('DSP processing fallback to raw stream:', dspErr);
+      return raw;
+    }
   };
 
   // Start outgoing call
@@ -299,7 +337,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const pc = createPeerConnection();
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      const offer = await pc.createOffer();
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: type === 'video',
+      });
       await pc.setLocalDescription(offer);
 
       socket.emit('call:initiate', {
@@ -530,6 +571,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsPip,
       }}
     >
+      {/* Permanent Audio Element for incoming remote audio across all calling modes */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
       {children}
     </CallContext.Provider>
   );
