@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Settings, Image, Bot, Phone, Video } from 'lucide-react';
+import { Search, Settings, Image, Phone, Video } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 import { useAuth } from '../../context/AuthContext.js';
 import { useSocket } from '../../context/SocketContext.js';
@@ -69,10 +69,6 @@ export const ChatHeader: React.FC = () => {
             <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate flex items-center gap-1 drop-shadow-sm">
               <span className="truncate">{partnerName}</span>
             </h1>
-            <span className="hidden md:inline-flex items-center gap-1 text-[10px] text-[#5865F2] bg-[#5865F2]/15 px-2 py-0.5 rounded-full border border-[#5865F2]/20 font-medium flex-shrink-0">
-              <Bot className="w-2.5 h-2.5" />
-              Discord Synced
-            </span>
           </div>
 
           <div className="text-[11px] sm:text-xs text-slate-300 flex items-center gap-1.5 truncate">

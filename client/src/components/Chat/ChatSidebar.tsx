@@ -6,7 +6,7 @@ import {
   Pin,
   Heart,
   Shield,
-  Bot,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useSocket } from '../../context/SocketContext.js';
@@ -77,7 +77,7 @@ export const ChatSidebar: React.FC = () => {
       </div>
 
       {/* Main Conversation Tile */}
-      <div className="p-3 flex-1 overflow-y-auto space-y-2">
+      <div className="p-3 flex-1 overflow-y-auto space-y-2 custom-scrollbar">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-2">
           Direct Message
         </div>
@@ -147,13 +147,13 @@ export const ChatSidebar: React.FC = () => {
             </button>
           )}
 
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-950/40 to-pink-950/40 border border-white/10 space-y-1.5">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-950/40 to-pink-950/40 border border-white/10 space-y-1.5 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <Bot className="w-4 h-4 text-[#5865F2]" />
-              <span>Discord Bridge Connected</span>
+              <Sparkles className="w-4 h-4 text-brand-pink" />
+              <span>Studio Calling & Voice Isolation</span>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Messages and attachments sync live between this website and Discord.
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Crystal-clear 100% Free WebRTC Voice & Video calling with adaptive noise cancellation.
             </p>
           </div>
         </div>

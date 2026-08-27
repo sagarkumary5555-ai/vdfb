@@ -1,73 +1,62 @@
-import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { prisma } from '../db/prisma.js';
-import { MessageResponse, UserJWTPayload } from '../types/index.js';
 import { MessageService } from './message.service.js';
-import { DiscordBridgeService } from './discord.service.js';
-
-interface AuthenticatedSocket extends Socket {
-  user?: {
-    userId: string;
-    username: string;
-    displayName: string;
-  };
-}
+import { MessageResponse } from '../types/index.js';
 
 export class SocketService {
   private static io: SocketIOServer | null = null;
-  private static userSockets = new Map<string, Set<string>>();
-  private static typingTimeouts = new Map<string, NodeJS.Timeout>();
+  private static userSockets: Map<string, Set<string>> = new Map();
 
-  /**
-   * Initialize Socket.IO server
-   */
-  static init(httpServer: HttpServer) {
-    this.io = new SocketIOServer(httpServer, {
+  static init(server: HttpServer): SocketIOServer {
+    this.io = new SocketIOServer(server, {
       cors: {
         origin: '*',
         methods: ['GET', 'POST'],
         credentials: true,
       },
-      pingTimeout: 20000,
-      pingInterval: 10000,
+      pingTimeout: 60000,
+      pingInterval: 25000,
     });
 
-    this.io.use(async (socket: AuthenticatedSocket, next) => {
+    // Authenticate socket connections
+    this.io.use(async (socket: Socket, next) => {
       try {
-        const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace('Bearer ', '');
+        const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
         if (!token) {
-          return next(new Error('Authentication required'));
+          return next(new Error('Authentication error: Token required'));
         }
 
-        const decoded = jwt.verify(token, config.jwtSecret) as UserJWTPayload;
-        const session = await prisma.session.findUnique({
-          where: { id: decoded.sessionId },
-          include: { user: true },
-        });
+        const decoded = jwt.verify(token, config.jwtSecret) as { userId: string; username: string };
+        const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
 
-        if (!session || new Date() > session.expiresAt) {
-          return next(new Error('Session expired or invalid'));
+        if (!user) {
+          return next(new Error('Authentication error: User not found'));
         }
 
-        socket.user = {
-          userId: session.user.id,
-          username: session.user.username,
-          displayName: session.user.displayName,
-        };
-
+        socket.data.user = user;
         next();
-      } catch (err) {
-        next(new Error('Invalid token'));
+      } catch (err: any) {
+        next(new Error(`Authentication error: ${err.message}`));
       }
     });
 
-    this.io.on('connection', (socket: AuthenticatedSocket) => {
-      if (!socket.user) return;
-      const { userId, username, displayName } = socket.user;
+    this.setupEventHandlers();
+    return this.io;
+  }
 
-      console.log(`🔌 Socket connected: ${displayName} (${username}) [${socket.id}]`);
+  private static setupEventHandlers() {
+    if (!this.io) return;
+
+    this.io.on('connection', async (socket: Socket) => {
+      const user = socket.data.user;
+      const userId = user.id;
+      const username = user.username;
+      const displayName = user.displayName;
+
+      console.log(`⚡ Socket connected: ${displayName} (@${username}) [${socket.id}]`);
 
       // Track user sockets
       if (!this.userSockets.has(userId)) {
@@ -75,73 +64,73 @@ export class SocketService {
       }
       this.userSockets.get(userId)!.add(socket.id);
 
+      // Join the single duo room
       socket.join('duo_room');
 
-      // 1. Broadcast online status
+      // Update database status
+      await prisma.user.update({
+        where: { id: userId },
+        data: { lastSeen: new Date() },
+      });
+
+      // Broadcast online presence
       this.broadcastPresence(userId, username, 'online');
 
-      // 2. Send active online status of any already connected partner
-      for (const [activeUserId, socketSet] of this.userSockets.entries()) {
-        if (activeUserId !== userId && socketSet.size > 0) {
+      // Send initial presence state to the newly connected socket
+      for (const [uid, sockets] of this.userSockets.entries()) {
+        if (sockets.size > 0) {
           socket.emit('presence:update', {
-            userId: activeUserId,
+            userId: uid,
             status: 'online',
           });
         }
       }
 
       // ==========================================
-      // WebRTC Live Voice & Video Calling Relays
+      // WebRTC Live Calling Signaling Events
       // ==========================================
-      socket.on('call:initiate', (data: { type: 'audio' | 'video'; offer: any }) => {
-        console.log(`📞 Call initiated by ${displayName} (type: ${data.type})`);
+      socket.on('call:initiate', (data) => {
         socket.to('duo_room').emit('call:incoming', {
           callerId: userId,
           callerName: displayName,
           callerUsername: username,
-          type: data.type,
+          type: data.type, // 'audio' | 'video'
           offer: data.offer,
         });
       });
 
-      socket.on('call:accept', (data: { answer: any }) => {
-        console.log(`✅ Call accepted by ${displayName}`);
+      socket.on('call:accept', (data) => {
         socket.to('duo_room').emit('call:accepted', {
           acceptorId: userId,
           answer: data.answer,
         });
       });
 
-      socket.on('call:reject', (data?: { reason?: string }) => {
-        console.log(`❌ Call rejected by ${displayName}`);
+      socket.on('call:reject', (data) => {
         socket.to('duo_room').emit('call:rejected', {
           rejectorId: userId,
-          reason: data?.reason || 'declined',
+          reason: data.reason || 'declined',
         });
       });
 
       socket.on('call:end', () => {
-        console.log(`🔴 Call ended by ${displayName}`);
         socket.to('duo_room').emit('call:ended', {
-          endedById: userId,
+          endedBy: userId,
         });
       });
 
-      socket.on('call:ice-candidate', (data: { candidate: any }) => {
+      socket.on('call:ice-candidate', (data) => {
         socket.to('duo_room').emit('call:ice-candidate', {
           senderId: userId,
           candidate: data.candidate,
         });
       });
 
-      socket.on('call:media-toggle', (data: { isMuted?: boolean; isVideoOff?: boolean; isScreenSharing?: boolean }) => {
-        socket.to('duo_room').emit('call:peer-media-toggle', {
-          senderId: userId,
-          ...data,
-        });
+      socket.on('call:media-toggle', (data) => {
+        socket.to('duo_room').emit('call:peer-media-toggle', data);
       });
 
-      // Typing
+      // Typing indicators
       socket.on('typing:start', () => {
         socket.to('duo_room').emit('typing:status', {
           userId,
@@ -149,25 +138,9 @@ export class SocketService {
           displayName,
           isTyping: true,
         });
-
-        if (this.typingTimeouts.has(userId)) {
-          clearTimeout(this.typingTimeouts.get(userId)!);
-        }
-        const timeout = setTimeout(() => {
-          socket.to('duo_room').emit('typing:status', {
-            userId,
-            username,
-            displayName,
-            isTyping: false,
-          });
-        }, 4000);
-        this.typingTimeouts.set(userId, timeout);
       });
 
       socket.on('typing:stop', () => {
-        if (this.typingTimeouts.has(userId)) {
-          clearTimeout(this.typingTimeouts.get(userId)!);
-        }
         socket.to('duo_room').emit('typing:status', {
           userId,
           username,
@@ -176,12 +149,13 @@ export class SocketService {
         });
       });
 
-      // Message Send
+      // Send Message via Socket
       socket.on('message:send', async (data, callback) => {
         try {
           const { content, replyToId, attachments } = data;
-          if (!content?.trim() && (!attachments || !attachments.length)) {
-            if (callback) callback({ error: 'Message cannot be empty' });
+
+          if (!content?.trim() && (!attachments || attachments.length === 0)) {
+            if (callback) callback({ error: 'Message content or attachment is required' });
             return;
           }
 
@@ -196,10 +170,6 @@ export class SocketService {
 
           if (callback) callback({ success: true, message: savedMessage });
           this.broadcastNewMessage(savedMessage);
-
-          DiscordBridgeService.sendWebMessageToDiscord(savedMessage).catch((bridgeErr) => {
-            console.error('Discord bridge send error:', bridgeErr);
-          });
         } catch (err: any) {
           console.error('Socket message:send error:', err);
           if (callback) callback({ error: err.message || 'Failed to send message' });
@@ -251,14 +221,6 @@ export class SocketService {
 
           if (callback) callback({ success: true, message: updated });
           this.broadcastMessageEdit(updated);
-
-          if (updated.discordMessageId) {
-            DiscordBridgeService.syncEditToDiscord(
-              updated.discordMessageId,
-              updated.content,
-              username
-            );
-          }
         } catch (err: any) {
           console.error('Socket message:edit error:', err);
           if (callback) callback({ error: err.message });
@@ -277,10 +239,6 @@ export class SocketService {
 
           if (callback) callback({ success: true, message: updated });
           this.broadcastMessageDelete(updated);
-
-          if (updated.discordMessageId) {
-            DiscordBridgeService.syncDeleteToDiscord(updated.discordMessageId, username);
-          }
         } catch (err: any) {
           console.error('Socket message:delete error:', err);
           if (callback) callback({ error: err.message });

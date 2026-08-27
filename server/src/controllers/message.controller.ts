@@ -1,13 +1,12 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { z } from 'zod';
 import { MessageService } from '../services/message.service.js';
-import { AuthRequest } from '../middleware/auth.middleware.js';
 import { SocketService } from '../services/socket.service.js';
-import { DiscordBridgeService } from '../services/discord.service.js';
+import { AuthRequest } from '../middleware/auth.middleware.js';
 
-const createMessageSchema = z.object({
-  content: z.string().optional().default(''),
-  replyToId: z.string().uuid().optional().nullable(),
+const sendMessageSchema = z.object({
+  content: z.string().max(4000).default(''),
+  replyToId: z.string().optional().nullable(),
   attachments: z
     .array(
       z.object({
@@ -16,7 +15,7 @@ const createMessageSchema = z.object({
         mimeType: z.string(),
         size: z.number(),
         storagePath: z.string(),
-        discordUrl: z.string().optional(),
+        discordUrl: z.string().optional().nullable(),
       })
     )
     .optional(),
@@ -24,7 +23,7 @@ const createMessageSchema = z.object({
 
 export class MessageController {
   /**
-   * Get message history (paginated)
+   * Get messages
    */
   static async getMessages(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -46,67 +45,19 @@ export class MessageController {
       const pinned = await MessageService.getPinnedMessages();
       res.json({ pinned });
     } catch (err: any) {
-      res.status(500).json({ error: 'Failed to fetch pinned messages' });
+      res.status(500).json({ error: err.message || 'Failed to fetch pinned messages' });
     }
   }
 
   /**
-   * Get shared media gallery
+   * Get shared media
    */
   static async getSharedMedia(req: AuthRequest, res: Response): Promise<void> {
     try {
       const media = await MessageService.getSharedMedia();
       res.json({ media });
     } catch (err: any) {
-      res.status(500).json({ error: 'Failed to fetch shared media' });
-    }
-  }
-
-  /**
-   * Toggle reaction
-   */
-  static async toggleReaction(req: AuthRequest, res: Response): Promise<void> {
-    try {
-      if (!req.user) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const { emoji } = req.body;
-      if (!emoji) {
-        res.status(400).json({ error: 'Emoji is required' });
-        return;
-      }
-
-      const updated = await MessageService.toggleReaction(id, emoji, req.user.id);
-      if (!updated) {
-        res.status(404).json({ error: 'Message not found' });
-        return;
-      }
-
-      SocketService.broadcastMessageEdit(updated);
-      res.json({ message: updated });
-    } catch (err: any) {
-      res.status(500).json({ error: 'Failed to toggle reaction' });
-    }
-  }
-
-  /**
-   * Toggle pin
-   */
-  static async togglePin(req: AuthRequest, res: Response): Promise<void> {
-    try {
-      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const updated = await MessageService.togglePin(id);
-      if (!updated) {
-        res.status(404).json({ error: 'Message not found' });
-        return;
-      }
-
-      SocketService.broadcastMessageEdit(updated);
-      res.json({ message: updated });
-    } catch (err: any) {
-      res.status(500).json({ error: 'Failed to toggle pin' });
+      res.status(500).json({ error: err.message || 'Failed to fetch media' });
     }
   }
 
@@ -131,12 +82,12 @@ export class MessageController {
 
       res.json({ messages });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Search failed' });
+      res.status(500).json({ error: err.message || 'Failed to search messages' });
     }
   }
 
   /**
-   * Create message via REST API
+   * Send a new message
    */
   static async createMessage(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -145,7 +96,7 @@ export class MessageController {
         return;
       }
 
-      const parsed = createMessageSchema.safeParse(req.body);
+      const parsed = sendMessageSchema.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: parsed.error.errors[0].message });
         return;
@@ -169,13 +120,64 @@ export class MessageController {
 
       SocketService.broadcastNewMessage(message);
 
-      DiscordBridgeService.sendWebMessageToDiscord(message).catch((err) => {
-        console.error('Discord sync error:', err);
-      });
-
       res.status(201).json({ message });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to send message' });
+    }
+  }
+
+  /**
+   * Toggle reaction
+   */
+  static async toggleReaction(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const { emoji } = req.body;
+
+      if (!emoji) {
+        res.status(400).json({ error: 'Emoji is required' });
+        return;
+      }
+
+      const updated = await MessageService.toggleReaction(id, emoji, req.user.id);
+      if (!updated) {
+        res.status(404).json({ error: 'Message not found' });
+        return;
+      }
+
+      SocketService.broadcastMessageEdit(updated);
+      res.json({ message: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to toggle reaction' });
+    }
+  }
+
+  /**
+   * Toggle Pin
+   */
+  static async togglePin(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const updated = await MessageService.togglePin(id);
+      if (!updated) {
+        res.status(404).json({ error: 'Message not found' });
+        return;
+      }
+
+      SocketService.broadcastMessageEdit(updated);
+      res.json({ message: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to toggle pin' });
     }
   }
 
@@ -204,15 +206,6 @@ export class MessageController {
       }
 
       SocketService.broadcastMessageEdit(updated);
-
-      if (updated.discordMessageId) {
-        DiscordBridgeService.syncEditToDiscord(
-          updated.discordMessageId,
-          updated.content,
-          req.user.username
-        );
-      }
-
       res.json({ message: updated });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to edit message' });
@@ -238,11 +231,6 @@ export class MessageController {
       }
 
       SocketService.broadcastMessageDelete(updated);
-
-      if (updated.discordMessageId) {
-        DiscordBridgeService.syncDeleteToDiscord(updated.discordMessageId, req.user.username);
-      }
-
       res.json({ message: updated });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to delete message' });

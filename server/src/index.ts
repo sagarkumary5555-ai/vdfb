@@ -7,7 +7,6 @@ import helmet from 'helmet';
 import { config } from './config/index.js';
 import { StorageService } from './services/storage.service.js';
 import { SocketService } from './services/socket.service.js';
-import { DiscordBridgeService } from './services/discord.service.js';
 import { apiLimiter } from './middleware/rateLimit.middleware.js';
 import { ensureDatabaseReady } from './db/autoInit.js';
 
@@ -83,17 +82,13 @@ if (fs.existsSync(clientDistPath)) {
 // 6. Initialize Real-Time WebSockets
 SocketService.init(server);
 
-// 7. Initialize Database, Discord Bridge, and Start Server
+// 7. Initialize Database and Start Pure Standalone Server
 async function start() {
   await ensureDatabaseReady();
 
-  DiscordBridgeService.init().catch((err) => {
-    console.error('Failed to initialize Discord bridge:', err);
-  });
-
   server.listen(config.port, () => {
     console.log(`\n======================================================`);
-    console.log(`✨ Private Two-User Chat Server running on port ${config.port}`);
+    console.log(`✨ Private Standalone Duo Chat Server running on port ${config.port}`);
     console.log(`🔒 Strictly restricted to: Sagar & Something`);
     console.log(`🌐 Local Web: http://localhost:${config.port}`);
     console.log(`======================================================\n`);

@@ -10,11 +10,13 @@ import {
   Mic,
   Square,
   Heart,
+  Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useChat } from '../../context/ChatContext.js';
 import { useSocket } from '../../context/SocketContext.js';
 import { uploadApi } from '../../services/api.js';
+import { AudioDspService } from '../../services/audioDsp.js';
 import { Attachment } from '../../types/index.js';
 import { StickerAndEmojiPicker } from './StickerAndEmojiPicker.js';
 
@@ -41,6 +43,7 @@ export const MessageComposer: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dspCleanupRef = useRef<(() => void) | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,16 +80,37 @@ export const MessageComposer: React.FC = () => {
       particleCount: 35,
       spread: 70,
       origin: { y: 0.9 },
-      colors: ['#f43f5e', '#ec4899', '#a855f7'],
+      colors: ['#e11d48', '#f43f5e', '#ec4899'],
     });
     sendMessage('❤️');
   };
 
-  // Voice Recording
+  // Voice Recording with Studio Voice Isolation DSP
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const rawStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+        },
+      });
+
+      let finalStream = rawStream;
+      try {
+        const dsp = AudioDspService.processMicrophoneStream(rawStream, {
+          enableIsolation: true,
+          enableCompressor: true,
+          enableVocalBoost: true,
+        });
+        dspCleanupRef.current = dsp.cleanup;
+        finalStream = dsp.processedStream;
+      } catch (e) {
+        console.warn('Voice note DSP fallback to raw stream:', e);
+      }
+
+      const mediaRecorder = new MediaRecorder(finalStream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -110,7 +134,11 @@ export const MessageComposer: React.FC = () => {
           setIsUploading(false);
         }
 
-        stream.getTracks().forEach((track) => track.stop());
+        if (dspCleanupRef.current) {
+          dspCleanupRef.current();
+          dspCleanupRef.current = null;
+        }
+        rawStream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorder.start();
@@ -139,6 +167,10 @@ export const MessageComposer: React.FC = () => {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (dspCleanupRef.current) {
+        dspCleanupRef.current();
+        dspCleanupRef.current = null;
+      }
       mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
     }
   };
@@ -159,7 +191,7 @@ export const MessageComposer: React.FC = () => {
         particleCount: 30,
         spread: 70,
         origin: { y: 0.9 },
-        colors: ['#f43f5e', '#ec4899', '#a855f7'],
+        colors: ['#e11d48', '#f43f5e', '#ec4899'],
       });
     }
 
@@ -298,12 +330,16 @@ export const MessageComposer: React.FC = () => {
 
       {/* Recording Mode Bar */}
       {isRecording ? (
-        <div className="flex items-center justify-between p-2 bg-red-500/15 border border-red-500/30 rounded-2xl animate-pulse">
+        <div className="flex items-center justify-between p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-2xl animate-fade-in shadow-lg">
           <div className="flex items-center gap-3 px-2">
-            <div className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-            <span className="text-xs font-bold text-red-300">
-              Recording Voice Note: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
-            </span>
+            <div className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-rose-300 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-brand-pink" />
+                Recording: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+              </span>
+              <span className="text-[9px] text-slate-400">Studio Voice Isolation active</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -317,7 +353,7 @@ export const MessageComposer: React.FC = () => {
             <button
               type="button"
               onClick={stopRecording}
-              className="p-2 rounded-xl bg-red-600 hover:bg-red-500 text-white flex items-center gap-1.5 text-xs font-bold shadow-lg"
+              className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 text-xs font-bold shadow-lg active:scale-95 transition"
             >
               <Square className="w-3.5 h-3.5 fill-white" />
               <span>Send Voice</span>
@@ -325,8 +361,8 @@ export const MessageComposer: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* Main Composer Input Box */
-        <div className="relative flex items-end gap-1.5 sm:gap-2 bg-dark-950/90 rounded-2xl border border-white/15 p-1.5 sm:p-2 focus-within:border-brand-pink/50 transition shadow-xl">
+        /* Main Handcrafted Composer Input Box */
+        <div className="relative flex items-end gap-1.5 sm:gap-2 bg-dark-950/80 rounded-2xl border border-white/12 p-1.5 sm:p-2 focus-within:border-brand-pink/50 transition-all shadow-xl">
           <input
             ref={fileInputRef}
             type="file"
@@ -338,7 +374,7 @@ export const MessageComposer: React.FC = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 sm:p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
+            className="p-2 sm:p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
             title="Attach files (images, audio, video, docs)"
           >
             <Paperclip className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
@@ -348,7 +384,7 @@ export const MessageComposer: React.FC = () => {
             type="button"
             onClick={() => setShowPicker(!showPicker)}
             className={`p-2 sm:p-2.5 rounded-xl active:scale-95 transition flex-shrink-0 ${
-              showPicker ? 'text-brand-pink bg-brand-rose/20' : 'text-slate-300 hover:text-brand-pink hover:bg-white/10'
+              showPicker ? 'text-brand-pink bg-brand-rose/20' : 'text-slate-400 hover:text-brand-pink hover:bg-white/10'
             }`}
             title="Stickers & 3D Emojis"
           >
@@ -375,16 +411,16 @@ export const MessageComposer: React.FC = () => {
               <button
                 type="button"
                 onClick={startRecording}
-                className="p-2.5 sm:p-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
-                title="Record voice note"
+                className="p-2 sm:p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
+                title="Record studio voice note"
               >
-                <Mic className="w-4 h-4 text-slate-300 hover:text-brand-pink" />
+                <Mic className="w-4 h-4 text-slate-400 hover:text-brand-pink" />
               </button>
 
               <button
                 type="button"
                 onClick={triggerHeartBurst}
-                className="p-2.5 sm:p-3 rounded-xl bg-brand-rose/20 hover:bg-brand-rose/30 text-brand-pink border border-brand-rose/30 active:scale-90 transition flex-shrink-0 shadow-sm"
+                className="p-2 sm:p-2.5 rounded-xl bg-brand-rose/15 hover:bg-brand-rose/25 text-brand-pink border border-brand-rose/25 active:scale-90 transition flex-shrink-0 shadow-sm"
                 title="Send Heart"
               >
                 <Heart className="w-4 h-4 fill-brand-pink" />
@@ -395,7 +431,7 @@ export const MessageComposer: React.FC = () => {
               type="button"
               onClick={handleSend}
               disabled={isUploading}
-              className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-tr from-brand-rose via-brand-pink to-brand-purple hover:opacity-90 text-white shadow-md disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-90 flex-shrink-0"
+              className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-tr from-brand-rose via-brand-pink to-brand-purple hover:opacity-90 text-white shadow-md disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-90 flex-shrink-0"
               title="Send message (Enter)"
             >
               <Send className="w-4 h-4" />

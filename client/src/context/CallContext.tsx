@@ -245,7 +245,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         remoteStreamRef.current = stream;
         setRemoteStream(stream);
 
-        // Connect to invisible audio element so voice ALWAYS plays
+        // Connect to audio element so voice ALWAYS plays
         if (remoteAudioRef.current) {
           remoteAudioRef.current.srcObject = stream;
           remoteAudioRef.current.play().catch((e) => console.log('Audio autoplay play error:', e));
@@ -267,30 +267,23 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return pc;
   };
 
-  // Acquire raw stream with robust fallback constraints
+  // Acquire raw stream with optimal Chromium WebRTC constraints + Dynamic Noise Gate DSP
   const acquireProcessedStream = async (type: CallType): Promise<MediaStream> => {
     let raw: MediaStream;
 
     try {
-      // 1. Try optimal HD constraints
       raw = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: AudioDspService.getOptimalAudioConstraints(),
         video: type === 'video' ? { facingMode: 'user' } : false,
       });
     } catch (firstErr: any) {
       console.warn('Initial getUserMedia attempt failed, trying basic fallback:', firstErr);
       try {
-        // 2. Try basic generic constraints
         raw = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: type === 'video' ? true : false,
         });
       } catch (secondErr: any) {
-        // 3. If video source failed (camera blocked or in use), fallback gracefully to audio-only!
         if (type === 'video') {
           console.warn('Video camera completely unavailable, falling back to voice call...');
           raw = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -304,11 +297,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     rawStreamRef.current = raw;
 
     try {
-      // Pass microphone stream through Voice Isolation DSP
       const dsp = AudioDspService.processMicrophoneStream(raw, {
         enableIsolation: voiceIsolation,
         enableCompressor: true,
         enableVocalBoost: true,
+        gateThreshold: 18,
       });
       dspCleanupRef.current = dsp.cleanup;
       return dsp.processedStream;

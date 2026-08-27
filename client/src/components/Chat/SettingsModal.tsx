@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Key, Volume2, VolumeX, Bot, ShieldCheck, LogOut, CheckCircle2, AlertTriangle, Sliders, Sparkles, Mic, MicOff } from 'lucide-react';
+import { X, User, Key, Volume2, VolumeX, ShieldCheck, LogOut, Sliders, Sparkles, Mic, MicOff, Waves } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useChat } from '../../context/ChatContext.js';
 import { soundService } from '../../services/sound.js';
-import { systemApi } from '../../services/api.js';
 import { AudioDspService } from '../../services/audioDsp.js';
-import { BridgeStatus } from '../../types/index.js';
 import { Avatar } from '../Common/Avatar.js';
 
 export const SettingsModal: React.FC = () => {
@@ -20,7 +18,6 @@ export const SettingsModal: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
 
   const [isMuted, setIsMuted] = useState(soundService.getIsMuted());
-  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
 
   // Background customization settings
   const [blurLevel, setBlurLevel] = useState(() => localStorage.getItem('app_wallpaper_blur') || '3');
@@ -28,6 +25,7 @@ export const SettingsModal: React.FC = () => {
 
   // Audio Studio & Voice Isolation settings
   const [voiceIsolation, setVoiceIsolation] = useState(() => localStorage.getItem('voice_isolation') !== 'false');
+  const [noiseGateStrength, setNoiseGateStrength] = useState(() => localStorage.getItem('voice_noise_gate') || '20');
   const [micTesting, setMicTesting] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
 
@@ -46,11 +44,6 @@ export const SettingsModal: React.FC = () => {
       setAvatarUrl(user?.avatarUrl || '');
       setProfileMsg(null);
       setPasswordMsg(null);
-
-      systemApi
-        .getStatus()
-        .then((data) => setBridgeStatus(data.bridge))
-        .catch(() => {});
     } else {
       stopMicTest();
     }
@@ -81,12 +74,7 @@ export const SettingsModal: React.FC = () => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-        },
+        audio: AudioDspService.getOptimalAudioConstraints(),
       });
 
       testStreamRef.current = stream;
@@ -96,6 +84,7 @@ export const SettingsModal: React.FC = () => {
         enableIsolation: voiceIsolation,
         enableCompressor: true,
         enableVocalBoost: true,
+        gateThreshold: parseInt(noiseGateStrength, 10) || 20,
       });
 
       dspCleanupRef.current = dsp.cleanup;
@@ -115,6 +104,14 @@ export const SettingsModal: React.FC = () => {
     const nextVal = !voiceIsolation;
     setVoiceIsolation(nextVal);
     localStorage.setItem('voice_isolation', nextVal.toString());
+    if (micTesting) {
+      stopMicTest();
+    }
+  };
+
+  const handleNoiseGateChange = (val: string) => {
+    setNoiseGateStrength(val);
+    localStorage.setItem('voice_noise_gate', val);
     if (micTesting) {
       stopMicTest();
     }
@@ -148,8 +145,8 @@ export const SettingsModal: React.FC = () => {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordMsg({ type: 'error', text: 'New password must be at least 6 characters' });
+    if (!newPassword || newPassword.length < 4) {
+      setPasswordMsg({ type: 'error', text: 'New password must be at least 4 characters' });
       return;
     }
 
@@ -269,11 +266,11 @@ export const SettingsModal: React.FC = () => {
             </div>
           </form>
 
-          {/* Section 2: Studio Voice Isolation & Microphone */}
+          {/* Section 2: Studio Voice Isolation & Dynamic Noise Gate */}
           <div className="pt-3 border-t border-white/10 space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-brand-pink" />
-              Studio Voice Isolation & DSP Microphone
+              Studio Voice Isolation & Noise Suppression
             </h3>
 
             <div className="p-3.5 rounded-2xl bg-dark-950/70 border border-white/10 space-y-3 text-xs">
@@ -281,19 +278,19 @@ export const SettingsModal: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-semibold text-white flex items-center gap-1.5">
-                    <span>Studio Voice Isolation</span>
-                    <span className="text-[9px] text-emerald-400 bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-500/30">
-                      DSP AI
+                    <span>Dynamic Noise Gate & Isolation</span>
+                    <span className="text-[9px] text-emerald-400 bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-500/30 font-bold">
+                      PRO DSP
                     </span>
                   </div>
                   <div className="text-[10px] text-slate-400">
-                    Cuts background room hum, fan noise & applies vocal presence boost
+                    Cuts AC drone, fan hum, keyboard clicks, and room echo
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleVoiceIsolationToggle}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
                     voiceIsolation
                       ? 'bg-gradient-to-r from-brand-rose to-brand-purple text-white shadow-md'
                       : 'bg-slate-800 text-slate-400 border border-white/10'
@@ -303,10 +300,39 @@ export const SettingsModal: React.FC = () => {
                 </button>
               </div>
 
+              {/* Noise Gate Sensitivity Threshold Slider */}
+              {voiceIsolation && (
+                <div className="pt-2 border-t border-white/5 space-y-1.5">
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-[11px] flex items-center gap-1">
+                      <Waves className="w-3 h-3 text-brand-pink" />
+                      Noise Gate Cutoff Strength
+                    </span>
+                    <span className="text-[10px] font-bold text-brand-pink">
+                      {parseInt(noiseGateStrength, 10) < 15 ? 'Soft' : parseInt(noiseGateStrength, 10) < 30 ? 'Balanced (Recommended)' : 'Aggressive Studio'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    step="5"
+                    value={noiseGateStrength}
+                    onChange={(e) => handleNoiseGateChange(e.target.value)}
+                    className="w-full accent-brand-pink cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-500">
+                    <span>Gentle</span>
+                    <span>Standard</span>
+                    <span>Deep Isolation</span>
+                  </div>
+                </div>
+              )}
+
               {/* Real-time Mic Test Meter */}
               <div className="pt-2 border-t border-white/5 space-y-2">
                 <div className="flex items-center justify-between text-slate-300">
-                  <span className="text-[11px]">Microphone Input Level Test</span>
+                  <span className="text-[11px]">Live Microphone Level Test</span>
                   <button
                     type="button"
                     onClick={startMicTest}
@@ -322,7 +348,7 @@ export const SettingsModal: React.FC = () => {
                 </div>
 
                 {/* Level Bar */}
-                <div className="h-2 w-full bg-dark-900 rounded-full overflow-hidden border border-white/10 relative">
+                <div className="h-2.5 w-full bg-dark-900 rounded-full overflow-hidden border border-white/10 relative">
                   <div
                     className="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-brand-rose transition-all duration-75 rounded-full"
                     style={{ width: `${micLevel}%` }}
@@ -405,53 +431,7 @@ export const SettingsModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 5: Discord Bridge Diagnostics */}
-          <div className="pt-3 border-t border-white/10 space-y-2.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Bot className="w-3.5 h-3.5 text-[#5865F2]" />
-              Discord Bridge Diagnostics
-            </h3>
-            <div className="p-3.5 rounded-2xl bg-dark-950/70 border border-white/10 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Sagar Discord Bot (Bot 1):</span>
-                <span className="flex items-center gap-1">
-                  {bridgeStatus?.sagarBotReady ? (
-                    <span className="text-emerald-400 font-medium flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Connected
-                    </span>
-                  ) : (
-                    <span className="text-amber-400 flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Connecting...
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Something Discord Bot (Bot 2):</span>
-                <span className="flex items-center gap-1">
-                  {bridgeStatus?.somethingBotReady ? (
-                    <span className="text-emerald-400 font-medium flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Connected
-                    </span>
-                  ) : (
-                    <span className="text-amber-400 flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Connecting...
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1 border-t border-white/5">
-                <span className="text-slate-400">Channel ID:</span>
-                <span className="text-slate-200 font-mono text-[11px]">
-                  {bridgeStatus?.channelId || '1541061558753300603'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 6: Security & Password */}
+          {/* Section 5: Security & Password */}
           <form onSubmit={handlePasswordChange} className="pt-3 border-t border-white/10 space-y-2.5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5" />
