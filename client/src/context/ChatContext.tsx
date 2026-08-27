@@ -234,8 +234,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const nextList = [...prev];
           nextList.splice(idx, 1);
           return [updatedConv, ...nextList];
+        } else {
+          refreshConversations();
+          return prev;
         }
-        return prev;
       });
 
       if (newMsg.senderId !== user?.id) {
@@ -282,10 +284,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Send message
   const sendMessage = async (content: string, attachments: Attachment[] = []) => {
     if (!content.trim() && attachments.length === 0) return;
+    if (!activeConversation) {
+      alert('Please start or select a chat first!');
+      setIsNewChatModalOpen(true);
+      return;
+    }
 
     const replyId = replyingTo?.id || null;
-    const convId = activeConversation?.id;
-    const recipientId = activeConversation?.otherUser?.id;
+    const convId = activeConversation.id;
+    const recipientId = activeConversation.otherUser?.id;
     setReplyingTo(null);
 
     const mappedAttachments = attachments.map((a) => ({

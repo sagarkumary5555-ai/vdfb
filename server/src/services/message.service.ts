@@ -182,17 +182,12 @@ export class MessageService {
     }>;
   }): Promise<MessageResponse> {
     let convId: string = params.conversationId || '';
-
     if (!convId) {
       if (params.recipientId) {
         const conv = await this.getOrCreateDirectConversation(params.senderId, params.recipientId);
         convId = conv.id;
       } else {
-        let fallback = await prisma.conversation.findFirst();
-        if (!fallback) {
-          fallback = await prisma.conversation.create({ data: { name: 'General', isGroup: true } });
-        }
-        convId = fallback.id;
+        throw new Error('Conversation ID or recipient ID is required to send a message');
       }
     }
 

@@ -10,6 +10,7 @@ interface CallerInfo {
   callerId: string;
   callerName: string;
   callerUsername: string;
+  callerAvatar?: string | null;
   type: CallType;
   offer: any;
 }
@@ -33,7 +34,7 @@ interface CallContextType {
   voiceIsolation: boolean;
   peerMedia: PeerMediaState;
   callDuration: number;
-  startCall: (type: CallType) => Promise<void>;
+  startCall: (type: CallType, targetUserId: string) => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
   endCall: () => void;
@@ -83,6 +84,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [callDuration, setCallDuration] = useState(0);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const targetUserIdRef = useRef<string | null>(null);
   const rawStreamRef = useRef<MediaStream | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
@@ -136,6 +138,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
+    targetUserIdRef.current = null;
     setIsMuted(false);
     setIsVideoOff(false);
     setIsScreenSharing(false);
@@ -150,9 +153,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // 1. Incoming Call
     const handleIncomingCall = (data: CallerInfo) => {
       if (callState !== 'idle') {
-        socket.emit('call:reject', { reason: 'busy' });
+        socket.emit('call:reject', { callerId: data.callerId, reason: 'busy' });
         return;
       }
+      targetUserIdRef.current = data.callerId;
       setCallerInfo(data);
       setCallType(data.type);
       setCallState('incoming');
@@ -233,8 +237,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
     pc.onicecandidate = (event) => {
-      if (event.candidate && socket) {
-        socket.emit('call:ice-candidate', { candidate: event.candidate });
+      if (event.candidate && socket && targetUserIdRef.current) {
+        socket.emit('call:ice-candidate', {
+          targetUserId: targetUserIdRef.current,
+          candidate: event.candidate,
+        });
       }
     };
 
@@ -312,13 +319,18 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Start outgoing call
-  const startCall = async (type: CallType) => {
+  const startCall = async (type: CallType, targetUserId: string) => {
     if (!socket || !isConnected) {
       alert('Cannot start call: Not connected to chat server.');
       return;
     }
+    if (!targetUserId) {
+      alert('Cannot start call: No recipient selected.');
+      return;
+    }
 
     try {
+      targetUserIdRef.current = targetUserId;
       setCallType(type);
       setCallState('calling');
       callSound.playOutgoingRing();
@@ -337,6 +349,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await pc.setLocalDescription(offer);
 
       socket.emit('call:initiate', {
+        targetUserId,
         type,
         offer,
       });
@@ -365,7 +378,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      socket.emit('call:accept', { answer });
+      socket.emit('call:accept', {
+        callerId: callerInfo.callerId,
+        answer,
+      });
       callSound.playConnectedChime();
       setCallState('connected');
     } catch (err: any) {
@@ -378,8 +394,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Reject incoming call
   const rejectCall = () => {
     callSound.stopRingtone();
-    if (socket) {
-      socket.emit('call:reject', { reason: 'declined' });
+    if (socket && callerInfo) {
+      socket.emit('call:reject', {
+        callerId: callerInfo.callerId,
+        reason: 'declined',
+      });
     }
     cleanupMedia();
     setCallState('idle');
@@ -389,8 +408,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // End active call
   const endCall = () => {
     callSound.playEndCallTone();
-    if (socket) {
-      socket.emit('call:end');
+    if (socket && targetUserIdRef.current) {
+      socket.emit('call:end', {
+        targetUserId: targetUserIdRef.current,
+      });
     }
     setCallState('ended');
     setTimeout(() => {
@@ -407,8 +428,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const newMuted = !isMuted;
       audioTracks.forEach((t) => (t.enabled = !newMuted));
       setIsMuted(newMuted);
-      if (socket) {
-        socket.emit('call:media-toggle', { isMuted: newMuted });
+      if (socket && targetUserIdRef.current) {
+        socket.emit('call:media-toggle', {
+          targetUserId: targetUserIdRef.current,
+          isMuted: newMuted,
+        });
       }
     }
   };
@@ -420,8 +444,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const newVideoOff = !isVideoOff;
       videoTracks.forEach((t) => (t.enabled = !newVideoOff));
       setIsVideoOff(newVideoOff);
-      if (socket) {
-        socket.emit('call:media-toggle', { isVideoOff: newVideoOff });
+      if (socket && targetUserIdRef.current) {
+        socket.emit('call:media-toggle', {
+          targetUserId: targetUserIdRef.current,
+          isVideoOff: newVideoOff,
+        });
       }
     }
   };
@@ -460,7 +487,12 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         setIsScreenSharing(false);
-        if (socket) socket.emit('call:media-toggle', { isScreenSharing: false });
+        if (socket && targetUserIdRef.current) {
+          socket.emit('call:media-toggle', {
+            targetUserId: targetUserIdRef.current,
+            isScreenSharing: false,
+          });
+        }
       } catch (err) {
         console.error('Error reverting screen share:', err);
       }
@@ -492,7 +524,12 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         setIsScreenSharing(true);
-        if (socket) socket.emit('call:media-toggle', { isScreenSharing: true });
+        if (socket && targetUserIdRef.current) {
+          socket.emit('call:media-toggle', {
+            targetUserId: targetUserIdRef.current,
+            isScreenSharing: true,
+          });
+        }
       } catch (err) {
         console.error('Screen sharing canceled or failed:', err);
       }

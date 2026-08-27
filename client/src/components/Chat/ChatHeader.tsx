@@ -107,22 +107,22 @@ export const ChatHeader: React.FC = () => {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-        {!isGroup && (
+        {!isGroup && activePartner && (
           <>
             <button
-              onClick={() => startCall('audio')}
-              disabled={callState !== 'idle' || !activePartner}
+              onClick={() => startCall('audio', activePartner.id)}
+              disabled={callState !== 'idle'}
               className="p-2 sm:p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/15 active:scale-95 transition border border-white/10 disabled:opacity-30"
-              title="Voice Call (Studio Isolation)"
+              title={`Voice Call with ${activePartner.displayName}`}
             >
               <Phone className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
 
             <button
-              onClick={() => startCall('video')}
-              disabled={callState !== 'idle' || !activePartner}
+              onClick={() => startCall('video', activePartner.id)}
+              disabled={callState !== 'idle'}
               className="p-2 sm:p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/15 active:scale-95 transition border border-white/10 disabled:opacity-30"
-              title="Video Call"
+              title={`Video Call with ${activePartner.displayName}`}
             >
               <Video className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
