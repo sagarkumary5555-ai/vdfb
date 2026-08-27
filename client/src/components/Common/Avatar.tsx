@@ -78,11 +78,18 @@ export const Avatar: React.FC<AvatarProps> = ({
   const initial = displayName.trim().charAt(0).toUpperCase() || 'U';
   const gradientClass = isGroup ? 'bg-zinc-800' : getGradientForName(displayName);
 
+  const hasValidImage =
+    Boolean(avatarUrl) &&
+    !imageError &&
+    (avatarUrl!.startsWith('http') ||
+      avatarUrl!.startsWith('data:image/') ||
+      avatarUrl!.startsWith('/api/'));
+
   return (
     <div className={`relative inline-flex items-center justify-center flex-shrink-0 select-none ${className}`}>
-      {avatarUrl && !imageError && avatarUrl.startsWith('http') ? (
+      {hasValidImage ? (
         <img
-          src={avatarUrl}
+          src={avatarUrl!}
           alt=""
           onError={() => setImageError(true)}
           className={`${sizeClasses[size]} rounded-full object-cover bg-zinc-900 border border-white/10 shadow-md flex-shrink-0`}
