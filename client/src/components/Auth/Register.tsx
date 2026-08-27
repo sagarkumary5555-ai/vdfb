@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Eye, EyeOff, Upload, X, Camera } from 'lucide-react';
+import { Eye, EyeOff, Upload, X, Camera, Shield, Sparkles, UserPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 
 interface RegisterProps {
@@ -90,64 +90,80 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] w-screen bg-[#000000] flex items-center justify-center p-4 sm:p-6 lg:p-12 font-sans select-none text-white overflow-y-auto">
-      {/* 2-Column Luxury Instagram Layout */}
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center my-auto">
-        
-        {/* LEFT COLUMN: Visual Showcase */}
-        <div className="hidden lg:flex flex-col items-center justify-center text-center space-y-8 pr-4">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-20 h-20 rounded-[22px] bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] p-[2px] shadow-2xl shadow-[#dc2743]/20 flex items-center justify-center animate-fade-in">
-              <div className="w-full h-full bg-black/10 rounded-[20px] flex items-center justify-center">
-                <svg className="w-11 h-11 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-                </svg>
-              </div>
-            </div>
+    <div className="relative min-h-[100dvh] w-screen bg-[#060608] flex items-center justify-center p-4 sm:p-6 lg:p-12 font-sans select-none text-white overflow-y-auto">
+      {/* Background ambient lighting */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-zinc-800/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-zinc-900/30 rounded-full blur-3xl pointer-events-none" />
 
-            <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight text-white leading-tight max-w-sm">
-              Connect with friends, share moments &{' '}
-              <span className="bg-gradient-to-r from-[#f09433] via-[#e6683c] to-[#dc2743] bg-clip-text text-transparent">
-                live calls
-              </span>
-              .
-            </h1>
+      {/* 2-Column Professional Architecture */}
+      <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto">
+        
+        {/* LEFT COLUMN: Original Brand Identity */}
+        <div className="hidden lg:flex lg:col-span-6 flex-col items-start justify-center pr-4 space-y-7">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-white text-black flex items-center justify-center shadow-2xl shadow-white/10 ring-1 ring-white/20">
+              <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                <span>ChatUs</span>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400 bg-white/10 px-2 py-0.5 rounded-md border border-white/10">
+                  PRO
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400">Direct Social Messaging & Studio Calls</p>
+            </div>
           </div>
 
-          {/* Phone Card Mockup */}
-          <div className="relative w-72 h-80 flex items-center justify-center mt-2">
-            <div className="absolute -left-6 top-6 w-44 h-64 rounded-3xl bg-zinc-900 border border-white/10 shadow-2xl -rotate-12 overflow-hidden opacity-75">
-              <img
-                src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&auto=format&fit=crop&q=80"
-                alt="Story Left"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="relative z-10 w-48 h-72 rounded-[28px] bg-zinc-950 border-2 border-white/20 shadow-2xl overflow-hidden shadow-black">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80"
-                alt="Story Center"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-3 right-3 p-1.5 rounded-full bg-gradient-to-tr from-pink-600 to-rose-500 text-white shadow-lg">
-                <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
+          <div className="space-y-2 max-w-md">
+            <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight text-white leading-tight">
+              Create your profile and start chatting instantly.
+            </h1>
+            <p className="text-sm text-zinc-400 leading-relaxed pt-2">
+              Share real-time moments, exchange lossless media, and invite friends with your unique @handle.
+            </p>
+          </div>
+
+          {/* Key Feature List */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-3 text-xs text-zinc-300">
+              <div className="p-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white">
+                <Sparkles className="w-4 h-4" />
               </div>
+              <span>Studio Voice Isolation with zero background noise</span>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-zinc-300">
+              <div className="p-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white">
+                <Shield className="w-4 h-4" />
+              </div>
+              <span>Encrypted Direct Messaging & WebRTC Calling</span>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Sign Up Form Card */}
-        <div className="w-full max-w-md mx-auto">
-          <div className="bg-[#121214] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl backdrop-blur-2xl">
+        {/* RIGHT COLUMN: Sign Up Form */}
+        <div className="w-full lg:col-span-6 mx-auto">
+          <div className="bg-[#101014] rounded-3xl p-6 sm:p-8 border border-white/12 shadow-2xl backdrop-blur-2xl">
             
-            <div className="text-center mb-5">
-              <h2 className="text-xl font-bold text-white mb-1">
-                Sign up to see photos and videos from your friends.
+            <div className="mb-5">
+              <div className="lg:hidden flex items-center gap-2.5 mb-3">
+                <div className="w-8 h-8 rounded-xl bg-white text-black flex items-center justify-center">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <span className="text-base font-bold text-white tracking-tight">ChatUs</span>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                Create an account
               </h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                Fill in your profile details to join
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -159,7 +175,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
               )}
 
               {/* Drag & Drop Avatar Uploader */}
-              <div className="flex flex-col items-center gap-2 pb-1">
+              <div className="flex items-center gap-3.5 p-2.5 bg-zinc-900/80 rounded-2xl border border-white/10">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -173,14 +189,14 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`relative w-20 h-20 rounded-full border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition overflow-hidden group ${
+                  className={`relative w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer transition overflow-hidden group flex-shrink-0 ${
                     isDragging
                       ? 'border-white bg-white/20 scale-105'
                       : avatarPreview
-                      ? 'border-white/40 bg-zinc-900'
-                      : 'border-white/20 bg-zinc-900 hover:border-white/50 hover:bg-zinc-800'
+                      ? 'border-white/40 bg-zinc-950'
+                      : 'border-white/20 bg-zinc-950 hover:border-white/50'
                   }`}
-                  title="Drag & drop or click to upload photo from PC/Phone"
+                  title="Drag & drop photo or click to upload"
                 >
                   {avatarPreview ? (
                     <>
@@ -189,124 +205,135 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                         alt="Avatar preview"
                         className="w-full h-full object-cover rounded-full"
                       />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition">
-                        <Camera className="w-4 h-4 text-white mb-0.5" />
-                        <span className="text-[8px] text-white">Change</span>
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                        <Camera className="w-4 h-4 text-white" />
                       </div>
                     </>
                   ) : (
-                    <div className="flex flex-col items-center text-center p-2">
-                      <Upload className="w-4 h-4 text-zinc-400 mb-1 group-hover:text-white" />
-                      <span className="text-[9px] text-zinc-300 font-semibold leading-tight">
-                        Upload Photo
-                      </span>
-                    </div>
+                    <Upload className="w-5 h-5 text-zinc-400 group-hover:text-white" />
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
-                  <span>Drag & drop photo or</span>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-white font-semibold underline"
-                  >
-                    Browse PC / Phone
-                  </button>
-                  {avatarPreview && (
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-white">Profile Photo</div>
+                  <div className="text-[10px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
+                    <span>Drag & drop or</span>
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAvatarPreview(null);
-                      }}
-                      className="text-red-400 hover:text-red-300 ml-1 p-0.5"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-white font-semibold underline"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      Browse Device
                     </button>
-                  )}
+                    {avatarPreview && (
+                      <button
+                        type="button"
+                        onClick={() => setAvatarPreview(null)}
+                        className="text-red-400 ml-1"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Username Input */}
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
-                placeholder="Username (@handle)"
-                autoFocus
-                required
-                className="w-full px-4 py-2.5 bg-[#000000]/60 border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/50 focus:bg-[#000000] transition"
-              />
-
-              {/* Display Name Input */}
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Full Name"
-                className="w-full px-4 py-2.5 bg-[#000000]/60 border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/50 focus:bg-[#000000] transition"
-              />
-
-              {/* Password Input */}
-              <div className="relative">
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold text-zinc-300">
+                  Username (@handle)
+                </label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                  placeholder="e.g. alex"
+                  autoFocus
                   required
-                  className="w-full px-4 pr-11 py-2.5 bg-[#000000]/60 border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/50 focus:bg-[#000000] transition"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900/90 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-500 hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
 
-              {/* Bio Input */}
-              <textarea
-                rows={2}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Bio / Status (Optional)"
-                className="w-full px-4 py-2 bg-[#000000]/60 border border-white/15 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/50 focus:bg-[#000000] transition resize-none"
-              />
+              {/* Full Display Name */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold text-zinc-300">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Alex Rivera"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900/90 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition"
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold text-zinc-300">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 4 characters"
+                    required
+                    className="w-full px-3.5 pr-10 py-2.5 bg-zinc-900/90 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Bio */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold text-zinc-300">
+                  Bio / Status <span className="text-zinc-500 font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell friends what you're working on..."
+                  className="w-full px-3.5 py-2 bg-zinc-900/90 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition resize-none"
+                />
+              </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 px-4 bg-[#0095f6] hover:bg-[#1877f2] active:scale-[0.98] text-white font-bold rounded-xl shadow-lg transition disabled:opacity-50 text-xs sm:text-sm mt-1"
+                className="w-full py-3 px-4 bg-white hover:bg-zinc-200 active:scale-[0.98] text-black font-bold rounded-xl shadow-lg transition disabled:opacity-50 text-xs sm:text-sm flex items-center justify-center gap-2 mt-2"
               >
                 {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
-                  'Sign up'
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>Create Account</span>
+                  </>
                 )}
               </button>
             </form>
 
-            {/* Back to Log in */}
+            {/* Back to Sign In */}
             <div className="pt-4 mt-4 border-t border-white/10 text-center">
               <p className="text-xs text-zinc-400">
-                Have an account?{' '}
+                Already have an account?{' '}
                 <button
                   onClick={onSwitchToLogin}
-                  className="text-[#0095f6] font-semibold hover:underline"
+                  className="text-white font-semibold hover:underline"
                 >
-                  Log in
+                  Sign In
                 </button>
               </p>
-            </div>
-
-            {/* Meta Branding */}
-            <div className="text-center pt-5 text-zinc-500 text-[11px] flex items-center justify-center gap-1.5 font-medium">
-              <span>♾️</span>
-              <span>Meta</span>
             </div>
 
           </div>

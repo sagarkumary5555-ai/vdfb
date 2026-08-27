@@ -7,6 +7,7 @@ import {
   SquarePen,
   MessageSquare,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 import { useAuth } from '../../context/AuthContext.js';
@@ -36,21 +37,25 @@ export const ChatSidebar: React.FC = () => {
 
   return (
     <aside className="w-full lg:w-80 h-[100dvh] bg-[#09090b] border-r border-white/10 flex flex-col select-none flex-shrink-0 z-20">
-      {/* Top Header: Instagram Style Account Dropdown & New Message */}
+      {/* Top Header: ChatUs Branding + User Account & Actions */}
       <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-[#0e0e10]">
-        <div className="flex items-center gap-2 min-w-0">
-          <Avatar
-            name={user?.displayName || 'User'}
-            username={user?.username}
-            avatarUrl={user?.avatarUrl}
-            size="sm"
-          />
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-white text-black flex items-center justify-center font-black flex-shrink-0">
+            <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
           <div className="min-w-0">
-            <h2 className="text-xs sm:text-sm font-bold text-white tracking-tight truncate flex items-center gap-1">
-              @{user?.username}
-            </h2>
-            <div className="text-[10px] text-zinc-400 truncate">
-              {user?.displayName}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs sm:text-sm font-extrabold text-white tracking-tight">
+                ChatUs
+              </span>
+              <span className="text-[9px] uppercase font-bold text-zinc-400 bg-white/10 px-1.5 py-0.2 rounded border border-white/10">
+                PRO
+              </span>
+            </div>
+            <div className="text-[10px] text-zinc-400 truncate flex items-center gap-1">
+              <span>@{user?.username}</span>
             </div>
           </div>
         </div>
@@ -59,13 +64,13 @@ export const ChatSidebar: React.FC = () => {
           <button
             onClick={() => setIsNewChatModalOpen(true)}
             className="p-2 rounded-xl text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 transition active:scale-95"
-            title="New Chat / Search User"
+            title="New Chat or Group"
           >
             <SquarePen className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition"
+            className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition active:scale-95"
             title="Settings"
           >
             <Settings className="w-4 h-4" />
@@ -81,7 +86,7 @@ export const ChatSidebar: React.FC = () => {
         >
           <div className="flex items-center gap-2">
             <Search className="w-3.5 h-3.5" />
-            <span>Search friends (@username)...</span>
+            <span>Search friends or groups...</span>
           </div>
           <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] text-zinc-400 font-mono">+</kbd>
         </button>
@@ -90,7 +95,7 @@ export const ChatSidebar: React.FC = () => {
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
         <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 px-2 py-1 flex items-center justify-between">
-          <span>Messages</span>
+          <span>Conversations</span>
           <span>{conversations.length}</span>
         </div>
 
@@ -102,14 +107,14 @@ export const ChatSidebar: React.FC = () => {
               onClick={() => setIsNewChatModalOpen(true)}
               className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95"
             >
-              Start New Message
+              Start New Chat
             </button>
           </div>
         ) : (
           conversations.map((conv) => {
             const isSelected = activeConversation?.id === conv.id;
             const partner = conv.otherUser;
-            const displayName = partner?.displayName || conv.name || 'Friend';
+            const displayName = conv.isGroup ? conv.name : (partner?.displayName || conv.name || 'Friend');
             const username = partner?.username || 'user';
             const avatarUrl = partner?.avatarUrl;
             const lastMessageText = conv.lastMessage?.content || (conv.lastMessage?.attachments?.length ? '[Attachment]' : 'New conversation');
@@ -126,18 +131,27 @@ export const ChatSidebar: React.FC = () => {
                 }`}
               >
                 <Avatar
-                  name={displayName}
+                  name={displayName || 'Chat'}
                   username={username}
                   avatarUrl={avatarUrl}
                   size="md"
-                  status={partner?.lastSeen ? 'online' : 'offline'}
+                  isGroup={conv.isGroup}
+                  status={!conv.isGroup && partner?.lastSeen ? 'online' : null}
                 />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm font-semibold text-white truncate">
-                      {displayName}
-                    </span>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="text-xs sm:text-sm font-semibold text-white truncate">
+                        {displayName}
+                      </span>
+                      {conv.isGroup && (
+                        <span className="text-[9px] bg-white/10 text-zinc-300 px-1 rounded flex items-center gap-0.5">
+                          <Users className="w-2.5 h-2.5" />
+                          <span>Group</span>
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-zinc-400 flex-shrink-0 ml-1">
                       {timeFormatted}
                     </span>
@@ -190,7 +204,7 @@ export const ChatSidebar: React.FC = () => {
       <div className="p-3 border-t border-white/10 bg-[#0e0e10] flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px] text-zinc-400">
           <Sparkles className="w-3.5 h-3.5 text-white" />
-          <span>HD Calling & Noise Gate</span>
+          <span>ChatUs Studio Audio</span>
         </div>
         <button
           onClick={() => setIsSettingsOpen(true)}

@@ -74,6 +74,16 @@ export const messageApi = {
     return res.data;
   },
 
+  createGroup: async (data: { name: string; participantIds: string[] }): Promise<{ conversation: any }> => {
+    const res = await api.post('/messages/conversations/group', data);
+    return res.data;
+  },
+
+  getParticipants: async (conversationId: string): Promise<{ participants: Array<{ role: string; user: User }> }> => {
+    const res = await api.get(`/messages/conversations/${conversationId}/participants`);
+    return res.data;
+  },
+
   getMessages: async (
     conversationId?: string,
     limit = 50,

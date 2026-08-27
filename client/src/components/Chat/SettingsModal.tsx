@@ -1,5 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Key, Volume2, VolumeX, ShieldCheck, LogOut, Sliders, Sparkles, Mic, MicOff, Waves, Upload, Camera } from 'lucide-react';
+import {
+  X,
+  User,
+  Key,
+  Volume2,
+  VolumeX,
+  ShieldCheck,
+  LogOut,
+  Sliders,
+  Sparkles,
+  Mic,
+  MicOff,
+  Waves,
+  Upload,
+  Camera,
+  AtSign,
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useChat } from '../../context/ChatContext.js';
 import { soundService } from '../../services/sound.js';
@@ -9,6 +25,8 @@ import { Avatar } from '../Common/Avatar.js';
 export const SettingsModal: React.FC = () => {
   const { user, updateProfile, changePassword, logout } = useAuth();
   const { isSettingsOpen, setIsSettingsOpen } = useChat();
+
+  const [activeTab, setActiveTab] = useState<'profile' | 'voice' | 'appearance' | 'security'>('profile');
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [customStatus, setCustomStatus] = useState(user?.customStatus || '');
@@ -188,15 +206,26 @@ export const SettingsModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-lg bg-[#121214] rounded-3xl border border-white/12 shadow-2xl overflow-hidden animate-slide-up max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <span>Settings</span>
-            <span className="text-[10px] text-zinc-400 font-normal bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
-              Account & Audio
-            </span>
-          </h2>
+      <div className="relative w-full max-w-2xl bg-[#111114] rounded-3xl border border-white/12 shadow-2xl overflow-hidden animate-slide-up max-h-[92vh] flex flex-col">
+        
+        {/* Modal Header */}
+        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-[#0c0c0e]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-white text-black flex items-center justify-center font-black">
+              <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
+                <span>ChatUs Settings</span>
+                <span className="text-[9px] uppercase font-bold text-zinc-400 bg-white/10 px-1.5 py-0.2 rounded border border-white/10">
+                  PRO
+                </span>
+              </h2>
+            </div>
+          </div>
+
           <button
             onClick={() => setIsSettingsOpen(false)}
             className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition"
@@ -205,359 +234,426 @@ export const SettingsModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Body Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar text-zinc-100">
-          {/* Section 1: Profile */}
-          <form onSubmit={handleProfileSave} className="space-y-3.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5" />
-              Profile Photo & Details
-            </h3>
+        {/* Tab Navigation Pill Bar */}
+        <div className="p-2 border-b border-white/10 bg-[#0e0e11] flex items-center gap-1 overflow-x-auto flex-shrink-0">
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0 ${
+              activeTab === 'profile'
+                ? 'bg-white text-black shadow'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Profile & Photo</span>
+          </button>
 
-            {profileMsg && (
-              <div
-                className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
-                  profileMsg.type === 'success'
-                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-red-500/15 text-red-300 border border-red-500/30'
-                }`}
-              >
-                <span>{profileMsg.type === 'success' ? '✅' : '⚠️'}</span>
-                <span>{profileMsg.text}</span>
-              </div>
-            )}
+          <button
+            onClick={() => setActiveTab('voice')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0 ${
+              activeTab === 'voice'
+                ? 'bg-white text-black shadow'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Studio Voice DSP</span>
+          </button>
 
-            {/* Drag & Drop Avatar Uploader */}
-            <div className="flex items-center gap-4 p-3 bg-zinc-900/90 rounded-2xl border border-white/10">
-              <input
-                ref={avatarFileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => e.target.files?.[0] && processAvatarFile(e.target.files[0])}
-                className="hidden"
-              />
+          <button
+            onClick={() => setActiveTab('appearance')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0 ${
+              activeTab === 'appearance'
+                ? 'bg-white text-black shadow'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Atmosphere & Sounds</span>
+          </button>
 
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsAvatarDragging(true);
-                }}
-                onDragLeave={() => setIsAvatarDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsAvatarDragging(false);
-                  if (e.dataTransfer.files?.[0]) processAvatarFile(e.dataTransfer.files[0]);
-                }}
-                onClick={() => avatarFileInputRef.current?.click()}
-                className={`relative w-20 h-20 rounded-full border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition overflow-hidden group flex-shrink-0 ${
-                  isAvatarDragging
-                    ? 'border-white bg-white/20 scale-105'
-                    : 'border-white/20 bg-zinc-950 hover:border-white/50'
-                }`}
-              >
-                {avatarUrl ? (
-                  <>
-                    <img
-                      src={avatarUrl}
-                      alt="Avatar"
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition">
-                      <Camera className="w-4 h-4 text-white mb-0.5" />
-                      <span className="text-[8px] text-white">Change</span>
-                    </div>
-                  </>
-                ) : (
-                  <Avatar
-                    name={displayName || 'User'}
-                    username={user?.username}
-                    size="lg"
-                  />
-                )}
-              </div>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0 ${
+              activeTab === 'security'
+                ? 'bg-white text-black shadow'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Key className="w-3.5 h-3.5" />
+            <span>Security</span>
+          </button>
+        </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-white mb-0.5">Profile Photo</div>
-                <div className="text-[11px] text-zinc-400 leading-relaxed mb-2">
-                  Drag & drop image from PC, or browse device files.
-                </div>
-                <button
-                  type="button"
-                  onClick={() => avatarFileInputRef.current?.click()}
-                  className="px-3 py-1.5 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Upload Image</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[11px] text-zinc-400 mb-1">Display Name</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-zinc-400 mb-1">Custom Status</label>
-                <input
-                  type="text"
-                  value={customStatus}
-                  onChange={(e) => setCustomStatus(e.target.value)}
-                  placeholder="e.g. Available"
-                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-1">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-4 py-2 bg-white text-black hover:bg-zinc-200 text-xs font-bold rounded-xl transition active:scale-95"
-              >
-                Save Profile
-              </button>
-            </div>
-          </form>
-
-          {/* Section 2: Studio Voice Isolation & Dynamic Noise Gate */}
-          <div className="pt-3 border-t border-white/10 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-white" />
-              Studio Voice Isolation & Noise Suppression
-            </h3>
-
-            <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-white/10 space-y-3 text-xs">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-semibold text-white flex items-center gap-1.5">
-                    <span>Dynamic Noise Gate & Isolation</span>
-                    <span className="text-[9px] text-emerald-400 bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-500/30 font-bold">
-                      PRO DSP
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    Cuts AC drone, fan hum, keyboard clicks, and room echo
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleVoiceIsolationToggle}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
-                    voiceIsolation
-                      ? 'bg-white text-black shadow'
-                      : 'bg-zinc-800 text-zinc-400 border border-white/10'
+        {/* Tab Body Content */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar text-zinc-100 bg-[#09090b]">
+          
+          {/* TAB 1: Profile */}
+          {activeTab === 'profile' && (
+            <form onSubmit={handleProfileSave} className="space-y-4">
+              {profileMsg && (
+                <div
+                  className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                    profileMsg.type === 'success'
+                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-red-500/15 text-red-300 border border-red-500/30'
                   }`}
                 >
-                  {voiceIsolation ? 'Active' : 'Disabled'}
-                </button>
-              </div>
-
-              {voiceIsolation && (
-                <div className="pt-2 border-t border-white/5 space-y-1.5">
-                  <div className="flex items-center justify-between text-zinc-300">
-                    <span className="text-[11px] flex items-center gap-1">
-                      <Waves className="w-3 h-3 text-white" />
-                      Noise Gate Cutoff Strength
-                    </span>
-                    <span className="text-[10px] font-bold text-white">
-                      {parseInt(noiseGateStrength, 10) < 15 ? 'Soft' : parseInt(noiseGateStrength, 10) < 30 ? 'Balanced (Recommended)' : 'Deep Isolation'}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="5"
-                    max="50"
-                    step="5"
-                    value={noiseGateStrength}
-                    onChange={(e) => handleNoiseGateChange(e.target.value)}
-                    className="w-full accent-white cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[9px] text-zinc-500">
-                    <span>Gentle</span>
-                    <span>Standard</span>
-                    <span>Deep Isolation</span>
-                  </div>
+                  <span>{profileMsg.type === 'success' ? '✅' : '⚠️'}</span>
+                  <span>{profileMsg.text}</span>
                 </div>
               )}
 
-              {/* Real-time Mic Test Meter */}
-              <div className="pt-2 border-t border-white/5 space-y-2">
-                <div className="flex items-center justify-between text-zinc-300">
-                  <span className="text-[11px]">Live Microphone Level Test</span>
-                  <button
-                    type="button"
-                    onClick={startMicTest}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1 transition ${
-                      micTesting
-                        ? 'bg-red-500/20 text-red-300 border border-red-500/40'
-                        : 'bg-white/10 hover:bg-white/20 text-white'
-                    }`}
-                  >
-                    {micTesting ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
-                    {micTesting ? 'Stop Test' : 'Test Mic'}
-                  </button>
+              {/* Drag & Drop Avatar Uploader */}
+              <div className="flex items-center gap-4 p-4 bg-zinc-900/90 rounded-2xl border border-white/10">
+                <input
+                  ref={avatarFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => e.target.files?.[0] && processAvatarFile(e.target.files[0])}
+                  className="hidden"
+                />
+
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsAvatarDragging(true);
+                  }}
+                  onDragLeave={() => setIsAvatarDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsAvatarDragging(false);
+                    if (e.dataTransfer.files?.[0]) processAvatarFile(e.dataTransfer.files[0]);
+                  }}
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  className={`relative w-20 h-20 rounded-full border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition overflow-hidden group flex-shrink-0 ${
+                    isAvatarDragging
+                      ? 'border-white bg-white/20 scale-105'
+                      : 'border-white/20 bg-zinc-950 hover:border-white/50'
+                  }`}
+                  title="Drag & drop photo or browse files"
+                >
+                  {avatarUrl ? (
+                    <>
+                      <img
+                        src={avatarUrl}
+                        alt="Avatar"
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition">
+                        <Camera className="w-4 h-4 text-white mb-0.5" />
+                        <span className="text-[8px] text-white">Change</span>
+                      </div>
+                    </>
+                  ) : (
+                    <Avatar
+                      name={displayName || 'User'}
+                      username={user?.username}
+                      size="lg"
+                    />
+                  )}
                 </div>
 
-                <div className="h-2 w-full bg-zinc-950 rounded-full overflow-hidden border border-white/10 relative">
-                  <div
-                    className="h-full bg-white transition-all duration-75 rounded-full"
-                    style={{ width: `${micLevel}%` }}
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-white mb-0.5">Profile Picture</div>
+                  <div className="text-[11px] text-zinc-400 leading-relaxed mb-2.5">
+                    Drag & drop an image from your PC, or browse device storage.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Photo</span>
+                    </button>
+                    {avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setAvatarUrl('')}
+                        className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium rounded-xl transition"
+                      >
+                        Reset to Default
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Username Handle Badge */}
+              <div>
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
+                  Username Handle
+                </label>
+                <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950 border border-white/5 rounded-xl text-xs text-zinc-400">
+                  <AtSign className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>{user?.username}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Display Name</label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Custom Status</label>
+                  <input
+                    type="text"
+                    value={customStatus}
+                    onChange={(e) => setCustomStatus(e.target.value)}
+                    placeholder="e.g. In my own little world 🌸"
+                    className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
                   />
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Section 3: Wallpaper & Glass Visuals */}
-          <div className="pt-3 border-t border-white/10 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5" />
-              Atmosphere & Blur
-            </h3>
-
-            <div className="space-y-3 p-3.5 rounded-2xl bg-zinc-900/90 border border-white/10 text-xs">
-              <div>
-                <div className="flex items-center justify-between text-zinc-300 mb-1.5">
-                  <span>Background Blur</span>
-                  <span className="font-bold text-white">{blurLevel}px</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="12"
-                  step="1"
-                  value={blurLevel}
-                  onChange={(e) => handleBlurChange(e.target.value)}
-                  className="w-full accent-white cursor-pointer"
-                />
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 bg-white text-black hover:bg-zinc-200 text-xs font-bold rounded-xl transition active:scale-95 shadow"
+                >
+                  Save Profile Changes
+                </button>
               </div>
+            </form>
+          )}
 
-              <div>
-                <div className="flex items-center justify-between text-zinc-300 mb-1.5">
-                  <span>Tint Darkness</span>
-                  <span className="font-bold text-white">{tintLevel}%</span>
+          {/* TAB 2: Studio Voice DSP */}
+          {activeTab === 'voice' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-zinc-900/90 border border-white/10 space-y-3.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-white flex items-center gap-1.5">
+                      <span>Dynamic Adaptive Noise Gate</span>
+                      <span className="text-[9px] text-emerald-400 bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-500/30 font-bold">
+                        ACTIVE DSP
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-400 pt-0.5">
+                      Silences AC humming, ceiling fan drone, keyboard clatter, and echo
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleVoiceIsolationToggle}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition active:scale-95 ${
+                      voiceIsolation
+                        ? 'bg-white text-black shadow'
+                        : 'bg-zinc-800 text-zinc-400 border border-white/10'
+                    }`}
+                  >
+                    {voiceIsolation ? 'Enabled' : 'Disabled'}
+                  </button>
                 </div>
-                <input
-                  type="range"
-                  min="15"
-                  max="85"
-                  step="5"
-                  value={tintLevel}
-                  onChange={(e) => handleTintChange(e.target.value)}
-                  className="w-full accent-white cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
 
-          {/* Section 4: Preferences */}
-          <div className="pt-3 border-t border-white/10 space-y-2.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Audio & Alerts
-            </h3>
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-900/90 border border-white/10">
-              <div className="flex items-center gap-2.5">
-                {isMuted ? (
-                  <VolumeX className="w-5 h-5 text-zinc-500" />
-                ) : (
-                  <Volume2 className="w-5 h-5 text-white" />
+                {voiceIsolation && (
+                  <div className="pt-3 border-t border-white/5 space-y-2">
+                    <div className="flex items-center justify-between text-zinc-300">
+                      <span className="text-[11px] flex items-center gap-1 font-semibold">
+                        <Waves className="w-3.5 h-3.5 text-white" />
+                        Noise Gate Threshold Cutoff
+                      </span>
+                      <span className="text-[10px] font-bold text-white bg-white/10 px-2 py-0.5 rounded">
+                        {parseInt(noiseGateStrength, 10) < 15 ? 'Soft' : parseInt(noiseGateStrength, 10) < 30 ? 'Balanced Studio (Recommended)' : 'Deep Isolation'}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="50"
+                      step="5"
+                      value={noiseGateStrength}
+                      onChange={(e) => handleNoiseGateChange(e.target.value)}
+                      className="w-full accent-white cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[9px] text-zinc-500">
+                      <span>Gentle</span>
+                      <span>Balanced Studio</span>
+                      <span>Deep Isolation</span>
+                    </div>
+                  </div>
                 )}
-                <div>
-                  <div className="text-xs font-medium text-white">Notification Sounds</div>
-                  <div className="text-[10px] text-zinc-400">Chime for incoming and sent messages</div>
+
+                {/* Real-time Mic Test Meter */}
+                <div className="pt-3 border-t border-white/5 space-y-2">
+                  <div className="flex items-center justify-between text-zinc-300">
+                    <span className="text-[11px] font-semibold">Live Microphone Visualizer</span>
+                    <button
+                      type="button"
+                      onClick={startMicTest}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
+                        micTesting
+                          ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                          : 'bg-white/10 hover:bg-white/20 text-white'
+                      }`}
+                    >
+                      {micTesting ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                      <span>{micTesting ? 'Stop Test' : 'Test Microphone'}</span>
+                    </button>
+                  </div>
+
+                  <div className="h-2.5 w-full bg-zinc-950 rounded-full overflow-hidden border border-white/10 relative">
+                    <div
+                      className="h-full bg-white transition-all duration-75 rounded-full"
+                      style={{ width: `${micLevel}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={toggleSound}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition active:scale-95 ${
-                  isMuted
-                    ? 'bg-zinc-800 text-zinc-400 border border-white/10'
-                    : 'bg-white text-black'
-                }`}
-              >
-                {isMuted ? 'Muted' : 'Enabled'}
-              </button>
             </div>
-          </div>
+          )}
 
-          {/* Section 5: Security & Password */}
-          <form onSubmit={handlePasswordChange} className="pt-3 border-t border-white/10 space-y-2.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5" />
-              Change Password
-            </h3>
+          {/* TAB 3: Appearance & Sounds */}
+          {activeTab === 'appearance' && (
+            <div className="space-y-4">
+              <div className="space-y-3.5 p-4 rounded-2xl bg-zinc-900/90 border border-white/10 text-xs">
+                <div className="font-bold text-white text-xs">Atmosphere & Glass Control</div>
 
-            {passwordMsg && (
-              <div
-                className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
-                  passwordMsg.type === 'success'
-                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-red-500/15 text-red-300 border border-red-500/30'
-                }`}
-              >
-                <span>{passwordMsg.type === 'success' ? '✅' : '⚠️'}</span>
-                <span>{passwordMsg.text}</span>
+                <div>
+                  <div className="flex items-center justify-between text-zinc-300 mb-1.5">
+                    <span>Background Wallpaper Blur</span>
+                    <span className="font-bold text-white">{blurLevel}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="12"
+                    step="1"
+                    value={blurLevel}
+                    onChange={(e) => handleBlurChange(e.target.value)}
+                    className="w-full accent-white cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-zinc-300 mb-1.5">
+                    <span>Tint Darkness</span>
+                    <span className="font-bold text-white">{tintLevel}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="15"
+                    max="85"
+                    step="5"
+                    value={tintLevel}
+                    onChange={(e) => handleTintChange(e.target.value)}
+                    className="w-full accent-white cursor-pointer"
+                  />
+                </div>
               </div>
-            )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[11px] text-zinc-400 mb-1">Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-zinc-400 mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
-                  required
-                />
+              {/* Sound Alerts */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-900/90 border border-white/10">
+                <div className="flex items-center gap-3">
+                  {isMuted ? (
+                    <VolumeX className="w-5 h-5 text-zinc-500" />
+                  ) : (
+                    <Volume2 className="w-5 h-5 text-white" />
+                  )}
+                  <div>
+                    <div className="text-xs font-bold text-white">Notification Sounds</div>
+                    <div className="text-[11px] text-zinc-400">Audio chimes for incoming & sent messages</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleSound}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                    isMuted
+                      ? 'bg-zinc-800 text-zinc-400 border border-white/10'
+                      : 'bg-white text-black'
+                  }`}
+                >
+                  {isMuted ? 'Muted' : 'Enabled'}
+                </button>
               </div>
             </div>
+          )}
 
-            <div className="flex justify-end pt-1">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold rounded-xl border border-white/15 transition active:scale-95"
-              >
-                Update Password
-              </button>
-            </div>
-          </form>
+          {/* TAB 4: Security & Password */}
+          {activeTab === 'security' && (
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              {passwordMsg && (
+                <div
+                  className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                    passwordMsg.type === 'success'
+                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-red-500/15 text-red-300 border border-red-500/30'
+                  }`}
+                >
+                  <span>{passwordMsg.type === 'success' ? '✅' : '⚠️'}</span>
+                  <span>{passwordMsg.text}</span>
+                </div>
+              )}
+
+              <div className="p-4 bg-zinc-900/90 rounded-2xl border border-white/10 space-y-3">
+                <div className="font-bold text-white text-xs">Update Account Password</div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Current Password</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-950 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-400 mb-1">New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="At least 4 characters"
+                      className="w-full px-3 py-2 bg-zinc-950 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-white text-black hover:bg-zinc-200 text-xs font-bold rounded-xl transition active:scale-95"
+                  >
+                    Change Password
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+
         </div>
 
-        {/* Footer */}
+        {/* Modal Footer */}
         <div className="p-3.5 sm:p-4 border-t border-white/10 flex items-center justify-between bg-[#0e0e10] flex-shrink-0">
           <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-white" />
-            <span>Encrypted Room</span>
+            <span>ChatUs Encrypted Session</span>
           </div>
 
           <button
             onClick={logout}
-            className="px-3.5 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 text-xs font-semibold flex items-center gap-1.5 border border-red-500/30 active:scale-95 transition"
+            className="px-3.5 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 text-xs font-bold flex items-center gap-1.5 border border-red-500/30 active:scale-95 transition"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Logout</span>
+            <span>Log Out</span>
           </button>
         </div>
+
       </div>
     </div>
   );

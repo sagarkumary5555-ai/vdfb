@@ -62,6 +62,45 @@ export class MessageController {
   }
 
   /**
+   * Create a new group conversation
+   */
+  static async createGroup(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      const { name, participantIds } = req.body;
+      if (!name || !name.trim()) {
+        res.status(400).json({ error: 'Group name is required' });
+        return;
+      }
+      if (!Array.isArray(participantIds) || participantIds.length === 0) {
+        res.status(400).json({ error: 'At least one participant is required' });
+        return;
+      }
+
+      const conversation = await MessageService.createGroupConversation(req.user.id, name.trim(), participantIds);
+      res.status(201).json({ conversation });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to create group' });
+    }
+  }
+
+  /**
+   * Get participants for a conversation
+   */
+  static async getParticipants(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const participants = await MessageService.getConversationParticipants(id);
+      res.json({ participants });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch participants' });
+    }
+  }
+
+  /**
    * Get messages in a conversation
    */
   static async getMessages(req: AuthRequest, res: Response): Promise<void> {

@@ -1,10 +1,11 @@
-import React from 'react';
-import { Search, Settings, Image, Phone, Video, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Settings, Image, Phone, Video, ChevronLeft, Users } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 import { useSocket } from '../../context/SocketContext.js';
 import { useChat } from '../../context/ChatContext.js';
 import { useCall } from '../../context/CallContext.js';
 import { Avatar } from '../Common/Avatar.js';
+import { messageApi } from '../../services/api.js';
 
 export const ChatHeader: React.FC = () => {
   const { isPartnerTyping } = useSocket();
@@ -18,11 +19,35 @@ export const ChatHeader: React.FC = () => {
   } = useChat();
   const { startCall, callState } = useCall();
 
-  const partnerName = activePartner?.displayName || activeConversation?.name || 'Direct Message';
-  const partnerUsername = activePartner?.username || 'user';
-  const partnerAvatar = activePartner?.avatarUrl;
+  const [groupParticipantsCount, setGroupParticipantsCount] = useState<number | null>(null);
 
-  const formatLastSeen = () => {
+  useEffect(() => {
+    if (activeConversation?.isGroup) {
+      messageApi.getParticipants(activeConversation.id).then((res) => {
+        setGroupParticipantsCount(res.participants.length);
+      }).catch(() => {});
+    } else {
+      setGroupParticipantsCount(null);
+    }
+  }, [activeConversation?.id, activeConversation?.isGroup]);
+
+  const isGroup = Boolean(activeConversation?.isGroup);
+  const titleName = isGroup
+    ? (activeConversation?.name || 'Group Chat')
+    : (activePartner?.displayName || activeConversation?.name || 'Direct Message');
+  const partnerUsername = activePartner?.username || 'user';
+  const partnerAvatar = isGroup ? null : activePartner?.avatarUrl;
+
+  const formatSubtitle = () => {
+    if (isGroup) {
+      return (
+        <span className="text-zinc-400 flex items-center gap-1">
+          <Users className="w-3 h-3 text-zinc-400" />
+          <span>{groupParticipantsCount ? `${groupParticipantsCount} members` : 'Group conversation'}</span>
+        </span>
+      );
+    }
+
     if (isPartnerTyping) {
       return (
         <span className="text-white font-bold animate-pulse flex items-center gap-1">
@@ -43,9 +68,8 @@ export const ChatHeader: React.FC = () => {
 
   return (
     <header className="h-16 px-3 sm:px-6 bg-[#0c0c0e] border-b border-white/10 flex items-center justify-between z-30 select-none flex-shrink-0">
-      {/* Left: Mobile Back Button + Partner Profile */}
+      {/* Left: Mobile Back Button + Profile / Group Details */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
-        {/* Mobile Back to Inbox Button */}
         <button
           onClick={() => setIsSidebarOpen(true)}
           className="lg:hidden p-1.5 -ml-1 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition"
@@ -55,23 +79,24 @@ export const ChatHeader: React.FC = () => {
         </button>
 
         <Avatar
-          name={partnerName}
+          name={titleName}
           username={partnerUsername}
           avatarUrl={partnerAvatar}
           size="md"
-          status={activePartner?.lastSeen ? 'online' : 'offline'}
+          isGroup={isGroup}
+          status={!isGroup && activePartner?.lastSeen ? 'online' : null}
         />
 
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-center gap-1.5 truncate">
             <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
-              {partnerName}
+              {titleName}
             </h1>
           </div>
 
           <div className="text-[11px] sm:text-xs text-zinc-400 flex items-center gap-1.5 truncate">
-            {formatLastSeen()}
-            {activePartner?.customStatus && (
+            {formatSubtitle()}
+            {!isGroup && activePartner?.customStatus && (
               <span className="hidden sm:inline text-zinc-500 truncate font-normal">
                 • {activePartner.customStatus}
               </span>
@@ -80,27 +105,29 @@ export const ChatHeader: React.FC = () => {
         </div>
       </div>
 
-      {/* Right: Actions (Voice Call, Video Call, Search, Media) */}
+      {/* Right: Actions */}
       <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-        {/* Voice Call Button */}
-        <button
-          onClick={() => startCall('audio')}
-          disabled={callState !== 'idle' || !activePartner}
-          className="p-2 sm:p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/15 active:scale-95 transition border border-white/10 disabled:opacity-30"
-          title="Voice Call"
-        >
-          <Phone className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-        </button>
+        {!isGroup && (
+          <>
+            <button
+              onClick={() => startCall('audio')}
+              disabled={callState !== 'idle' || !activePartner}
+              className="p-2 sm:p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/15 active:scale-95 transition border border-white/10 disabled:opacity-30"
+              title="Voice Call (Studio Isolation)"
+            >
+              <Phone className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+            </button>
 
-        {/* Video Call Button */}
-        <button
-          onClick={() => startCall('video')}
-          disabled={callState !== 'idle' || !activePartner}
-          className="p-2 sm:p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/15 active:scale-95 transition border border-white/10 disabled:opacity-30"
-          title="Video Call"
-        >
-          <Video className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-        </button>
+            <button
+              onClick={() => startCall('video')}
+              disabled={callState !== 'idle' || !activePartner}
+              className="p-2 sm:p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/15 active:scale-95 transition border border-white/10 disabled:opacity-30"
+              title="Video Call"
+            >
+              <Video className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+            </button>
+          </>
+        )}
 
         <button
           onClick={() => setIsSharedMediaOpen(true)}

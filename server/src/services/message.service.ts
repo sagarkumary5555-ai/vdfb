@@ -110,6 +110,58 @@ export class MessageService {
   }
 
   /**
+   * Create a new group conversation
+   */
+  static async createGroupConversation(creatorId: string, name: string, participantIds: string[]) {
+    if (!name.trim()) {
+      throw new Error('Group name is required');
+    }
+
+    const uniqueUserIds = Array.from(new Set([creatorId, ...participantIds]));
+
+    const conversation = await prisma.conversation.create({
+      data: {
+        isGroup: true,
+        name: name.trim(),
+      },
+    });
+
+    await prisma.conversationParticipant.createMany({
+      data: uniqueUserIds.map((userId) => ({
+        conversationId: conversation.id,
+        userId,
+        role: userId === creatorId ? 'admin' : 'member',
+      })),
+    });
+
+    const creator = await prisma.user.findUnique({ where: { id: creatorId } });
+    if (creator) {
+      await this.createMessage({
+        conversationId: conversation.id,
+        senderId: creatorId,
+        content: `🎉 ${creator.displayName} created the group "${name.trim()}".`,
+      });
+    }
+
+    return conversation;
+  }
+
+  /**
+   * Get participants for a conversation
+   */
+  static async getConversationParticipants(conversationId: string) {
+    const participants = await prisma.conversationParticipant.findMany({
+      where: { conversationId },
+      include: { user: true },
+    });
+
+    return participants.map((p) => ({
+      role: p.role,
+      user: AuthService.formatUser(p.user),
+    }));
+  }
+
+  /**
    * Create a new message
    */
   static async createMessage(params: {

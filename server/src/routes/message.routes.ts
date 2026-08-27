@@ -8,6 +8,8 @@ router.use(requireAuth);
 
 router.get('/conversations', MessageController.getConversations);
 router.post('/conversations/direct', MessageController.getOrCreateDirect);
+router.post('/conversations/group', MessageController.createGroup);
+router.get('/conversations/:id/participants', MessageController.getParticipants);
 router.get('/', MessageController.getMessages);
 router.get('/pinned', MessageController.getPinned);
 router.get('/media', MessageController.getSharedMedia);

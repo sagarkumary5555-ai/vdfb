@@ -36,6 +36,7 @@ interface ChatContextType {
   offlineQueue: QueuedMessage[];
   selectConversation: (conv: ConversationItem) => void;
   startDirectChatWithUser: (user: User) => Promise<void>;
+  createGroupConversation: (name: string, participantIds: string[]) => Promise<void>;
   sendMessage: (content: string, attachments?: Attachment[]) => Promise<void>;
   editMessage: (messageId: string, newContent: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
@@ -165,6 +166,29 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsNewChatModalOpen(false);
     } catch (err: any) {
       alert(`Could not start chat: ${err.message || 'Error'}`);
+    }
+  };
+
+  const createGroupConversation = async (name: string, participantIds: string[]) => {
+    try {
+      const res = await messageApi.createGroup({ name, participantIds });
+      const convId = res.conversation.id;
+
+      const newGroupItem: ConversationItem = {
+        id: convId,
+        name,
+        isGroup: true,
+        otherUser: null,
+        lastMessage: null,
+        unreadCount: 0,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setConversations((prev) => [newGroupItem, ...prev]);
+      selectConversation(newGroupItem);
+      setIsNewChatModalOpen(false);
+    } catch (err: any) {
+      alert(`Could not create group: ${err.response?.data?.error || err.message || 'Error'}`);
     }
   };
 
@@ -390,6 +414,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         offlineQueue,
         selectConversation,
         startDirectChatWithUser,
+        createGroupConversation,
         sendMessage,
         editMessage,
         deleteMessage,
