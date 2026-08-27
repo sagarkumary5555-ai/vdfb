@@ -3,10 +3,12 @@ import { Search, X, MessageSquare, Sparkles, UserPlus, Users, Check } from 'luci
 import { authApi } from '../../services/api.js';
 import { User } from '../../types/index.js';
 import { useChat } from '../../context/ChatContext.js';
+import { useSocket } from '../../context/SocketContext.js';
 import { Avatar } from '../Common/Avatar.js';
 
 export const NewChatModal: React.FC = () => {
   const { isNewChatModalOpen, setIsNewChatModalOpen, startDirectChatWithUser, createGroupConversation } = useChat();
+  const { isUserOnline } = useSocket();
   const [tab, setTab] = useState<'direct' | 'group'>('direct');
 
   // Search & users
@@ -72,10 +74,10 @@ export const NewChatModal: React.FC = () => {
   if (!isNewChatModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-md bg-[#121214] rounded-3xl border border-white/10 shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[88vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fade-in select-none">
+      <div className="relative w-full max-w-md bg-[#121215] rounded-3xl border border-white/12 shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[88vh]">
         {/* Header with Mode Switcher Tabs */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0e0e11]">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTab('direct')}
@@ -152,7 +154,7 @@ export const NewChatModal: React.FC = () => {
         </div>
 
         {/* Results List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar bg-[#121215]">
           {isLoading ? (
             <div className="py-8 text-center text-xs text-zinc-400 flex flex-col items-center justify-center gap-2">
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -166,6 +168,7 @@ export const NewChatModal: React.FC = () => {
           ) : (
             results.map((u) => {
               const isSelected = selectedUserIds.includes(u.id);
+              const isOnline = isUserOnline(u.id);
 
               if (tab === 'group') {
                 return (
@@ -219,7 +222,7 @@ export const NewChatModal: React.FC = () => {
                       username={u.username}
                       avatarUrl={u.avatarUrl}
                       size="md"
-                      status={u.lastSeen ? 'online' : 'offline'}
+                      status={isOnline ? 'online' : 'offline'}
                     />
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-white truncate group-hover:text-zinc-100">

@@ -35,6 +35,23 @@ const isJumboEmoji = (text: string): boolean => {
   return emojiRegex.test(trimmed);
 };
 
+const getGifUrl = (text: string): string | null => {
+  if (!text) return null;
+  const trimmed = text.trim();
+  if (trimmed.startsWith('[GIF:') && trimmed.endsWith(']')) {
+    return trimmed.slice(5, -1);
+  }
+  if (
+    /^https?:\/\/.*\.(gif|webp)(\?.*)?$/i.test(trimmed) ||
+    trimmed.includes('media.giphy.com') ||
+    trimmed.includes('tenor.com') ||
+    trimmed.includes('c.tenor.com')
+  ) {
+    return trimmed;
+  }
+  return null;
+};
+
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isFirstInGroup = true,
@@ -57,8 +74,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
   const isMe = message.senderId === user?.id || message.sender.username === user?.username;
   const isHighlighted = highlightedMessageId === message.id;
+  const gifUrl = !message.isDeleted ? getGifUrl(message.content) : null;
   const isEmojiOnly =
     !message.isDeleted &&
+    !gifUrl &&
     isJumboEmoji(message.content) &&
     (!message.attachments || message.attachments.length === 0);
 
@@ -69,7 +88,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       particleCount: 20,
       spread: 50,
       origin: { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight },
-      colors: ['#e11d48', '#f43f5e', '#fb7185'],
+      colors: ['#ffffff', '#a1a1aa', '#52525b'],
     });
   };
 
@@ -144,20 +163,20 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         target="_blank"
         rel="noopener noreferrer"
         download={att.originalName}
-        className="mt-1 p-2.5 rounded-2xl bg-dark-950/80 border border-white/10 flex items-center justify-between gap-2.5 max-w-xs hover:border-brand-pink/40 transition group shadow-md"
+        className="mt-1 p-2.5 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-between gap-2.5 max-w-xs hover:border-white/30 transition group shadow-md"
       >
         <div className="flex items-center gap-2 truncate">
-          <div className="p-1.5 rounded-xl bg-brand-rose/15 text-brand-pink flex-shrink-0">
+          <div className="p-1.5 rounded-xl bg-white/10 text-white flex-shrink-0">
             <FileText className="w-4 h-4" />
           </div>
           <div className="truncate">
-            <div className="text-xs font-semibold text-slate-200 truncate group-hover:text-white">
+            <div className="text-xs font-semibold text-zinc-200 truncate group-hover:text-white">
               {att.originalName}
             </div>
-            <div className="text-[10px] text-slate-400">{formatSize(att.size)}</div>
+            <div className="text-[10px] text-zinc-400">{formatSize(att.size)}</div>
           </div>
         </div>
-        <div className="p-1 rounded-xl bg-white/5 text-slate-300 group-hover:text-white group-hover:bg-brand-rose/25 transition flex-shrink-0">
+        <div className="p-1 rounded-xl bg-white/5 text-zinc-300 group-hover:text-white group-hover:bg-white/20 transition flex-shrink-0">
           <Download className="w-3.5 h-3.5" />
         </div>
       </a>
@@ -172,12 +191,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       className={`relative group flex gap-2 sm:gap-2.5 transition-all duration-150 ${
         isMe ? 'flex-row-reverse' : 'flex-row'
       } ${isLastInGroup ? 'mb-2' : 'mb-0.5'} ${isFirstInGroup ? 'mt-1' : ''} ${
-        isHighlighted ? 'bg-brand-rose/15 py-1.5 rounded-2xl px-2 ring-1 ring-brand-pink/50' : ''
+        isHighlighted ? 'bg-white/10 py-1.5 rounded-2xl px-2 ring-1 ring-white/30' : ''
       }`}
     >
-      {/* Sender Avatar (Only visible on last message in consecutive group like iMessage/Telegram) */}
+      {/* Sender Avatar */}
       <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 self-end">
-        {isLastInGroup ? (
+        {!isMe && isLastInGroup ? (
           <Avatar
             name={message.sender.displayName}
             username={message.sender.username}
@@ -194,7 +213,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className={`relative max-w-[85%] sm:max-w-[72%] md:max-w-[58%] ${isMe ? 'items-end' : 'items-start'} flex flex-col min-w-0`}>
         {/* Pinned Tag */}
         {message.isPinned && (
-          <div className="flex items-center gap-1 text-[10px] text-brand-pink bg-brand-rose/15 px-2 py-0.5 rounded-full border border-brand-rose/30 mb-1 font-semibold shadow-xs">
+          <div className="flex items-center gap-1 text-[10px] text-white bg-white/15 px-2 py-0.5 rounded-full border border-white/20 mb-1 font-semibold shadow-xs">
             <Pin className="w-2.5 h-2.5" />
             Pinned
           </div>
@@ -205,27 +224,44 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <div
             className={`mb-1 p-2 rounded-xl text-xs max-w-full border-l-2 ${
               isMe
-                ? 'bg-slate-900/80 border-brand-pink text-slate-300 self-end shadow-xs'
-                : 'bg-dark-950/80 border-brand-purple text-slate-300 self-start shadow-xs'
+                ? 'bg-zinc-800 border-white text-zinc-300 self-end shadow-xs'
+                : 'bg-zinc-900 border-zinc-500 text-zinc-300 self-start shadow-xs'
             }`}
           >
-            <div className="text-[10px] font-semibold text-slate-300 flex items-center gap-1">
+            <div className="text-[10px] font-semibold text-zinc-300 flex items-center gap-1">
               <Reply className="w-2.5 h-2.5" />
               {message.replyTo.sender.displayName}
             </div>
-            <div className="text-slate-200 text-[11px] truncate max-w-xs font-normal">
+            <div className="text-zinc-200 text-[11px] truncate max-w-xs font-normal">
               {message.replyTo.content || '[Attachment]'}
             </div>
           </div>
         )}
 
-        {/* Jumbo Emoji Display OR Full Bubble */}
-        {isEmojiOnly ? (
-          <div className="py-0.5 px-1 select-text text-4xl sm:text-5xl tracking-wide filter drop-shadow-[0_4px_12px_rgba(244,63,94,0.25)]">
+        {/* 1. Animated GIF Display */}
+        {gifUrl ? (
+          <div className="mt-1 overflow-hidden rounded-2xl border border-white/10 max-w-xs sm:max-w-sm cursor-pointer group shadow-xl">
+            <img
+              src={gifUrl}
+              alt="Animated GIF"
+              onClick={() => openLightbox(gifUrl, 'Animated GIF')}
+              className="w-full max-h-64 sm:max-h-80 object-cover hover:scale-[1.015] transition-transform duration-200 rounded-2xl"
+              loading="lazy"
+            />
+            <div className={`flex items-center gap-1 text-[10px] mt-1 select-none font-medium ${
+              isMe ? 'justify-end text-zinc-400' : 'justify-start text-zinc-400'
+            }`}>
+              <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
+              {isMe && <MessageStatus status={message.status} />}
+            </div>
+          </div>
+        ) : isEmojiOnly ? (
+          /* 2. Jumbo Emoji Display */
+          <div className="py-0.5 px-1 select-text text-4xl sm:text-5xl tracking-wide filter drop-shadow-md">
             {message.content}
             <div
               className={`flex items-center gap-1 text-[10px] select-none font-medium mt-0.5 ${
-                isMe ? 'justify-end text-slate-400' : 'justify-start text-slate-400'
+                isMe ? 'justify-end text-zinc-400' : 'justify-start text-zinc-400'
               }`}
             >
               <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
@@ -233,16 +269,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           </div>
         ) : (
-          /* Main Message Bubble with Dynamic Telegram Radii */
+          /* 3. Main Instagram Rounded Message Bubble */
           <div
-            className={`relative px-3.5 sm:px-4 py-2 sm:py-2.5 text-[13px] sm:text-[14px] leading-relaxed transition-all max-w-full overflow-hidden ${
+            className={`relative px-4 py-2.5 text-sm leading-relaxed transition-all max-w-full overflow-hidden ${
               isMe
-                ? `bubble-sent text-white ${isLastInGroup ? 'rounded-2xl rounded-br-xs' : 'rounded-2xl rounded-br-md'}`
-                : `bubble-received text-slate-100 ${isLastInGroup ? 'rounded-2xl rounded-bl-xs' : 'rounded-2xl rounded-bl-md'}`
-            } ${message.isDeleted ? 'italic text-slate-400 bg-dark-950/80 border-dashed' : ''}`}
+                ? `bg-white text-black font-normal ${isLastInGroup ? 'rounded-2xl rounded-br-xs' : 'rounded-2xl'}`
+                : `bg-[#262626] text-white ${isLastInGroup ? 'rounded-2xl rounded-bl-xs' : 'rounded-2xl'}`
+            } ${message.isDeleted ? 'italic text-zinc-400 bg-zinc-900 border border-dashed border-white/20' : ''}`}
           >
             {/* Text Body */}
-            <div className="whitespace-pre-wrap break-words select-text font-normal drop-shadow-xs overflow-hidden">
+            <div className="whitespace-pre-wrap break-words select-text font-normal overflow-hidden">
               {message.content}
             </div>
 
@@ -256,7 +292,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             {/* Footer Metadata */}
             <div
               className={`flex items-center gap-1.5 text-[10px] mt-1 select-none font-medium ${
-                isMe ? 'justify-end text-white/80' : 'justify-start text-slate-400'
+                isMe ? 'justify-end text-zinc-500' : 'justify-start text-zinc-400'
               }`}
             >
               {message.isEdited && !message.isDeleted && (
@@ -282,8 +318,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   }}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border transition-all active:scale-95 shadow-xs ${
                     hasReacted
-                      ? 'bg-brand-rose/25 border-brand-rose/50 text-brand-pink ring-1 ring-brand-pink/30'
-                      : 'bg-dark-950/80 border-white/10 text-slate-300 hover:bg-white/10'
+                      ? 'bg-white text-black border-white ring-1 ring-white/50'
+                      : 'bg-zinc-900 border-white/10 text-zinc-300 hover:bg-white/10'
                   }`}
                 >
                   <span className="text-sm">{r.emoji}</span>
@@ -298,7 +334,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       {/* Floating Action Menu */}
       {!message.isDeleted && (
         <div
-          className={`absolute -top-3.5 z-30 flex items-center gap-0.5 p-1 glass-dropdown rounded-2xl border border-white/15 shadow-xl transition-all duration-200 max-w-[calc(100vw-2rem)] overflow-x-auto ${
+          className={`absolute -top-3.5 z-30 flex items-center gap-0.5 p-1 bg-black/90 rounded-2xl border border-white/15 shadow-xl transition-all duration-200 max-w-[calc(100vw-2rem)] overflow-x-auto ${
             mobileMenuOpen
               ? 'opacity-100 scale-100 pointer-events-auto'
               : 'opacity-0 scale-95 pointer-events-none sm:group-hover:opacity-100 sm:group-hover:scale-100 sm:group-hover:pointer-events-auto'
@@ -322,7 +358,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               setReplyingTo(message);
               setMobileMenuOpen(false);
             }}
-            className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/15 transition active:scale-95"
+            className="p-1.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/15 transition active:scale-95"
             title="Reply"
           >
             <Reply className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -335,8 +371,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             }}
             className={`p-1.5 rounded-xl transition active:scale-95 ${
               message.isPinned
-                ? 'text-brand-pink bg-brand-rose/20'
-                : 'text-slate-300 hover:text-white hover:bg-white/15'
+                ? 'text-white bg-white/20'
+                : 'text-zinc-300 hover:text-white hover:bg-white/15'
             }`}
             title={message.isPinned ? 'Unpin' : 'Pin'}
           >
@@ -345,7 +381,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           <button
             onClick={handleCopy}
-            className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/15 transition active:scale-95"
+            className="p-1.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/15 transition active:scale-95"
             title="Copy Text"
           >
             {copied ? <Check className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-400" /> : <Copy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
@@ -357,7 +393,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 setEditingMessage(message);
                 setMobileMenuOpen(false);
               }}
-              className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/15 transition active:scale-95"
+              className="p-1.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/15 transition active:scale-95"
               title="Edit"
             >
               <Edit2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -368,7 +404,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="p-1.5 rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-500/20 transition active:scale-95"
+              className="p-1.5 rounded-xl text-zinc-300 hover:text-red-400 hover:bg-red-500/20 transition active:scale-95"
               title="Delete"
             >
               <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />

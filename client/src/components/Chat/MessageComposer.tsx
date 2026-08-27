@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Send,
-  Paperclip,
   Smile,
   X,
   Reply,
@@ -11,6 +9,7 @@ import {
   Square,
   Sparkles,
   Heart,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useChat } from '../../context/ChatContext.js';
 import { useSocket } from '../../context/SocketContext.js';
@@ -58,7 +57,7 @@ export const MessageComposer: React.FC = () => {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [text]);
 
@@ -225,34 +224,34 @@ export const MessageComposer: React.FC = () => {
   };
 
   return (
-    <div className="p-2.5 sm:p-4 bg-[#09090b] border-t border-white/10 select-none relative z-20 flex-shrink-0">
+    <div className="p-3 sm:p-5 bg-black select-none relative z-20 flex-shrink-0">
       {/* Reply Banner */}
       {replyingTo && (
-        <div className="mb-2 px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 flex items-center justify-between animate-slide-up">
+        <div className="mb-2 px-3.5 py-1.5 rounded-2xl bg-[#262626] border border-white/10 flex items-center justify-between animate-slide-up">
           <div className="flex items-center gap-2 truncate">
             <div className="p-1 rounded-lg bg-white/10 text-white">
-              <Reply className="w-3 h-3" />
+              <Reply className="w-3.5 h-3.5" />
             </div>
             <div className="text-xs truncate">
               <span className="text-zinc-400">Replying to </span>
               <span className="font-semibold text-white">{replyingTo.sender.displayName}</span>
-              <p className="text-zinc-400 text-[10px] truncate">{replyingTo.content || '[Attachment]'}</p>
+              <p className="text-zinc-400 text-[11px] truncate">{replyingTo.content || '[Attachment]'}</p>
             </div>
           </div>
           <button
             onClick={() => setReplyingTo(null)}
             className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* Editing Banner */}
       {editingMessage && (
-        <div className="mb-2 px-3 py-1.5 rounded-xl bg-zinc-800 border border-white/20 flex items-center justify-between animate-slide-up">
+        <div className="mb-2 px-3.5 py-1.5 rounded-2xl bg-[#262626] border border-white/15 flex items-center justify-between animate-slide-up">
           <div className="flex items-center gap-2">
-            <Edit2 className="w-3 h-3 text-white" />
+            <Edit2 className="w-3.5 h-3.5 text-white" />
             <div className="text-xs text-white">
               <span className="font-semibold">Editing message</span>
             </div>
@@ -264,7 +263,7 @@ export const MessageComposer: React.FC = () => {
             }}
             className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -275,15 +274,15 @@ export const MessageComposer: React.FC = () => {
           {selectedFiles.map((file, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-zinc-900 border border-white/15 text-xs text-zinc-200 shadow"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#262626] border border-white/15 text-xs text-zinc-200 shadow"
             >
-              <FileText className="w-3 h-3 text-white flex-shrink-0" />
-              <span className="truncate max-w-[120px] text-[11px]">{file.name}</span>
+              <FileText className="w-3.5 h-3.5 text-white flex-shrink-0" />
+              <span className="truncate max-w-[140px] text-xs">{file.name}</span>
               <button
                 onClick={() => removeSelectedFile(idx)}
                 className="text-zinc-400 hover:text-red-400 p-0.5"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
@@ -311,39 +310,38 @@ export const MessageComposer: React.FC = () => {
 
       {/* Recording Mode Bar */}
       {isRecording ? (
-        <div className="flex items-center justify-between p-2.5 bg-zinc-900 border border-white/20 rounded-2xl animate-fade-in shadow-lg">
-          <div className="flex items-center gap-3 px-2">
+        <div className="flex items-center justify-between p-3 bg-[#18181b] border border-white/20 rounded-full animate-fade-in shadow-2xl">
+          <div className="flex items-center gap-3 px-3">
             <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-white flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-zinc-400" />
-                Recording: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-zinc-400" />
+                Recording voice note... ({Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')})
               </span>
-              <span className="text-[9px] text-zinc-400">Studio Voice Isolation active</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pr-1">
             <button
               type="button"
               onClick={cancelRecording}
-              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 text-xs font-semibold"
+              className="px-3 py-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 text-xs font-semibold"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={stopRecording}
-              className="p-2 rounded-xl bg-white text-black flex items-center gap-1.5 text-xs font-bold shadow active:scale-95 transition"
+              className="px-4 py-1.5 rounded-full bg-white text-black flex items-center gap-1.5 text-xs font-bold shadow active:scale-95 transition"
             >
               <Square className="w-3.5 h-3.5 fill-black" />
-              <span>Send Voice</span>
+              <span>Send</span>
             </button>
           </div>
         </div>
       ) : (
-        /* Main Handcrafted Composer Input Box */
-        <div className="relative flex items-end gap-1.5 sm:gap-2 bg-zinc-900/90 rounded-2xl border border-white/10 p-1.5 sm:p-2 focus-within:border-white/30 transition-all shadow-xl">
+        /* Instagram Pill Input Bar */
+        <div className="relative flex items-center gap-2 bg-[#262626] rounded-full border border-white/10 px-3.5 py-1.5 focus-within:border-white/30 transition-all shadow-md">
           <input
             ref={fileInputRef}
             type="file"
@@ -352,26 +350,17 @@ export const MessageComposer: React.FC = () => {
             className="hidden"
           />
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
-            title="Attach files (images, audio, video, docs)"
-          >
-            <Paperclip className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-          </button>
-
+          {/* Left: Emoji Button */}
           <button
             type="button"
             onClick={() => setShowPicker(!showPicker)}
-            className={`p-2 sm:p-2.5 rounded-xl active:scale-95 transition flex-shrink-0 ${
-              showPicker ? 'text-white bg-white/20' : 'text-zinc-400 hover:text-white hover:bg-white/10'
-            }`}
-            title="Stickers & Emojis"
+            className={`p-1.5 rounded-full text-white hover:opacity-80 active:scale-95 transition flex-shrink-0`}
+            title="Emojis & Stickers"
           >
-            <Smile className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+            <Smile className="w-6 h-6 stroke-[1.8]" />
           </button>
 
+          {/* Center: Expandable Textarea */}
           <textarea
             ref={textareaRef}
             rows={1}
@@ -381,30 +370,39 @@ export const MessageComposer: React.FC = () => {
             placeholder={
               editingMessage
                 ? 'Update your message...'
-                : 'Message... (Enter to send)'
+                : 'Message...'
             }
-            className="flex-1 max-h-32 py-2 px-1 bg-transparent text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
+            className="flex-1 max-h-28 py-1.5 px-1 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
           />
 
-          {/* Voice Note Button or Quick Heart */}
+          {/* Right Action Icons (Mic 🎙️, Gallery 🖼️, Heart 🤍 / Send) */}
           {!text.trim() && selectedFiles.length === 0 ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 type="button"
                 onClick={startRecording}
-                className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex-shrink-0"
-                title="Record studio voice note"
+                className="p-1.5 rounded-full text-white hover:opacity-80 active:scale-95 transition"
+                title="Record voice note"
               >
-                <Mic className="w-4 h-4 text-zinc-400 hover:text-white" />
+                <Mic className="w-6 h-6 stroke-[1.8]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-1.5 rounded-full text-white hover:opacity-80 active:scale-95 transition"
+                title="Send photo or video"
+              >
+                <ImageIcon className="w-6 h-6 stroke-[1.8]" />
               </button>
 
               <button
                 type="button"
                 onClick={() => sendMessage('❤️')}
-                className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-90 transition flex-shrink-0"
-                title="Like / Heart"
+                className="p-1.5 rounded-full text-white hover:opacity-80 active:scale-90 transition"
+                title="Like"
               >
-                <Heart className="w-4 h-4" />
+                <Heart className="w-6 h-6 stroke-[1.8]" />
               </button>
             </div>
           ) : (
@@ -412,10 +410,10 @@ export const MessageComposer: React.FC = () => {
               type="button"
               onClick={handleSend}
               disabled={isUploading}
-              className="p-2 sm:p-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black shadow-md disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-90 flex-shrink-0"
-              title="Send message (Enter)"
+              className="px-3 py-1.5 text-sm font-bold text-blue-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 flex-shrink-0"
+              title="Send (Enter)"
             >
-              <Send className="w-4 h-4" />
+              Send
             </button>
           )}
         </div>

@@ -9,6 +9,7 @@ import {
   Maximize2,
   RefreshCw,
   Monitor,
+  MonitorOff,
   Volume2,
   Sparkles,
 } from 'lucide-react';
@@ -75,6 +76,11 @@ export const CallModal: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const isVideoOrScreenActive =
+    (callType === 'video' && !peerMedia.isVideoOff) ||
+    isScreenSharing ||
+    peerMedia.isScreenSharing;
+
   // ========================================================
   // Floating Picture-in-Picture (PiP) Mode
   // ========================================================
@@ -85,7 +91,7 @@ export const CallModal: React.FC = () => {
 
         {/* PiP Video or Audio Header */}
         <div className="relative h-36 bg-[#09090b] flex items-center justify-center overflow-hidden">
-          {callType === 'video' && remoteStream && !peerMedia.isVideoOff ? (
+          {isVideoOrScreenActive && remoteStream ? (
             <video
               ref={remoteVideoRef}
               autoPlay
@@ -119,6 +125,7 @@ export const CallModal: React.FC = () => {
           {/* Status / Timer Badge */}
           <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/70 text-[10px] font-semibold text-emerald-400 backdrop-blur-md flex items-center gap-1 border border-white/10">
             {voiceIsolation && <Sparkles className="w-2.5 h-2.5 text-white" />}
+            {isScreenSharing && <Monitor className="w-2.5 h-2.5 text-blue-400" />}
             {callState === 'calling' ? 'Calling...' : formatTimer(callDuration)}
           </div>
         </div>
@@ -135,17 +142,15 @@ export const CallModal: React.FC = () => {
             {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
 
-          {callType === 'video' && (
-            <button
-              onClick={toggleVideo}
-              className={`p-2 rounded-xl text-white transition active:scale-95 ${
-                isVideoOff ? 'bg-red-500/30 text-red-400 border border-red-500/40' : 'hover:bg-white/10'
-              }`}
-              title={isVideoOff ? 'Turn Video On' : 'Turn Video Off'}
-            >
-              {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-            </button>
-          )}
+          <button
+            onClick={toggleScreenShare}
+            className={`p-2 rounded-xl text-white transition active:scale-95 ${
+              isScreenSharing ? 'bg-blue-600 text-white shadow' : 'hover:bg-white/10'
+            }`}
+            title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
+          >
+            <Monitor className="w-4 h-4" />
+          </button>
 
           <button
             onClick={endCall}
@@ -166,21 +171,27 @@ export const CallModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-2xl animate-fade-in select-none">
       <audio ref={modalAudioRef} autoPlay playsInline />
 
-      <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-3xl sm:aspect-[16/10] bg-[#09090b] rounded-none sm:rounded-3xl border-0 sm:border border-white/15 shadow-2xl overflow-hidden flex flex-col">
-        {/* Remote Video Stream / Full Background */}
-        {callType === 'video' && remoteStream && !peerMedia.isVideoOff ? (
+      <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-4xl sm:aspect-[16/10] bg-[#09090b] rounded-none sm:rounded-3xl border-0 sm:border border-white/15 shadow-2xl overflow-hidden flex flex-col">
+        {/* Remote Video Stream / Screen Share Full View */}
+        {isVideoOrScreenActive && remoteStream ? (
           <div className="relative flex-1 w-full h-full bg-black overflow-hidden flex items-center justify-center">
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              className="w-full h-full object-contain sm:object-cover"
+              className="w-full h-full object-contain"
             />
+            {peerMedia.isScreenSharing && (
+              <div className="absolute top-16 left-4 sm:top-5 sm:left-5 z-20 px-3 py-1 bg-black/80 rounded-full border border-white/20 text-xs font-semibold text-white flex items-center gap-1.5 backdrop-blur-md">
+                <Monitor className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                <span>{partnerName}'s Screen</span>
+              </div>
+            )}
           </div>
         ) : (
           /* Voice Call Visualizer */
           <div className="relative flex-1 w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#121215] via-[#09090b] to-black">
-            {/* Circular Partner Avatar (No square box) */}
+            {/* Circular Partner Avatar */}
             <div className="my-5 flex items-center justify-center">
               <Avatar
                 name={partnerName}
@@ -228,10 +239,10 @@ export const CallModal: React.FC = () => {
           </div>
         )}
 
-        {/* Local Video Thumbnail */}
-        {callType === 'video' && localStream && (
-          <div className="absolute top-16 right-4 sm:top-5 sm:right-5 z-30 w-28 h-36 sm:w-36 sm:h-48 rounded-2xl overflow-hidden border-2 border-white/30 shadow-2xl bg-black/90 group">
-            {isVideoOff ? (
+        {/* Local Video Thumbnail (Screen or Camera) */}
+        {(callType === 'video' || isScreenSharing) && localStream && (
+          <div className="absolute top-16 right-4 sm:top-5 sm:right-5 z-30 w-32 h-40 sm:w-44 sm:h-32 rounded-2xl overflow-hidden border-2 border-white/30 shadow-2xl bg-black/90 group">
+            {isVideoOff && !isScreenSharing ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-400 text-xs gap-1">
                 <VideoOff className="w-5 h-5 text-red-400" />
                 <span>Camera Off</span>
@@ -245,8 +256,8 @@ export const CallModal: React.FC = () => {
                 className={`w-full h-full object-cover ${isScreenSharing ? '' : '-scale-x-100'}`}
               />
             )}
-            <div className="absolute bottom-1 left-2 text-[9px] font-semibold text-white/80 bg-black/70 px-1.5 py-0.2 rounded backdrop-blur-xs">
-              You {isMuted && '🔇'}
+            <div className="absolute bottom-1 left-2 text-[9px] font-semibold text-white/90 bg-black/80 px-2 py-0.5 rounded backdrop-blur-xs flex items-center gap-1">
+              {isScreenSharing ? <Monitor className="w-3 h-3 text-blue-400" /> : 'You'} {isMuted && '🔇'}
             </div>
           </div>
         )}
@@ -292,7 +303,7 @@ export const CallModal: React.FC = () => {
         </div>
 
         {/* Bottom Control Bar Dock */}
-        <div className="absolute bottom-0 inset-x-0 z-20 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex items-center justify-center gap-3 sm:gap-5 pb-safe">
+        <div className="absolute bottom-0 inset-x-0 z-20 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex items-center justify-center gap-2.5 sm:gap-4 pb-safe flex-wrap">
           {/* Mute Mic */}
           <button
             onClick={toggleMute}
@@ -306,20 +317,31 @@ export const CallModal: React.FC = () => {
             {isMuted ? <MicOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Mic className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
 
-          {/* Camera Video On/Off */}
-          {callType === 'video' && (
-            <button
-              onClick={toggleVideo}
-              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white transition-all duration-200 active:scale-90 shadow-xl ${
-                isVideoOff
-                  ? 'bg-red-500/80 border border-red-400 ring-2 ring-red-500/40 text-white'
-                  : 'bg-white/15 hover:bg-white/25 backdrop-blur-xl border border-white/20'
-              }`}
-              title={isVideoOff ? 'Turn Camera On' : 'Turn Camera Off'}
-            >
-              {isVideoOff ? <VideoOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Video className="w-5 h-5 sm:w-6 sm:h-6" />}
-            </button>
-          )}
+          {/* Camera Video On/Off (if video call or switching on) */}
+          <button
+            onClick={toggleVideo}
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white transition-all duration-200 active:scale-90 shadow-xl ${
+              isVideoOff
+                ? 'bg-red-500/80 border border-red-400 ring-2 ring-red-500/40 text-white'
+                : 'bg-white/15 hover:bg-white/25 backdrop-blur-xl border border-white/20'
+            }`}
+            title={isVideoOff ? 'Turn Camera On' : 'Turn Camera Off'}
+          >
+            {isVideoOff ? <VideoOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Video className="w-5 h-5 sm:w-6 sm:h-6" />}
+          </button>
+
+          {/* Universal Screen Share Button (Prominent in ALL Calls) */}
+          <button
+            onClick={toggleScreenShare}
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-90 shadow-xl ${
+              isScreenSharing
+                ? 'bg-blue-600 border border-blue-400 ring-2 ring-blue-500/40 text-white animate-pulse'
+                : 'bg-white/15 hover:bg-white/25 text-white backdrop-blur-xl border border-white/20'
+            }`}
+            title={isScreenSharing ? 'Stop Screen Sharing' : 'Share Screen'}
+          >
+            {isScreenSharing ? <MonitorOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Monitor className="w-5 h-5 sm:w-6 sm:h-6" />}
+          </button>
 
           {/* Flip Camera (Front / Back) on mobile */}
           {callType === 'video' && !isScreenSharing && (
@@ -329,21 +351,6 @@ export const CallModal: React.FC = () => {
               title="Switch Camera"
             >
               <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-          )}
-
-          {/* Screen Share on Desktop */}
-          {callType === 'video' && (
-            <button
-              onClick={toggleScreenShare}
-              className={`hidden sm:flex w-12 h-12 sm:w-14 sm:h-14 rounded-2xl items-center justify-center text-white transition-all duration-200 active:scale-90 shadow-xl ${
-                isScreenSharing
-                  ? 'bg-white text-black font-bold'
-                  : 'bg-white/15 hover:bg-white/25 backdrop-blur-xl border border-white/20'
-              }`}
-              title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
-            >
-              <Monitor className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           )}
 

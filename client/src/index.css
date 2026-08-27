@@ -7,21 +7,28 @@
     color-scheme: dark;
   }
 
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-[#000000] text-zinc-100 antialiased overflow-hidden select-none;
+    @apply bg-black text-white antialiased overflow-hidden select-none;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
   }
 }
 
-/* Background Atmosphere */
-.app-bg {
-  background-color: #000000;
-  background-image: 
-    radial-gradient(at 50% 0%, rgba(39, 39, 42, 0.25) 0px, transparent 60%),
-    radial-gradient(at 100% 100%, rgba(24, 24, 27, 0.3) 0px, transparent 60%);
-  background-size: cover;
-  background-attachment: fixed;
+/* Instagram Story Gradient Ring */
+.story-ring-active {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  padding: 2px;
+  border-radius: 9999px;
+}
+
+.story-ring-luxury {
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 50%, #3f3f46 100%);
+  padding: 2px;
+  border-radius: 9999px;
 }
 
 /* High-Contrast Glass & Panels */
@@ -33,67 +40,53 @@
 }
 
 .glass-dropdown {
-  background: rgba(15, 15, 18, 0.95);
+  background: rgba(18, 18, 18, 0.95);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-}
-
-/* Ultra-Sleek Monochrome Message Bubbles */
-.bubble-sent {
-  background: #ffffff;
-  color: #000000;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-}
-
-.bubble-sent .bubble-meta {
-  color: rgba(0, 0, 0, 0.6);
-}
-
-.bubble-received {
-  background: #18181b;
-  color: #f4f4f5;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
-}
-
-.bubble-received .bubble-meta {
-  color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
 }
 
 /* Custom Minimalist Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.28);
 }
 
-/* Animations */
+/* Smooth Spring Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.98); }
+  from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.08); }
+}
+
 .animate-fade-in {
-  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
 }

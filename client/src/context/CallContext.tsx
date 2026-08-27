@@ -280,6 +280,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createPeerConnection = (): RTCPeerConnection => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
+    // Pre-create transceivers for bi-directional audio and video / screen share
+    try {
+      pc.addTransceiver('audio', { direction: 'sendrecv' });
+      pc.addTransceiver('video', { direction: 'sendrecv' });
+    } catch {
+      // Ignore if browser handles automatically
+    }
+
     pc.onicecandidate = (event) => {
       if (event.candidate && socket && targetUserIdRef.current) {
         socket.emit('call:ice-candidate', {
@@ -515,30 +523,47 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('voice_isolation', nextVal.toString());
   };
 
-  // Toggle Screen Sharing
+  // Toggle Screen Sharing (Universal across Voice and Video calls)
   const toggleScreenShare = async () => {
-    if (!peerConnectionRef.current) return;
+    if (!peerConnectionRef.current) {
+      alert('Cannot share screen: No active call.');
+      return;
+    }
 
     if (isScreenSharing) {
       try {
-        const camStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: currentFacingModeRef.current },
-        });
-        const newVideoTrack = camStream.getVideoTracks()[0];
-        const sender = peerConnectionRef.current
-          .getSenders()
-          .find((s) => s.track && s.track.kind === 'video');
+        if (callType === 'video') {
+          const camStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacingModeRef.current },
+          });
+          const newVideoTrack = camStream.getVideoTracks()[0];
+          const sender = peerConnectionRef.current
+            .getSenders()
+            .find((s) => s.track && s.track.kind === 'video');
 
-        if (sender && newVideoTrack) {
-          sender.replaceTrack(newVideoTrack);
-        }
+          if (sender && newVideoTrack) {
+            sender.replaceTrack(newVideoTrack);
+          }
 
-        if (localStreamRef.current) {
-          const oldTracks = localStreamRef.current.getVideoTracks();
-          oldTracks.forEach((t) => t.stop());
-          localStreamRef.current.removeTrack(oldTracks[0]);
-          localStreamRef.current.addTrack(newVideoTrack);
-          setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+          if (localStreamRef.current) {
+            const oldTracks = localStreamRef.current.getVideoTracks();
+            oldTracks.forEach((t) => t.stop());
+            localStreamRef.current.removeTrack(oldTracks[0]);
+            localStreamRef.current.addTrack(newVideoTrack);
+            setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+          }
+        } else {
+          // In audio call, stop the video track
+          const sender = peerConnectionRef.current
+            .getSenders()
+            .find((s) => s.track && s.track.kind === 'video');
+          if (sender) {
+            sender.replaceTrack(null as any);
+          }
+          if (localStreamRef.current) {
+            const oldTracks = localStreamRef.current.getVideoTracks();
+            oldTracks.forEach((t) => t.stop());
+          }
         }
 
         setIsScreenSharing(false);
@@ -554,7 +579,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } else {
       try {
         const screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
-          video: true,
+          video: {
+            cursor: 'always',
+            displaySurface: 'monitor',
+          },
+          audio: true,
         });
         const screenTrack = screenStream.getVideoTracks()[0];
 
@@ -568,14 +597,15 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (sender) {
           sender.replaceTrack(screenTrack);
+        } else {
+          peerConnectionRef.current.addTrack(screenTrack, screenStream);
         }
 
         if (localStreamRef.current) {
-          const oldTracks = localStreamRef.current.getVideoTracks();
-          oldTracks.forEach((t) => t.stop());
-          localStreamRef.current.removeTrack(oldTracks[0]);
           localStreamRef.current.addTrack(screenTrack);
           setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+        } else {
+          setLocalStream(screenStream);
         }
 
         setIsScreenSharing(true);

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { isSameDay } from 'date-fns';
 import { useChat } from '../../context/ChatContext.js';
+import { useSocket } from '../../context/SocketContext.js';
 import { MessageItem } from './MessageItem.js';
 import { DateSeparator } from './DateSeparator.js';
 import { Avatar } from '../Common/Avatar.js';
@@ -15,8 +16,10 @@ export const MessageList: React.FC = () => {
     activeConversation,
     activePartner,
     sendMessage,
+    setIsSettingsOpen,
   } = useChat();
 
+  const { isUserOnline } = useSocket();
   const listContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef<number>(0);
@@ -54,7 +57,7 @@ export const MessageList: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-zinc-400">
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-zinc-400 bg-black">
         <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" />
         <span className="text-xs font-medium tracking-wide text-zinc-300">Loading conversation...</span>
       </div>
@@ -67,20 +70,22 @@ export const MessageList: React.FC = () => {
     : (activePartner?.displayName || activeConversation?.name || 'Friend');
   const partnerUsername = activePartner?.username || 'user';
   const partnerAvatar = isGroup ? null : activePartner?.avatarUrl;
+  const isOnline = !isGroup && activePartner ? isUserOnline(activePartner.id) : false;
 
+  // Instagram Empty Chat State
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 select-none bg-[#09090b]">
-        <div className="max-w-md w-full text-center p-6 sm:p-8 rounded-3xl bg-[#111114] border border-white/10 shadow-2xl space-y-4 animate-fade-in">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 select-none bg-black">
+        <div className="max-w-md w-full text-center p-6 sm:p-8 rounded-3xl bg-[#121212] border border-[#262626] shadow-2xl space-y-4 animate-fade-in">
           {/* Avatar Header */}
           <div className="flex justify-center">
             <Avatar
               name={partnerName}
               username={partnerUsername}
               avatarUrl={partnerAvatar}
-              size="xl"
+              size="2xl"
               isGroup={isGroup}
-              status={!isGroup && activePartner?.lastSeen ? 'online' : null}
+              status={!isGroup ? (isOnline ? 'online' : 'offline') : null}
             />
           </div>
 
@@ -89,24 +94,18 @@ export const MessageList: React.FC = () => {
               {partnerName}
             </h2>
             {!isGroup && (
-              <p className="text-xs text-zinc-400 mt-0.5">@{partnerUsername}</p>
+              <p className="text-xs text-zinc-400 mt-0.5">@{partnerUsername} • ChatUs</p>
             )}
             {activePartner?.customStatus && !isGroup && (
-              <div className="inline-block mt-2 px-3 py-1 rounded-full bg-zinc-900 border border-white/10 text-[11px] text-zinc-300">
+              <div className="inline-block mt-2 px-3 py-1 rounded-full bg-[#262626] border border-white/10 text-xs text-zinc-300">
                 {activePartner.customStatus}
               </div>
             )}
-            {isGroup && (
-              <p className="text-xs text-zinc-400 mt-1">Group Conversation</p>
-            )}
           </div>
 
-          <div className="p-3.5 bg-zinc-900/80 rounded-2xl border border-white/5 space-y-1.5">
-            <div className="text-xs text-zinc-300 font-medium">
-              Start the conversation
-            </div>
-            <p className="text-[11px] text-zinc-500">
-              Messages and calls in this conversation are end-to-end encrypted.
+          <div className="p-3.5 bg-black/60 rounded-2xl border border-white/5 space-y-1">
+            <p className="text-xs text-zinc-400">
+              No messages here yet. Send a greeting to start the conversation!
             </p>
           </div>
 
@@ -114,13 +113,13 @@ export const MessageList: React.FC = () => {
           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
             <button
               onClick={() => sendMessage('Hey! 👋')}
-              className="px-3.5 py-1.5 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5"
+              className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5"
             >
               <span>Say Hello 👋</span>
             </button>
             <button
               onClick={() => sendMessage('How are you doing today? ✨')}
-              className="px-3.5 py-1.5 bg-zinc-900 border border-white/10 hover:border-white/25 text-white text-xs font-semibold rounded-xl transition active:scale-95"
+              className="px-4 py-2 bg-[#262626] hover:bg-[#363636] text-white text-xs font-semibold rounded-xl transition active:scale-95"
             >
               <span>How are you? ✨</span>
             </button>
@@ -134,13 +133,51 @@ export const MessageList: React.FC = () => {
     <div
       ref={listContainerRef}
       onScroll={handleScroll}
-      className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 space-y-0.5 custom-scrollbar bg-[#09090b]"
+      className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-0.5 custom-scrollbar bg-black"
     >
       {/* Top Loading Indicator */}
       {isLoadingMore && (
         <div className="py-2 text-center text-xs text-zinc-400 flex items-center justify-center gap-2">
           <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
           <span>Loading older messages...</span>
+        </div>
+      )}
+
+      {/* Instagram Profile Hero at Top of Chat (when reached top) */}
+      {!hasMore && (
+        <div className="py-8 pb-6 flex flex-col items-center justify-center text-center space-y-3 animate-fade-in border-b border-[#18181b] mb-4">
+          <div className="story-ring-luxury p-1 rounded-full">
+            <Avatar
+              name={partnerName}
+              username={partnerUsername}
+              avatarUrl={partnerAvatar}
+              size="2xl"
+              className="w-22 h-22 ring-2 ring-black"
+              isGroup={isGroup}
+              status={!isGroup ? (isOnline ? 'online' : 'offline') : null}
+            />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              {partnerName}
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              @{partnerUsername} • ChatUs PRO
+            </p>
+            {activePartner?.bio && (
+              <p className="text-xs text-zinc-300 max-w-sm mx-auto mt-1 line-clamp-2">
+                {activePartner.bio}
+              </p>
+            )}
+          </div>
+
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="px-4 py-1.5 bg-[#262626] hover:bg-[#363636] text-white text-xs font-semibold rounded-lg transition active:scale-95 shadow"
+          >
+            View profile
+          </button>
         </div>
       )}
 

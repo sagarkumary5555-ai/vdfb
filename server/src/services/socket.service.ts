@@ -65,6 +65,8 @@ export class SocketService {
 
       console.log(`⚡ Socket connected: ${displayName} (@${username}) [${socket.id}]`);
 
+      const isFirstSocket = !this.userSockets.has(userId) || this.userSockets.get(userId)!.size === 0;
+
       // Track user sockets
       if (!this.userSockets.has(userId)) {
         this.userSockets.set(userId, new Set());
@@ -84,8 +86,22 @@ export class SocketService {
         // Safe ignore
       }
 
-      // Broadcast online presence
-      this.broadcastPresence(userId, username, 'online');
+      // Send initial presence map of all currently active users to this client
+      socket.emit('presence:init', {
+        onlineUserIds: Array.from(this.userSockets.keys()),
+      });
+
+      // If user just came online, broadcast to all other connected clients
+      if (isFirstSocket) {
+        this.broadcastPresence(userId, username, 'online');
+      }
+
+      // Handle client requesting online user list
+      socket.on('presence:get_online', (callback) => {
+        if (typeof callback === 'function') {
+          callback({ onlineUserIds: Array.from(this.userSockets.keys()) });
+        }
+      });
 
       // Join a conversation room
       socket.on('conversation:join', (conversationId: string) => {
