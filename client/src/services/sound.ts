@@ -5,10 +5,33 @@ class SoundService {
   private isMuted: boolean = false;
 
   constructor() {
-    // Load mute preference from localStorage
     const saved = localStorage.getItem('chat_sound_muted');
     if (saved !== null) {
       this.isMuted = saved === 'true';
+    }
+
+    // Auto-unlock audio context on user interaction
+    if (typeof window !== 'undefined') {
+      const unlock = () => {
+        this.unlockAudio();
+        window.removeEventListener('click', unlock);
+        window.removeEventListener('touchstart', unlock);
+        window.removeEventListener('keydown', unlock);
+      };
+      window.addEventListener('click', unlock, { once: true });
+      window.addEventListener('touchstart', unlock, { once: true });
+      window.addEventListener('keydown', unlock, { once: true });
+    }
+  }
+
+  public unlockAudio() {
+    try {
+      const ctx = this.getAudioContext();
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume();
+      }
+    } catch {
+      // Safe ignore
     }
   }
 
@@ -56,7 +79,7 @@ class SoundService {
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(587.33, now);
       gain1.gain.setValueAtTime(0, now);
-      gain1.gain.linearRampToValueAtTime(0.12, now + 0.02);
+      gain1.gain.linearRampToValueAtTime(0.18, now + 0.02);
       gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
 
       osc1.connect(gain1);
@@ -71,7 +94,7 @@ class SoundService {
       osc2.type = 'sine';
       osc2.frequency.setValueAtTime(880, now + 0.08);
       gain2.gain.setValueAtTime(0, now + 0.08);
-      gain2.gain.linearRampToValueAtTime(0.15, now + 0.1);
+      gain2.gain.linearRampToValueAtTime(0.22, now + 0.1);
       gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
 
       osc2.connect(gain2);
@@ -79,7 +102,7 @@ class SoundService {
 
       osc2.start(now + 0.08);
       osc2.stop(now + 0.55);
-    } catch (e) {
+    } catch {
       // Audio context might be restricted before first user interaction
     }
   }
@@ -102,7 +125,7 @@ class SoundService {
       osc.frequency.setValueAtTime(440, now);
       osc.frequency.exponentialRampToValueAtTime(880, now + 0.06);
 
-      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.setValueAtTime(0.12, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
 
       osc.connect(gain);

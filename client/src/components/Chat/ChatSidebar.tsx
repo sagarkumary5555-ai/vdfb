@@ -8,6 +8,7 @@ import {
   X,
   MessageSquare,
   UserPlus,
+  UserCheck,
 } from 'lucide-react';
 import { format, isToday, isYesterday, formatDistanceToNowStrict } from 'date-fns';
 import { useAuth } from '../../context/AuthContext.js';
@@ -25,6 +26,8 @@ export const ChatSidebar: React.FC = () => {
     setIsNewChatModalOpen,
     setIsSettingsOpen,
     setIsSharedMediaOpen,
+    setIsFriendsModalOpen,
+    pendingFriendCount,
   } = useChat();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,7 +88,19 @@ export const ChatSidebar: React.FC = () => {
         </button>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
+          {/* Friends & Connections */}
+          <button
+            onClick={() => setIsFriendsModalOpen(true)}
+            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition active:scale-95 relative"
+            title="Friends & Connections"
+          >
+            <UserCheck className="w-4.5 h-4.5" />
+            {pendingFriendCount > 0 && (
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-black animate-pulse" />
+            )}
+          </button>
+
           {/* Shared Media */}
           <button
             onClick={() => setIsSharedMediaOpen(true)}
@@ -106,24 +121,37 @@ export const ChatSidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Prominent Quick Actions: + New Chat & + New Group */}
+      {/* Prominent Quick Actions: + New Chat & + New Group & Friends */}
       <div className="p-3 border-b border-white/5 bg-[#0e0e11] space-y-2.5">
         {/* 1-Tap Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => setIsNewChatModalOpen(true)}
-            className="w-full py-2 px-3 bg-white hover:bg-zinc-200 active:scale-95 text-black rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1.5 transition"
+            className="py-2 px-2 bg-white hover:bg-zinc-200 active:scale-95 text-black rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1 transition"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
-            <span>New Chat</span>
+            <span>Chat</span>
           </button>
 
           <button
             onClick={() => setIsNewChatModalOpen(true)}
-            className="w-full py-2 px-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white border border-white/10 rounded-xl text-xs font-semibold shadow flex items-center justify-center gap-1.5 transition"
+            className="py-2 px-2 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white border border-white/10 rounded-xl text-xs font-semibold shadow flex items-center justify-center gap-1 transition"
           >
             <Users className="w-3.5 h-3.5" />
-            <span>New Group</span>
+            <span>Group</span>
+          </button>
+
+          <button
+            onClick={() => setIsFriendsModalOpen(true)}
+            className="py-2 px-2 bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-300 hover:text-white border border-white/10 rounded-xl text-xs font-semibold shadow flex items-center justify-center gap-1 transition relative"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Friends</span>
+            {pendingFriendCount > 0 && (
+              <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-black text-[9px] font-black flex items-center justify-center animate-pulse">
+                {pendingFriendCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -178,16 +206,16 @@ export const ChatSidebar: React.FC = () => {
               {searchQuery
                 ? `No chats found matching "${searchQuery}"`
                 : filterTab === 'groups'
-                ? 'No groups yet. Click "New Group" to create one!'
+                ? 'No groups yet. Click "Group" to create one!'
                 : 'No conversations found.'}
             </p>
             <div className="flex items-center justify-center gap-2 pt-1">
               <button
-                onClick={() => setIsNewChatModalOpen(true)}
+                onClick={() => setIsFriendsModalOpen(true)}
                 className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                <span>Find Users</span>
+                <span>Add Friends</span>
               </button>
             </div>
           </div>

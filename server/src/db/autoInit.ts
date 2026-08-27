@@ -117,6 +117,20 @@ export async function ensureDatabaseReady() {
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );`,
+    `CREATE TABLE IF NOT EXISTS "Friendship" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "requesterId" TEXT NOT NULL,
+      "addresseeId" TEXT NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'pending',
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Friendship_requesterId_fkey" FOREIGN KEY ("requesterId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "Friendship_addresseeId_fkey" FOREIGN KEY ("addresseeId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    );`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "Friendship_users" ON "Friendship"("requesterId", "addresseeId");`,
+    `CREATE INDEX IF NOT EXISTS "Friendship_status_idx" ON "Friendship"("status");`,
+    `CREATE INDEX IF NOT EXISTS "Friendship_requester_idx" ON "Friendship"("requesterId");`,
+    `CREATE INDEX IF NOT EXISTS "Friendship_addressee_idx" ON "Friendship"("addresseeId");`,
   ];
 
   for (const sql of schemaStatements) {
@@ -211,7 +225,17 @@ export async function ensureDatabaseReady() {
       });
     }
 
-    console.log('✅ Accounts for Sagar (pass: 99313935287549051214) & Something (pass: <yaade>) are active!');
+    // Ensure Sagar & Something are accepted friends
+    try {
+      await prisma.$executeRawUnsafe(`
+        INSERT OR IGNORE INTO "Friendship" ("id", "requesterId", "addresseeId", "status", "createdAt", "updatedAt")
+        VALUES ('friend-sagar-something', '${sagarUser.id}', '${somethingUser.id}', 'accepted', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+      `);
+    } catch {
+      // Safe ignore
+    }
+
+    console.log('✅ Accounts for Sagar (pass: 99313935287549051214) & Something (pass: <yaade>) are active with accepted friendship!');
   } catch (err) {
     console.error('Seeding notice:', err);
   }

@@ -14,6 +14,7 @@ import authRoutes from './routes/auth.routes.js';
 import messageRoutes from './routes/message.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import systemRoutes from './routes/system.routes.js';
+import { friendsRouter } from './routes/friends.routes.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -46,6 +47,7 @@ app.use('/api', apiLimiter);
 
 // 4. API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/friends', friendsRouter);
 app.use('/api/messages', messageRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/system', systemRoutes);

@@ -14,6 +14,7 @@ import { SearchModal } from './components/Chat/SearchModal.js';
 import { SettingsModal } from './components/Chat/SettingsModal.js';
 import { SharedMediaModal } from './components/Chat/SharedMediaModal.js';
 import { NewChatModal } from './components/Chat/NewChatModal.js';
+import { FriendsModal } from './components/Chat/FriendsModal.js';
 import { ConnectionBanner } from './components/Chat/ConnectionBanner.js';
 import { DragDropOverlay } from './components/Chat/DragDropOverlay.js';
 import { CallModal } from './components/Chat/CallModal.js';
@@ -139,6 +140,7 @@ const ChatContent: React.FC = () => {
       <SettingsModal />
       <SharedMediaModal />
       <NewChatModal />
+      <FriendsModal />
       <DragDropOverlay isDragging={isDragging} />
 
       {/* WebRTC Live Calling Overlays */}

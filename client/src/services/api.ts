@@ -13,6 +13,40 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export interface FriendOverviewData {
+  friends: User[];
+  incomingRequests: Array<{ id: string; user: User; createdAt: string }>;
+  outgoingRequests: Array<{ id: string; user: User; createdAt: string }>;
+  pendingCount: number;
+}
+
+export const friendsApi = {
+  getOverview: async (): Promise<FriendOverviewData> => {
+    const res = await api.get('/friends');
+    return res.data;
+  },
+
+  sendRequest: async (target: string): Promise<{ success: boolean; message: string; friendUser?: User }> => {
+    const res = await api.post('/friends/request', { target });
+    return res.data;
+  },
+
+  acceptRequest: async (requesterId: string): Promise<{ success: boolean; message: string }> => {
+    const res = await api.post('/friends/accept', { requesterId });
+    return res.data;
+  },
+
+  declineRequest: async (requesterId: string): Promise<{ success: boolean; message: string }> => {
+    const res = await api.post('/friends/decline', { requesterId });
+    return res.data;
+  },
+
+  removeFriend: async (friendId: string): Promise<{ success: boolean; message: string }> => {
+    const res = await api.post('/friends/remove', { friendId });
+    return res.data;
+  },
+};
+
 export const authApi = {
   register: async (data: {
     username: string;

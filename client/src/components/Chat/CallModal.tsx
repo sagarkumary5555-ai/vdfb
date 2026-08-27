@@ -42,7 +42,6 @@ export const CallModal: React.FC = () => {
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
-  const modalAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Attach local media stream
   useEffect(() => {
@@ -51,16 +50,11 @@ export const CallModal: React.FC = () => {
     }
   }, [localStream, isPip]);
 
-  // Attach remote media stream
+  // Attach remote media stream for video
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch(() => {});
-    }
-    if (modalAudioRef.current && remoteStream) {
-      modalAudioRef.current.srcObject = remoteStream;
-      modalAudioRef.current.volume = 1.0;
-      modalAudioRef.current.play().catch(() => {});
     }
   }, [remoteStream, isPip]);
 
@@ -87,8 +81,6 @@ export const CallModal: React.FC = () => {
   if (isPip) {
     return (
       <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 w-64 sm:w-72 bg-[#121215] rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-slide-up flex flex-col select-none">
-        <audio ref={modalAudioRef} autoPlay playsInline />
-
         {/* PiP Video or Audio Header */}
         <div className="relative h-36 bg-[#09090b] flex items-center justify-center overflow-hidden">
           {isVideoOrScreenActive && remoteStream ? (
@@ -169,8 +161,6 @@ export const CallModal: React.FC = () => {
   // ========================================================
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-2xl animate-fade-in select-none">
-      <audio ref={modalAudioRef} autoPlay playsInline />
-
       <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-4xl sm:aspect-[16/10] bg-[#09090b] rounded-none sm:rounded-3xl border-0 sm:border border-white/15 shadow-2xl overflow-hidden flex flex-col">
         {/* Remote Video Stream / Screen Share Full View */}
         {isVideoOrScreenActive && remoteStream ? (

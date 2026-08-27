@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { useSocket } from './SocketContext.js';
 import { callSound } from '../services/callSound.js';
-import { AudioDspService } from '../services/audioDsp.js';
+import { soundService } from '../services/sound.js';
 
 export type CallState = 'idle' | 'calling' | 'incoming' | 'connected' | 'ended';
 export type CallType = 'audio' | 'video';
@@ -114,6 +114,32 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const currentFacingModeRef = useRef<'user' | 'environment'>('user');
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Dedicated remote audio player with autoplay unlock
+  const playRemoteAudio = (stream: MediaStream) => {
+    try {
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = stream;
+        remoteAudioRef.current.volume = 1.0;
+        remoteAudioRef.current.muted = false;
+        const p = remoteAudioRef.current.play();
+        if (p !== undefined) {
+          p.catch((err) => {
+            console.warn('Autoplay prevented remote audio, attaching gesture listener:', err);
+            const unlock = () => {
+              remoteAudioRef.current?.play().catch(() => {});
+              window.removeEventListener('click', unlock);
+              window.removeEventListener('touchstart', unlock);
+            };
+            window.addEventListener('click', unlock, { once: true });
+            window.addEventListener('touchstart', unlock, { once: true });
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Error playing remote audio:', e);
+    }
+  };
+
   // Call duration counter
   useEffect(() => {
     if (callState === 'connected') {
@@ -208,6 +234,9 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
           callSound.playConnectedChime();
           setCallState('connected');
+          if (remoteStreamRef.current) {
+            playRemoteAudio(remoteStreamRef.current);
+          }
         } catch (err) {
           console.error('Failed to set remote description on accept:', err);
         }
@@ -280,12 +309,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createPeerConnection = (): RTCPeerConnection => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    // Pre-create transceivers for bi-directional audio and video / screen share
     try {
       pc.addTransceiver('audio', { direction: 'sendrecv' });
       pc.addTransceiver('video', { direction: 'sendrecv' });
     } catch {
-      // Ignore if browser handles automatically
+      // Browser handles automatically
     }
 
     pc.onicecandidate = (event) => {
@@ -303,22 +331,16 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       remoteStreamRef.current = stream;
       setRemoteStream(stream);
 
-      // Play audio on remoteAudioRef
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = stream;
-        remoteAudioRef.current.volume = 1.0;
-        remoteAudioRef.current.muted = false;
-        remoteAudioRef.current.play().catch((err) => {
-          console.warn('Audio play error, retrying on user click:', err);
-          const resumeAudio = () => {
-            remoteAudioRef.current?.play().catch(() => {});
-            window.removeEventListener('click', resumeAudio);
-            window.removeEventListener('touchstart', resumeAudio);
-          };
-          window.addEventListener('click', resumeAudio, { once: true });
-          window.addEventListener('touchstart', resumeAudio, { once: true });
-        });
+      if (event.track.kind === 'audio') {
+        event.track.enabled = true;
       }
+
+      playRemoteAudio(stream);
+
+      event.track.onunmute = () => {
+        console.log('📡 Remote track unmuted, playing audio...');
+        playRemoteAudio(stream);
+      };
     };
 
     pc.onconnectionstatechange = () => {
@@ -326,10 +348,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (pc.connectionState === 'connected') {
         callSound.stopRingtone();
         setCallState('connected');
-        if (remoteAudioRef.current && remoteStreamRef.current) {
-          remoteAudioRef.current.srcObject = remoteStreamRef.current;
-          remoteAudioRef.current.volume = 1.0;
-          remoteAudioRef.current.play().catch(() => {});
+        if (remoteStreamRef.current) {
+          playRemoteAudio(remoteStreamRef.current);
         }
       } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
         endCall();
@@ -340,13 +360,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return pc;
   };
 
-  // Acquire raw stream with optimal Chromium WebRTC constraints
+  // Acquire raw stream with optimal audio constraints
   const acquireProcessedStream = async (type: CallType): Promise<MediaStream> => {
     let raw: MediaStream;
 
     try {
       raw = await navigator.mediaDevices.getUserMedia({
-        audio: AudioDspService.getOptimalAudioConstraints(),
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
         video: type === 'video' ? { facingMode: 'user' } : false,
       });
     } catch (firstErr: any) {
@@ -367,6 +391,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
 
+    raw.getAudioTracks().forEach((t) => {
+      t.enabled = true;
+    });
+
     rawStreamRef.current = raw;
     return raw;
   };
@@ -381,6 +409,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       alert('Cannot start call: No recipient selected.');
       return;
     }
+
+    soundService.unlockAudio();
 
     try {
       targetUserIdRef.current = targetUser.id;
@@ -397,7 +427,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const pc = createPeerConnection();
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      const offer = await pc.createOffer();
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
       await pc.setLocalDescription(offer);
 
       socket.emit('call:initiate', {
@@ -417,6 +450,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const acceptCall = async () => {
     if (!socket || !callerInfo) return;
 
+    soundService.unlockAudio();
     callSound.stopRingtone();
     try {
       const stream = await acquireProcessedStream(callerInfo.type);

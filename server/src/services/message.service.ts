@@ -1,6 +1,7 @@
 import { prisma } from '../db/prisma.js';
 import { MessageResponse, MessageReaction } from '../types/index.js';
 import { AuthService } from './auth.service.js';
+import { FriendsService } from './friends.service.js';
 
 export class MessageService {
   /**
@@ -69,6 +70,11 @@ export class MessageService {
       throw new Error('Cannot create conversation with yourself');
     }
 
+    const areFriends = await FriendsService.areFriends(user1Id, user2Id);
+    if (!areFriends) {
+      throw new Error('You can only start a direct chat with accepted friends. Please send a friend request first.');
+    }
+
     const user1Convs = await prisma.conversationParticipant.findMany({
       where: { userId: user1Id },
       select: { conversationId: true },
@@ -115,6 +121,16 @@ export class MessageService {
   static async createGroupConversation(creatorId: string, name: string, participantIds: string[]) {
     if (!name.trim()) {
       throw new Error('Group name is required');
+    }
+
+    // Verify all participants are friends of the creator
+    for (const pId of participantIds) {
+      if (pId !== creatorId) {
+        const isFriend = await FriendsService.areFriends(creatorId, pId);
+        if (!isFriend) {
+          throw new Error('You can only add your accepted friends to a group.');
+        }
+      }
     }
 
     const uniqueUserIds = Array.from(new Set([creatorId, ...participantIds]));

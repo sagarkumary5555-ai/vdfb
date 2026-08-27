@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, MessageSquare, Sparkles, UserPlus, Users, Check } from 'lucide-react';
+import { Search, X, MessageSquare, Sparkles, UserPlus, Users, Check, ShieldCheck } from 'lucide-react';
 import { authApi } from '../../services/api.js';
 import { User } from '../../types/index.js';
 import { useChat } from '../../context/ChatContext.js';
@@ -7,7 +7,16 @@ import { useSocket } from '../../context/SocketContext.js';
 import { Avatar } from '../Common/Avatar.js';
 
 export const NewChatModal: React.FC = () => {
-  const { isNewChatModalOpen, setIsNewChatModalOpen, startDirectChatWithUser, createGroupConversation } = useChat();
+  const {
+    isNewChatModalOpen,
+    setIsNewChatModalOpen,
+    friends,
+    sendFriendRequest,
+    startDirectChatWithUser,
+    createGroupConversation,
+    setIsFriendsModalOpen,
+  } = useChat();
+
   const { isUserOnline } = useSocket();
   const [tab, setTab] = useState<'direct' | 'group'>('direct');
 
@@ -15,6 +24,7 @@ export const NewChatModal: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [requestSentMap, setRequestSentMap] = useState<{ [userId: string]: boolean }>({});
 
   // Group creation state
   const [groupName, setGroupName] = useState('');
@@ -31,6 +41,12 @@ export const NewChatModal: React.FC = () => {
       return;
     }
 
+    if (!searchQuery.trim()) {
+      // Default to Friends list
+      setResults(friends);
+      return;
+    }
+
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
@@ -44,12 +60,21 @@ export const NewChatModal: React.FC = () => {
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, isNewChatModalOpen]);
+  }, [searchQuery, isNewChatModalOpen, friends]);
 
   const toggleSelectUser = (userId: string) => {
     setSelectedUserIds((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
+  };
+
+  const handleSendReq = async (u: User) => {
+    try {
+      await sendFriendRequest(u.username);
+      setRequestSentMap((prev) => ({ ...prev, [u.id]: true }));
+    } catch (err: any) {
+      alert(err.response?.data?.error || err.message || 'Failed to send request');
+    }
   };
 
   const handleCreateGroup = async (e: React.FormEvent) => {
@@ -59,7 +84,7 @@ export const NewChatModal: React.FC = () => {
       return;
     }
     if (selectedUserIds.length === 0) {
-      alert('Please select at least 1 member for the group');
+      alert('Please select at least 1 friend to add to the group');
       return;
     }
 
@@ -132,7 +157,7 @@ export const NewChatModal: React.FC = () => {
             </div>
             {selectedUserIds.length > 0 && (
               <div className="text-[10px] text-zinc-400 font-medium pt-1">
-                {selectedUserIds.length} member{selectedUserIds.length > 1 ? 's' : ''} selected
+                {selectedUserIds.length} friend{selectedUserIds.length > 1 ? 's' : ''} selected
               </div>
             )}
           </div>
@@ -146,11 +171,28 @@ export const NewChatModal: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={tab === 'direct' ? 'Search users (@username)...' : 'Search members to add...'}
+              placeholder={tab === 'direct' ? 'Search friends or @username...' : 'Search friends to add...'}
               autoFocus
               className="w-full pl-10 pr-4 py-2 bg-zinc-900/90 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white transition"
             />
           </div>
+        </div>
+
+        {/* Privacy Info Banner */}
+        <div className="px-3.5 py-2 bg-[#0d0d10] border-b border-white/5 flex items-center justify-between text-[11px] text-zinc-400">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{tab === 'direct' ? 'Only friends can direct chat' : 'Only friends can be added to groups'}</span>
+          </div>
+          <button
+            onClick={() => {
+              setIsNewChatModalOpen(false);
+              setIsFriendsModalOpen(true);
+            }}
+            className="text-white hover:underline font-semibold"
+          >
+            Manage Friends →
+          </button>
         </div>
 
         {/* Results List */}
@@ -160,15 +202,31 @@ export const NewChatModal: React.FC = () => {
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               <span>Searching users...</span>
             </div>
-          ) : results.length === 0 ? (
-            <div className="py-12 text-center text-xs text-zinc-500 space-y-2">
+          ) : (tab === 'group' ? friends : results).length === 0 ? (
+            <div className="py-12 text-center text-xs text-zinc-500 space-y-3">
               <Sparkles className="w-6 h-6 mx-auto text-zinc-600" />
-              <p>No users found matching "{searchQuery}"</p>
+              <p>
+                {tab === 'group'
+                  ? 'No friends available to add yet.'
+                  : `No users found matching "${searchQuery}"`}
+              </p>
+              <button
+                onClick={() => {
+                  setIsNewChatModalOpen(false);
+                  setIsFriendsModalOpen(true);
+                }}
+                className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5 mx-auto"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Add Friends First</span>
+              </button>
             </div>
           ) : (
-            results.map((u) => {
+            (tab === 'group' ? friends : results).map((u) => {
               const isSelected = selectedUserIds.includes(u.id);
               const isOnline = isUserOnline(u.id);
+              const isFriend = friends.some((f) => f.id === u.id);
+              const isRequestSent = requestSentMap[u.id];
 
               if (tab === 'group') {
                 return (
@@ -211,9 +269,8 @@ export const NewChatModal: React.FC = () => {
               }
 
               return (
-                <button
+                <div
                   key={u.id}
-                  onClick={() => startDirectChatWithUser(u)}
                   className="w-full p-2.5 rounded-2xl hover:bg-white/5 border border-transparent hover:border-white/10 transition flex items-center justify-between group text-left"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -235,10 +292,29 @@ export const NewChatModal: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-white/5 text-zinc-400 group-hover:bg-white group-hover:text-black transition">
-                    <MessageSquare className="w-4 h-4" />
-                  </div>
-                </button>
+                  {isFriend ? (
+                    <button
+                      onClick={() => startDirectChatWithUser(u)}
+                      className="px-3.5 py-1.5 rounded-xl bg-white text-black text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-200 transition active:scale-95 shadow"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Chat</span>
+                    </button>
+                  ) : isRequestSent ? (
+                    <span className="text-[10px] font-semibold text-zinc-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
+                      Request Sent
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleSendReq(u)}
+                      className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition active:scale-95 border border-white/10 flex items-center gap-1"
+                      title="Send Friend Request"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Add Friend</span>
+                    </button>
+                  )}
+                </div>
               );
             })
           )}
