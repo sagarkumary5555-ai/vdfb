@@ -160,10 +160,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
 
           {/* Custom Status / Bio Card */}
           {(user.customStatus || user.bio) && (
-            <div className="w-full p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] text-left space-y-1.5 shadow-sm">
+            <div className="w-full p-3.5 bg-[#141416] rounded-2xl border border-white/10 text-left space-y-1.5 shadow-sm">
               {user.customStatus && (
                 <div className="text-xs font-semibold text-white flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
                   <span>{user.customStatus}</span>
                 </div>
               )}
@@ -182,7 +182,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
                 onClose();
                 startDirectChatWithUser(user);
               }}
-              className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-950/50 transition active:scale-95 flex flex-col items-center justify-center gap-1"
+              className="py-2.5 px-3 rounded-xl bg-white hover:bg-zinc-200 text-black font-bold text-xs shadow-md transition active:scale-95 flex flex-col items-center justify-center gap-1"
             >
               <MessageSquare className="w-4 h-4" />
               <span>Chat</span>
@@ -191,24 +191,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
             <button
               onClick={() => handleStartCall('audio')}
               disabled={callState !== 'idle'}
-              className="py-2.5 px-3 rounded-xl bg-[#151923] hover:bg-[#1D2230] text-zinc-200 hover:text-white font-semibold text-xs border border-white/[0.08] transition active:scale-95 flex flex-col items-center justify-center gap-1 disabled:opacity-40 shadow-sm"
+              className="py-2.5 px-3 rounded-xl bg-[#141416] hover:bg-[#1E1E22] text-zinc-200 hover:text-white font-semibold text-xs border border-white/10 transition active:scale-95 flex flex-col items-center justify-center gap-1 disabled:opacity-40 shadow-sm"
             >
-              <Phone className="w-4 h-4 text-emerald-400" />
+              <Phone className="w-4 h-4 text-white" />
               <span>Voice</span>
             </button>
 
             <button
               onClick={() => handleStartCall('video')}
               disabled={callState !== 'idle'}
-              className="py-2.5 px-3 rounded-xl bg-[#151923] hover:bg-[#1D2230] text-zinc-200 hover:text-white font-semibold text-xs border border-white/[0.08] transition active:scale-95 flex flex-col items-center justify-center gap-1 disabled:opacity-40 shadow-sm"
+              className="py-2.5 px-3 rounded-xl bg-[#141416] hover:bg-[#1E1E22] text-zinc-200 hover:text-white font-semibold text-xs border border-white/10 transition active:scale-95 flex flex-col items-center justify-center gap-1 disabled:opacity-40 shadow-sm"
             >
-              <Video className="w-4 h-4 text-blue-400" />
+              <Video className="w-4 h-4 text-white" />
               <span>Video</span>
             </button>
           </div>
 
           {/* Secondary Actions */}
-          <div className="w-full pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs text-zinc-400">
+          <div className="w-full pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400">
             <button
               onClick={() => {
                 onClose();
@@ -224,7 +224,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
               <button
                 onClick={handleRemoveFriend}
                 disabled={isProcessing}
-                className="flex items-center gap-1 text-zinc-500 hover:text-red-400 transition"
+                className="flex items-center gap-1 text-zinc-400 hover:text-red-400 transition"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Unfriend</span>
@@ -233,7 +233,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
               <button
                 onClick={handleSendFriendReq}
                 disabled={isProcessing}
-                className="flex items-center gap-1 text-blue-400 font-bold hover:underline transition"
+                className="flex items-center gap-1 text-white font-bold hover:underline transition"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>Add Friend</span>

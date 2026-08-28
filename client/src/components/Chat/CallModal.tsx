@@ -776,31 +776,31 @@ export const CallModal: React.FC = () => {
 
         {/* Live Diagnostics HUD Overlay */}
         {showDiagnosticsHUD && (
-          <div className="absolute top-16 left-4 z-30 p-3 bg-black/85 border border-white/15 rounded-2xl shadow-2xl text-[11px] text-zinc-300 space-y-1 backdrop-blur-xl animate-fade-in font-mono">
+          <div className="absolute top-16 left-4 z-30 p-3 bg-black/90 border border-white/15 rounded-2xl shadow-2xl text-[11px] text-zinc-300 space-y-1 backdrop-blur-xl animate-fade-in font-mono">
             <div className="flex items-center justify-between text-white font-bold pb-1 border-b border-white/10">
               <span className="flex items-center gap-1">
-                <Info className="w-3.5 h-3.5 text-blue-400" />
+                <Info className="w-3.5 h-3.5 text-white" />
                 WebRTC Diagnostics HUD
               </span>
               <button onClick={() => setShowDiagnosticsHUD(false)} className="text-zinc-500 hover:text-white">
                 <X className="w-3 h-3" />
               </button>
             </div>
-            <div>• Codec: <span className="text-emerald-400">Opus 48kHz Stereo / VP8 HD</span></div>
-            <div>• Bitrate: <span className="text-blue-400">64 kbps Voice / 2500 kbps Video</span></div>
-            <div>• Packet Loss: <span className="text-emerald-400">0.0% (Lossless)</span></div>
-            <div>• Framerate: <span className="text-cyan-400">60 FPS Smooth</span></div>
-            <div>• Security: <span className="text-amber-400">DTLS-SRTP AES-256</span></div>
-            <div>• ICE Transport: <span className="text-zinc-200">UDP / TLS-TURN (Port 443)</span></div>
+            <div>• Codec: <span className="text-white font-bold">Opus 48kHz Stereo / VP8 HD</span></div>
+            <div>• Bitrate: <span className="text-white font-bold">64 kbps Voice / 2500 kbps Video</span></div>
+            <div>• Packet Loss: <span className="text-white font-bold">0.0% (Lossless)</span></div>
+            <div>• Framerate: <span className="text-white font-bold">60 FPS Smooth</span></div>
+            <div>• Security: <span className="text-white font-bold">DTLS-SRTP AES-256</span></div>
+            <div>• ICE Transport: <span className="text-zinc-300">UDP / TLS-TURN (Port 443)</span></div>
           </div>
         )}
 
         {/* In-Call Slide-Out Mini Chat Drawer */}
         {showInCallChat && (
           <div className="absolute top-16 right-0 bottom-24 z-30 w-72 sm:w-80 bg-[#0E111A]/95 border-l border-white/15 rounded-l-3xl shadow-2xl flex flex-col backdrop-blur-2xl animate-slide-left overflow-hidden">
-            <div className="p-3 border-b border-white/10 flex items-center justify-between bg-[#151923]">
+            <div className="p-3 border-b border-white/10 flex items-center justify-between bg-[#141416]">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-blue-400" />
+                <MessageSquare className="w-4 h-4 text-white" />
                 <span className="text-xs font-bold text-white">In-Call Chat</span>
               </div>
               <button
@@ -823,8 +823,8 @@ export const CallModal: React.FC = () => {
                     <div
                       className={`px-3 py-2 rounded-2xl max-w-[85%] break-words ${
                         isMe
-                          ? 'bg-blue-600 text-white rounded-br-none'
-                          : 'bg-[#1C2230] text-zinc-200 rounded-bl-none border border-white/10'
+                          ? 'bg-white text-black font-semibold rounded-br-none'
+                          : 'bg-[#18181A] text-zinc-200 rounded-bl-none border border-white/10'
                       }`}
                     >
                       {msg.content}
@@ -836,19 +836,19 @@ export const CallModal: React.FC = () => {
             </div>
 
             {/* Quick In-Call Message Input */}
-            <form onSubmit={handleSendInCallMessage} className="p-2 bg-[#121520] border-t border-white/10 flex items-center gap-1.5">
+            <form onSubmit={handleSendInCallMessage} className="p-2 bg-[#121214] border-t border-white/10 flex items-center gap-1.5">
               <input
                 type="text"
                 value={chatInputText}
                 onChange={(e) => setChatInputText(e.target.value)}
                 placeholder="Type a message..."
-                className="flex-1 bg-[#1A2030] text-white text-xs px-3 py-2 rounded-xl border border-white/10 focus:outline-none focus:border-blue-500"
+                className="flex-1 bg-[#1A1A1E] text-white text-xs px-3 py-2 rounded-xl border border-white/10 focus:outline-none focus:border-white"
               />
               <button
                 type="submit"
-                className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition active:scale-95"
+                className="p-2 rounded-xl bg-white hover:bg-zinc-200 text-black transition active:scale-95 shadow"
               >
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-3.5 h-3.5 fill-black" />
               </button>
             </form>
           </div>
@@ -953,7 +953,7 @@ export const CallModal: React.FC = () => {
             onClick={toggleScreenShare}
             className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-90 shadow-xl ${
               isScreenSharing
-                ? 'bg-blue-600 border border-blue-400 ring-2 ring-blue-500/40 text-white animate-pulse'
+                ? 'bg-white text-black border border-white ring-2 ring-white/40 animate-pulse'
                 : 'bg-white/15 hover:bg-white/25 text-white backdrop-blur-xl border border-white/20'
             }`}
             title={isScreenSharing ? 'Stop Screen Sharing' : 'Share Screen'}
