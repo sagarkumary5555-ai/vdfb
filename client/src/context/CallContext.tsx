@@ -63,18 +63,42 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:stun.services.mozilla.com:3478' },
     { urls: 'stun:global.stun.twilio.com:3478' },
+    // Public OpenRelay UDP/TCP TURN
     {
       urls: [
         'turn:openrelay.metered.ca:80',
         'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp'
+        'turn:openrelay.metered.ca:443?transport=tcp',
       ],
       username: 'openrelayproject',
-      credential: 'openrelayproject'
-    }
+      credential: 'openrelayproject',
+    },
+    // Secure TLS/HTTPS TURN (Essential for mobile ISPs and firewalls)
+    {
+      urls: [
+        'turns:openrelay.metered.ca:443',
+        'turns:openrelay.metered.ca:443?transport=tcp',
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: [
+        'turn:standard.relay.metered.ca:80',
+        'turn:standard.relay.metered.ca:443',
+        'turn:standard.relay.metered.ca:443?transport=tcp',
+        'turns:standard.relay.metered.ca:443',
+        'turns:standard.relay.metered.ca:443?transport=tcp',
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ],
   iceCandidatePoolSize: 10,
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require',
 };
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
@@ -114,17 +138,19 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const currentFacingModeRef = useRef<'user' | 'environment'>('user');
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Dedicated remote audio player with autoplay unlock
+  // Dedicated remote audio player with auto-unlock listeners
   const playRemoteAudio = (stream: MediaStream) => {
     try {
       if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = stream;
+        if (remoteAudioRef.current.srcObject !== stream) {
+          remoteAudioRef.current.srcObject = stream;
+        }
         remoteAudioRef.current.volume = 1.0;
         remoteAudioRef.current.muted = false;
         const p = remoteAudioRef.current.play();
         if (p !== undefined) {
           p.catch((err) => {
-            console.warn('Autoplay prevented remote audio, attaching gesture listener:', err);
+            console.warn('Autoplay prevented remote audio, waiting for user gesture unlock:', err);
             const unlock = () => {
               remoteAudioRef.current?.play().catch(() => {});
               window.removeEventListener('click', unlock);
@@ -309,13 +335,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createPeerConnection = (): RTCPeerConnection => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    try {
-      pc.addTransceiver('audio', { direction: 'sendrecv' });
-      pc.addTransceiver('video', { direction: 'sendrecv' });
-    } catch {
-      // Browser handles automatically
-    }
-
     pc.onicecandidate = (event) => {
       if (event.candidate && socket && targetUserIdRef.current) {
         socket.emit('call:ice-candidate', {
@@ -326,14 +345,20 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     pc.ontrack = (event) => {
-      console.log('📡 Received remote track:', event.track.kind);
-      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+      console.log('📡 Received remote track:', event.track.kind, event.track.id);
+      
+      event.track.enabled = true;
+
+      const stream = (event.streams && event.streams[0])
+        ? event.streams[0]
+        : (remoteStreamRef.current || new MediaStream());
+
+      if (!stream.getTracks().some((t) => t.id === event.track.id)) {
+        stream.addTrack(event.track);
+      }
+
       remoteStreamRef.current = stream;
       setRemoteStream(stream);
-
-      if (event.track.kind === 'audio') {
-        event.track.enabled = true;
-      }
 
       playRemoteAudio(stream);
 
@@ -371,7 +396,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           noiseSuppression: true,
           autoGainControl: true,
         },
-        video: type === 'video' ? { facingMode: 'user' } : false,
+        video: type === 'video' ? {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        } : false,
       });
     } catch (firstErr: any) {
       console.warn('Initial getUserMedia attempt failed, trying basic fallback:', firstErr);
