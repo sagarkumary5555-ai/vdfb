@@ -343,7 +343,7 @@ export const MessageComposer: React.FC = () => {
         </div>
       ) : (
         /* Luxury Composer Input Dock */
-        <div className="relative flex items-center gap-2 bg-[#12151F] rounded-2xl border border-white/[0.08] p-2 focus-within:border-indigo-500/50 transition-all shadow-xl">
+        <div className="relative flex items-center gap-2 bg-[#0C101A] rounded-2xl border border-white/[0.1] p-2 focus-within:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-xl">
           <input
             ref={fileInputRef}
             type="file"
