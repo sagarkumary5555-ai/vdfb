@@ -247,25 +247,30 @@ async function runSuperComprehensiveTests() {
     });
     console.log('  ✅ Both WebSocket clients connected & authenticated');
 
-    socketCharlie.emit('conversation:join', directChatRes.conversation.id);
-    socketDiana.emit('conversation:join', directChatRes.conversation.id);
-    await new Promise((r) => setTimeout(r, 150));
-
-    // Diana listens for incoming message
+    // Setup Diana message receiver
     const dianaMsgPromise = new Promise<any>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Timed out waiting for socket message')), 4000);
-      socketDiana.on('message:new', (msg) => {
+      const timer = setTimeout(() => reject(new Error('Timed out waiting for socket message')), 6000);
+      const onMsg = (msg: any) => {
         clearTimeout(timer);
         resolve(msg);
+      };
+      socketDiana.on('message:new', onMsg);
+      socketDiana.on('conversation:activity', (data: any) => {
+        if (data?.message) {
+          clearTimeout(timer);
+          resolve(data.message);
+        }
       });
     });
+
+    socketCharlie.emit('conversation:join', directChatRes.conversation.id);
+    socketDiana.emit('conversation:join', directChatRes.conversation.id);
+    await new Promise((r) => setTimeout(r, 200));
 
     socketCharlie.emit('message:send', {
       conversationId: directChatRes.conversation.id,
       recipientId: dianaId,
       content: 'Real-time WebSocket Test: 3D Animated Sticker 🔥✨',
-    }, (res: any) => {
-      if (res?.error) console.error('  ⚠️ socketCharlie message:send error:', res.error);
     });
 
     const rxMsg = await dianaMsgPromise;

@@ -16,7 +16,8 @@ export const MessageList: React.FC = () => {
     activeConversation,
     activePartner,
     sendMessage,
-    setIsSettingsOpen,
+    viewUserProfile,
+    setIsSharedMediaOpen,
   } = useChat();
 
   const { isUserOnline } = useSocket();
@@ -72,13 +73,25 @@ export const MessageList: React.FC = () => {
   const partnerAvatar = isGroup ? null : activePartner?.avatarUrl;
   const isOnline = !isGroup && activePartner ? isUserOnline(activePartner.id) : false;
 
+  const handleProfileClick = () => {
+    if (isGroup) {
+      setIsSharedMediaOpen(true);
+    } else if (activePartner) {
+      viewUserProfile(activePartner);
+    }
+  };
+
   // Instagram Empty Chat State
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 select-none bg-black">
         <div className="max-w-md w-full text-center p-6 sm:p-8 rounded-3xl bg-[#121212] border border-[#262626] shadow-2xl space-y-4 animate-fade-in">
           {/* Avatar Header */}
-          <div className="flex justify-center">
+          <div
+            onClick={handleProfileClick}
+            className="flex justify-center cursor-pointer group"
+            title="View Profile"
+          >
             <Avatar
               name={partnerName}
               username={partnerUsername}
@@ -86,21 +99,34 @@ export const MessageList: React.FC = () => {
               size="2xl"
               isGroup={isGroup}
               status={!isGroup ? (isOnline ? 'online' : 'offline') : null}
+              className="group-hover:scale-105 transition-transform"
             />
           </div>
 
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+            <h2
+              onClick={handleProfileClick}
+              className="text-lg sm:text-xl font-bold text-white tracking-tight cursor-pointer hover:underline"
+            >
               {partnerName}
             </h2>
             {!isGroup && (
-              <p className="text-xs text-zinc-400 mt-0.5">@{partnerUsername} • ChatUs</p>
+              <p className="text-xs text-zinc-400 mt-0.5">@{partnerUsername} • ChatUs PRO</p>
             )}
             {activePartner?.customStatus && !isGroup && (
               <div className="inline-block mt-2 px-3 py-1 rounded-full bg-[#262626] border border-white/10 text-xs text-zinc-300">
                 {activePartner.customStatus}
               </div>
             )}
+          </div>
+
+          <div className="flex justify-center pt-1">
+            <button
+              onClick={handleProfileClick}
+              className="px-4 py-1.5 bg-[#262626] hover:bg-[#363636] text-white text-xs font-semibold rounded-xl border border-white/10 transition active:scale-95 shadow"
+            >
+              View profile
+            </button>
           </div>
 
           <div className="p-3.5 bg-black/60 rounded-2xl border border-white/5 space-y-1">
@@ -143,23 +169,30 @@ export const MessageList: React.FC = () => {
         </div>
       )}
 
-      {/* Instagram Profile Hero at Top of Chat (when reached top) */}
+      {/* Hero at Top of Chat (when reached top) */}
       {!hasMore && (
         <div className="py-8 pb-6 flex flex-col items-center justify-center text-center space-y-3 animate-fade-in border-b border-[#18181b] mb-4">
-          <div className="story-ring-luxury p-1 rounded-full">
+          <div
+            onClick={handleProfileClick}
+            className="cursor-pointer group story-ring-luxury p-1 rounded-full"
+            title="Click to view profile"
+          >
             <Avatar
               name={partnerName}
               username={partnerUsername}
               avatarUrl={partnerAvatar}
               size="2xl"
-              className="w-22 h-22 ring-2 ring-black"
+              className="w-22 h-22 ring-2 ring-black group-hover:scale-105 transition-transform"
               isGroup={isGroup}
               status={!isGroup ? (isOnline ? 'online' : 'offline') : null}
             />
           </div>
 
           <div>
-            <h3 className="text-lg font-bold text-white tracking-tight">
+            <h3
+              onClick={handleProfileClick}
+              className="text-lg font-bold text-white tracking-tight cursor-pointer hover:underline"
+            >
               {partnerName}
             </h3>
             <p className="text-xs text-zinc-400 mt-0.5">
@@ -173,8 +206,8 @@ export const MessageList: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="px-4 py-1.5 bg-[#262626] hover:bg-[#363636] text-white text-xs font-semibold rounded-lg transition active:scale-95 shadow"
+            onClick={handleProfileClick}
+            className="px-4 py-1.5 bg-[#262626] hover:bg-[#363636] text-white text-xs font-semibold rounded-xl border border-white/10 transition active:scale-95 shadow"
           >
             View profile
           </button>

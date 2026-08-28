@@ -1,8 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { Message, QueuedMessage, Attachment, ConversationItem, User } from '../types/index.js';
-import { messageApi, friendsApi, FriendOverviewData } from '../services/api.js';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
+} from 'react';
+import {
+  Message,
+  ConversationItem,
+  Attachment,
+  User,
+  QueuedMessage,
+  FriendOverviewData,
+} from '../types/index.js';
 import { useAuth } from './AuthContext.js';
 import { useSocket } from './SocketContext.js';
+import { messageApi, friendsApi } from '../services/api.js';
 import { soundService } from '../services/sound.js';
 
 interface ChatContextType {
@@ -36,6 +51,10 @@ interface ChatContextType {
   highlightedMessageId: string | null;
   setHighlightedMessageId: (id: string | null) => void;
   offlineQueue: QueuedMessage[];
+  // View Profile Modal
+  selectedProfileUser: User | null;
+  viewUserProfile: (user: User) => void;
+  closeUserProfile: () => void;
   // Friends System
   friends: User[];
   incomingRequests: Array<{ id: string; user: User; createdAt: string }>;
@@ -85,6 +104,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isFriendsModalOpen, setIsFriendsModalOpen] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [selectedProfileUser, setSelectedProfileUser] = useState<User | null>(null);
 
   // Friends State
   const [friends, setFriends] = useState<User[]>([]);
@@ -92,7 +112,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [outgoingRequests, setOutgoingRequests] = useState<Array<{ id: string; user: User; createdAt: string }>>([]);
   const [pendingFriendCount, setPendingFriendCount] = useState<number>(0);
 
-  const originalTitleRef = useRef<string>(document.title);
+  const originalTitleRef = useRef<string>(typeof document !== 'undefined' ? document.title : 'ChatUs PRO');
   const unreadAlertTimerRef = useRef<any>(null);
 
   // Request browser notification permission on mount
@@ -166,6 +186,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await friendsApi.removeFriend(friendId);
     await loadFriends();
     await refreshConversations();
+  };
+
+  const viewUserProfile = (targetUser: User) => {
+    setSelectedProfileUser(targetUser);
+  };
+
+  const closeUserProfile = () => {
+    setSelectedProfileUser(null);
   };
 
   // Fetch all user conversations
@@ -329,10 +357,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (newMsg.senderId !== user?.id) {
-        // 1. Play melodic notification sound chime
         soundService.playIncomingMessageSound();
 
-        // 2. Desktop Push Notification if window is in background
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
           if (document.hidden) {
             try {
@@ -350,7 +376,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         }
 
-        // 3. Flashing Tab Title Alert
         if (document.hidden) {
           if (unreadAlertTimerRef.current) clearInterval(unreadAlertTimerRef.current);
           let flag = false;
@@ -388,14 +413,43 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       );
     };
 
-    const handleFriendRequestReceived = () => {
+    const handleFriendRequestReceived = (data?: any) => {
       loadFriends();
       soundService.playIncomingMessageSound();
+
+      // Web Push Browser Notification
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        try {
+          const reqSenderName = data?.requester?.displayName || 'Someone';
+          const notification = new Notification(`👥 Friend Request from ${reqSenderName}`, {
+            body: `${reqSenderName} sent you a friend request on ChatUs PRO!`,
+            icon: data?.requester?.avatarUrl || '/favicon.ico',
+          });
+          notification.onclick = () => {
+            window.focus();
+            setIsFriendsModalOpen(true);
+            notification.close();
+          };
+        } catch {
+          // Ignore
+        }
+      }
+
+      // Flashing Tab Title Alert
+      if (document.hidden) {
+        if (unreadAlertTimerRef.current) clearInterval(unreadAlertTimerRef.current);
+        let flag = false;
+        unreadAlertTimerRef.current = setInterval(() => {
+          document.title = flag ? '(1) 👥 New Friend Request!' : 'ChatUs PRO';
+          flag = !flag;
+        }, 1000);
+      }
     };
 
     const handleFriendRequestAccepted = () => {
       loadFriends();
       refreshConversations();
+      soundService.playIncomingMessageSound();
     };
 
     const handleFriendRemoved = () => {
@@ -420,7 +474,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       socket.off('friend:request_accepted', handleFriendRequestAccepted);
       socket.off('friend:removed', handleFriendRemoved);
     };
-  }, [socket, user, activeConversation, refreshConversations]);
+  }, [socket, user, activeConversation, refreshConversations, loadFriends]);
 
   // Send message
   const sendMessage = async (content: string, attachments: Attachment[] = []) => {
@@ -567,6 +621,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         highlightedMessageId,
         setHighlightedMessageId,
         offlineQueue,
+        // View Profile Modal
+        selectedProfileUser,
+        viewUserProfile,
+        closeUserProfile,
         // Friends
         friends,
         incomingRequests,

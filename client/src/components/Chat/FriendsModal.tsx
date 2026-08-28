@@ -28,6 +28,7 @@ export const FriendsModal: React.FC = () => {
     declineFriendRequest,
     removeFriend,
     startDirectChatWithUser,
+    viewUserProfile,
   } = useChat();
 
   const { isUserOnline } = useSocket();
@@ -224,7 +225,11 @@ export const FriendsModal: React.FC = () => {
                     key={f.id}
                     className="p-3 rounded-2xl bg-zinc-900/90 border border-white/10 flex items-center justify-between gap-3 group hover:border-white/20 transition"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      onClick={() => viewUserProfile(f)}
+                      className="flex items-center gap-3 min-w-0 cursor-pointer group-hover:opacity-90"
+                      title="Click to view profile"
+                    >
                       <Avatar
                         name={f.displayName}
                         username={f.username}
@@ -233,7 +238,7 @@ export const FriendsModal: React.FC = () => {
                         status={isOnline ? 'online' : 'offline'}
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate">{f.displayName}</div>
+                        <div className="text-xs font-bold text-white truncate group-hover:underline">{f.displayName}</div>
                         <div className="text-[10px] text-zinc-400 truncate">@{f.username}</div>
                         {f.customStatus && (
                           <div className="text-[10px] text-zinc-500 truncate mt-0.5">{f.customStatus}</div>

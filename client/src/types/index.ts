@@ -83,3 +83,10 @@ export interface QueuedMessage {
   attachments: Attachment[];
   createdAt: string;
 }
+
+export interface FriendOverviewData {
+  friends: User[];
+  incomingRequests: Array<{ id: string; user: User; createdAt: string }>;
+  outgoingRequests: Array<{ id: string; user: User; createdAt: string }>;
+  pendingCount: number;
+}

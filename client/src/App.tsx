@@ -15,6 +15,7 @@ import { SettingsModal } from './components/Chat/SettingsModal.js';
 import { SharedMediaModal } from './components/Chat/SharedMediaModal.js';
 import { NewChatModal } from './components/Chat/NewChatModal.js';
 import { FriendsModal } from './components/Chat/FriendsModal.js';
+import { UserProfileModal } from './components/Chat/UserProfileModal.js';
 import { ConnectionBanner } from './components/Chat/ConnectionBanner.js';
 import { DragDropOverlay } from './components/Chat/DragDropOverlay.js';
 import { CallModal } from './components/Chat/CallModal.js';
@@ -22,7 +23,14 @@ import { IncomingCallDialog } from './components/Chat/IncomingCallDialog.js';
 import { uploadApi } from './services/api.js';
 
 const ChatContent: React.FC = () => {
-  const { sendMessage, isSidebarOpen, activeConversation, setIsNewChatModalOpen } = useChat();
+  const {
+    sendMessage,
+    isSidebarOpen,
+    activeConversation,
+    setIsNewChatModalOpen,
+    selectedProfileUser,
+    closeUserProfile,
+  } = useChat();
   const [isDragging, setIsDragging] = useState(false);
 
   // Global Drag & Drop Handler
@@ -141,6 +149,7 @@ const ChatContent: React.FC = () => {
       <SharedMediaModal />
       <NewChatModal />
       <FriendsModal />
+      <UserProfileModal user={selectedProfileUser} onClose={closeUserProfile} />
       <DragDropOverlay isDragging={isDragging} />
 
       {/* WebRTC Live Calling Overlays */}

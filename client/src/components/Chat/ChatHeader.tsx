@@ -15,6 +15,7 @@ export const ChatHeader: React.FC = () => {
     setIsSharedMediaOpen,
     setIsSearchOpen,
     setIsSidebarOpen,
+    viewUserProfile,
     friends,
   } = useChat();
   const { startCall, callState } = useCall();
@@ -41,6 +42,14 @@ export const ChatHeader: React.FC = () => {
   const isOnline = !isGroup && isUserOnline(activePartner?.id);
   const isFriend = !isGroup && activePartner && friends.some((f) => f.id === activePartner.id);
   const lastSeenStr = !isGroup ? (getUserLastSeen(activePartner?.id) || activePartner?.lastSeen) : null;
+
+  const handleHeaderUserClick = () => {
+    if (isGroup) {
+      setIsSharedMediaOpen(true);
+    } else if (activePartner) {
+      viewUserProfile(activePartner);
+    }
+  };
 
   const formatSubtitle = () => {
     if (isGroup) {
@@ -99,7 +108,7 @@ export const ChatHeader: React.FC = () => {
   return (
     <header className="h-16 px-4 sm:px-6 bg-[#0a0a0d] border-b border-white/10 flex items-center justify-between z-30 select-none flex-shrink-0">
       {/* Left: Mobile Back Button + Profile / Group Details */}
-      <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
         <button
           onClick={() => setIsSidebarOpen(true)}
           className="lg:hidden p-1.5 -ml-1 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition"
@@ -108,30 +117,36 @@ export const ChatHeader: React.FC = () => {
           <ChevronLeft className="w-6 h-6 stroke-[2]" />
         </button>
 
-        <Avatar
-          name={titleName}
-          username={partnerUsername}
-          avatarUrl={partnerAvatar}
-          size="md"
-          className="w-10 h-10 ring-1 ring-white/10"
-          isGroup={isGroup}
-          status={!isGroup ? (isOnline ? 'online' : 'offline') : null}
-        />
+        <div
+          onClick={handleHeaderUserClick}
+          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group py-1 rounded-xl hover:opacity-90 transition"
+          title="Click to view profile / info"
+        >
+          <Avatar
+            name={titleName}
+            username={partnerUsername}
+            avatarUrl={partnerAvatar}
+            size="md"
+            className="w-10 h-10 ring-1 ring-white/10 group-hover:scale-105 transition-transform"
+            isGroup={isGroup}
+            status={!isGroup ? (isOnline ? 'online' : 'offline') : null}
+          />
 
-        <div className="flex flex-col min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 truncate">
-            <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate leading-tight">
-              {titleName}
-            </h1>
-            {isGroup && (
-              <span className="text-[10px] font-bold text-zinc-400 bg-white/10 px-1.5 py-0.5 rounded-md flex-shrink-0">
-                GROUP
-              </span>
-            )}
-          </div>
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 truncate">
+              <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate leading-tight group-hover:underline">
+                {titleName}
+              </h1>
+              {isGroup && (
+                <span className="text-[10px] font-bold text-zinc-400 bg-white/10 px-1.5 py-0.5 rounded-md flex-shrink-0">
+                  GROUP
+                </span>
+              )}
+            </div>
 
-          <div className="text-xs flex items-center gap-1.5 truncate leading-tight mt-0.5">
-            {formatSubtitle()}
+            <div className="text-xs flex items-center gap-1.5 truncate leading-tight mt-0.5">
+              {formatSubtitle()}
+            </div>
           </div>
         </div>
       </div>
