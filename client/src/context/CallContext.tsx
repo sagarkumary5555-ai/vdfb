@@ -256,7 +256,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const playRemoteAudio = (stream: MediaStream) => {
     if (!stream) return;
     try {
-      // Ensure all incoming audio tracks are explicitly enabled
+      // Ensure all incoming audio tracks are explicitly unmuted & enabled
       stream.getAudioTracks().forEach((track) => {
         track.enabled = true;
       });
@@ -266,39 +266,55 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ctx.resume().catch(() => {});
       }
 
-      if (remoteAudioRef.current) {
-        const audioEl = remoteAudioRef.current;
-        if (audioEl.srcObject !== stream) {
-          audioEl.srcObject = stream;
-        }
-        audioEl.volume = Math.min(1.0, Math.max(0.1, volumeBoost));
-        audioEl.muted = false;
+      let audioEl = remoteAudioRef.current;
+      if (!audioEl) {
+        audioEl = document.getElementById('webrtc-remote-audio') as HTMLAudioElement;
+      }
+      if (!audioEl) {
+        audioEl = document.createElement('audio');
+        audioEl.id = 'webrtc-remote-audio';
+        audioEl.autoplay = true;
+        (audioEl as any).playsInline = true;
+        audioEl.style.position = 'fixed';
+        audioEl.style.top = '-9999px';
+        audioEl.style.left = '-9999px';
+        audioEl.style.width = '1px';
+        audioEl.style.height = '1px';
+        audioEl.style.opacity = '0.01';
+        audioEl.style.pointerEvents = 'none';
+        document.body.appendChild(audioEl);
+      }
 
-        const playPromise = audioEl.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log('🔊 WebRTC remote audio playing cleanly');
-            })
-            .catch((err) => {
-              console.warn('Autoplay prevented remote audio, waiting for user gesture unlock:', err);
-              const unlock = () => {
+      audioEl.srcObject = stream;
+      audioEl.volume = Math.min(1.0, Math.max(0.1, volumeBoost));
+      audioEl.muted = false;
+
+      const playPromise = audioEl.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('🔊 WebRTC remote audio playing cleanly');
+          })
+          .catch((err) => {
+            console.warn('Autoplay prevented remote audio, waiting for user gesture unlock:', err);
+            const unlock = () => {
+              if (audioEl) {
                 audioEl.muted = false;
                 audioEl.play().catch(() => {});
-                if (ctx && ctx.state === 'suspended') {
-                  ctx.resume().catch(() => {});
-                }
-                window.removeEventListener('click', unlock);
-                window.removeEventListener('touchstart', unlock);
-                window.removeEventListener('pointerdown', unlock);
-                window.removeEventListener('keydown', unlock);
-              };
-              window.addEventListener('click', unlock, { once: true });
-              window.addEventListener('touchstart', unlock, { once: true });
-              window.addEventListener('pointerdown', unlock, { once: true });
-              window.addEventListener('keydown', unlock, { once: true });
-            });
-        }
+              }
+              if (ctx && ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+              }
+              window.removeEventListener('click', unlock);
+              window.removeEventListener('touchstart', unlock);
+              window.removeEventListener('pointerdown', unlock);
+              window.removeEventListener('keydown', unlock);
+            };
+            window.addEventListener('click', unlock, { once: true });
+            window.addEventListener('touchstart', unlock, { once: true });
+            window.addEventListener('pointerdown', unlock, { once: true });
+            window.addEventListener('keydown', unlock, { once: true });
+          });
       }
     } catch (e) {
       console.warn('Error playing remote audio:', e);
@@ -871,23 +887,43 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       event.track.enabled = true;
 
-      const stream = (event.streams && event.streams[0])
-        ? event.streams[0]
-        : (remoteStreamRef.current || new MediaStream());
-
-      if (!stream.getTracks().some((t) => t.id === event.track.id)) {
-        stream.addTrack(event.track);
+      // Construct a new MediaStream instance to trigger React state updates
+      const current = remoteStreamRef.current ? new MediaStream(remoteStreamRef.current.getTracks()) : new MediaStream();
+      if (!current.getTracks().some((t) => t.id === event.track.id)) {
+        current.addTrack(event.track);
+      }
+      
+      // If event.streams[0] has tracks, merge any missing ones
+      if (event.streams && event.streams[0]) {
+        event.streams[0].getTracks().forEach((t) => {
+          t.enabled = true;
+          if (!current.getTracks().some((ct) => ct.id === t.id)) {
+            current.addTrack(t);
+          }
+        });
       }
 
-      remoteStreamRef.current = stream;
-      setRemoteStream(stream);
+      remoteStreamRef.current = current;
+      setRemoteStream(current);
 
-      playRemoteAudio(stream);
+      playRemoteAudio(current);
 
       event.track.onunmute = () => {
         console.log('📡 Remote track unmuted, playing audio...');
-        playRemoteAudio(stream);
+        event.track.enabled = true;
+        playRemoteAudio(current);
       };
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log('📡 ICE connection state:', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        callSound.stopRingtone();
+        setCallState('connected');
+        if (remoteStreamRef.current) {
+          playRemoteAudio(remoteStreamRef.current);
+        }
+      }
     };
 
     pc.onconnectionstatechange = () => {
@@ -1335,7 +1371,21 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }}
     >
       {/* Permanent Audio Element for incoming remote audio across all calling modes */}
-      <audio ref={remoteAudioRef} autoPlay playsInline />
+      <audio
+        id="webrtc-remote-audio"
+        ref={remoteAudioRef}
+        autoPlay
+        playsInline
+        style={{
+          position: 'fixed',
+          top: -9999,
+          left: -9999,
+          width: 1,
+          height: 1,
+          opacity: 0.01,
+          pointerEvents: 'none',
+        }}
+      />
       {children}
     </CallContext.Provider>
   );
