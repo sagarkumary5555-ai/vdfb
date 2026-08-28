@@ -278,12 +278,13 @@ async function runSuperComprehensiveTests() {
     passedTests++;
 
     // ----------------------------------------------------
-    // TEST 9: WebRTC Calling Signaling (Audio & Video)
+    // TEST 9: WebRTC Calling Signaling (Audio & Video & ICE & Reject)
     // ----------------------------------------------------
-    console.log('\n[TEST 9/10] WebRTC Voice & Video Call Signaling...');
-    // Charlie initiates call to Diana
+    console.log('\n[TEST 9/10] WebRTC Voice, Video, ICE Candidates & Signaling...');
+    
+    // 9A: Charlie initiates Video Call to Diana
     const dianaIncomingCallPromise = new Promise<any>((resolve) => {
-      socketDiana.on('call:incoming', (data) => resolve(data));
+      socketDiana.once('call:incoming', (data) => resolve(data));
     });
 
     socketCharlie.emit('call:initiate', {
@@ -293,11 +294,11 @@ async function runSuperComprehensiveTests() {
     });
 
     const callIncomingData = await dianaIncomingCallPromise;
-    console.log('  ✅ Diana received call:incoming from:', callIncomingData.callerName, '| Type:', callIncomingData.type);
+    console.log('  ✅ 9A. Diana received call:incoming from:', callIncomingData.callerName, '| Type:', callIncomingData.type);
 
     // Diana accepts call
     const charlieCallAcceptedPromise = new Promise<any>((resolve) => {
-      socketCharlie.on('call:accepted', (data) => resolve(data));
+      socketCharlie.once('call:accepted', (data) => resolve(data));
     });
 
     socketDiana.emit('call:accept', {
@@ -306,30 +307,72 @@ async function runSuperComprehensiveTests() {
     });
 
     const callAcceptedData = await charlieCallAcceptedPromise;
-    console.log('  ✅ Charlie received call:accepted from Diana:', Boolean(callAcceptedData.answer));
+    console.log('  ✅ 9B. Charlie received call:accepted with answer SDP:', Boolean(callAcceptedData.answer));
 
-    // Media Toggle: Charlie toggles screen share
+    // 9C: Bidirectional ICE Candidate Exchange
+    const dianaIcePromise = new Promise<any>((resolve) => {
+      socketDiana.once('call:ice-candidate', (data) => resolve(data));
+    });
+    const charlieIcePromise = new Promise<any>((resolve) => {
+      socketCharlie.once('call:ice-candidate', (data) => resolve(data));
+    });
+
+    socketCharlie.emit('call:ice-candidate', {
+      targetUserId: dianaId,
+      candidate: { candidate: 'candidate:1 1 UDP 2122260223 127.0.0.1 50000 typ host', sdpMid: '0' },
+    });
+    socketDiana.emit('call:ice-candidate', {
+      targetUserId: charlieId,
+      candidate: { candidate: 'candidate:2 1 UDP 2122260223 127.0.0.1 50001 typ host', sdpMid: '0' },
+    });
+
+    await Promise.all([dianaIcePromise, charlieIcePromise]);
+    console.log('  ✅ 9C. ICE candidates relayed bidirectionally between peers');
+
+    // 9D: Media Toggle: Charlie toggles screen share & mute
     const dianaMediaTogglePromise = new Promise<any>((resolve) => {
-      socketDiana.on('call:peer-media-toggle', (data) => resolve(data));
+      socketDiana.once('call:peer-media-toggle', (data) => resolve(data));
     });
 
     socketCharlie.emit('call:media-toggle', {
       targetUserId: dianaId,
       isScreenSharing: true,
-      isMuted: false,
+      isMuted: true,
+      isVideoOff: false,
     });
 
     const mediaToggleData = await dianaMediaTogglePromise;
-    console.log('  ✅ Diana received peer-media-toggle (isScreenSharing):', mediaToggleData.isScreenSharing);
+    console.log('  ✅ 9D. Diana received peer-media-toggle (isScreenSharing, isMuted):', mediaToggleData.isScreenSharing, mediaToggleData.isMuted);
 
-    // End call
+    // 9E: End call
     const dianaCallEndedPromise = new Promise<void>((resolve) => {
-      socketDiana.on('call:ended', () => resolve());
+      socketDiana.once('call:ended', () => resolve());
     });
 
     socketCharlie.emit('call:end', { targetUserId: dianaId });
     await dianaCallEndedPromise;
-    console.log('  ✅ Call cleanly ended and terminated on both peers');
+    console.log('  ✅ 9E. Call cleanly ended and terminated on both peers');
+
+    // 9F: Test Call Rejection (Decline Flow)
+    const dianaRejectedPromise = new Promise<any>((resolve) => {
+      socketDiana.once('call:rejected', (data) => resolve(data));
+    });
+
+    socketDiana.emit('call:initiate', {
+      targetUserId: charlieId,
+      type: 'audio',
+      offer: { type: 'offer', sdp: 'v=0\r\no=audio-test 1 1 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n' },
+    });
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    socketCharlie.emit('call:reject', {
+      callerId: dianaId,
+      reason: 'declined',
+    });
+
+    const rejectedData = await dianaRejectedPromise;
+    console.log('  ✅ 9F. Caller Diana received call:rejected with reason:', rejectedData.reason);
 
     socketCharlie.disconnect();
     socketDiana.disconnect();
