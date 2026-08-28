@@ -410,6 +410,7 @@ export const CallModal: React.FC = () => {
               ref={remoteVideoRef}
               autoPlay
               playsInline
+              muted
               className={`w-full h-full object-contain ${VIDEO_FILTER_STYLES[videoFilter] || ''}`}
             />
             {peerMedia.isScreenSharing && (

@@ -976,17 +976,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLocalStream(stream);
 
       const pc = createPeerConnection();
-      
-      // Ensure audio transceivers for lossless bidirectional audio
-      try {
-        pc.addTransceiver('audio', { direction: 'sendrecv' });
-        if (type === 'video') {
-          pc.addTransceiver('video', { direction: 'sendrecv' });
-        }
-      } catch (e) {
-        // Fallback for older browsers
-      }
 
+      // Attach microphone and camera tracks directly to PeerConnection
       stream.getTracks().forEach((track) => {
         track.enabled = true;
         pc.addTrack(track, stream);
@@ -994,7 +985,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
+        offerToReceiveVideo: type === 'video',
       });
       await pc.setLocalDescription(offer);
 
@@ -1029,15 +1020,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const pc = createPeerConnection();
 
-      try {
-        pc.addTransceiver('audio', { direction: 'sendrecv' });
-        if (callerInfo.type === 'video') {
-          pc.addTransceiver('video', { direction: 'sendrecv' });
-        }
-      } catch (e) {
-        // Fallback for older browsers
-      }
-
+      // Attach microphone and camera tracks directly to PeerConnection
       stream.getTracks().forEach((track) => {
         track.enabled = true;
         pc.addTrack(track, stream);
@@ -1055,10 +1038,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      const answer = await pc.createAnswer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
+      const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
       socket.emit('call:accept', {
