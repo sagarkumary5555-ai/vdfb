@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Sparkles, Shield, PhoneCall, ArrowRight, MessageSquare, Zap, User } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, Shield, PhoneCall, ArrowRight, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { Register } from './Register.js';
 
@@ -30,20 +30,6 @@ export const Login: React.FC = () => {
       await login(username.trim().toLowerCase(), password);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuickLogin = async (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    setIsLoading(true);
-    setError(null);
-    try {
-      await login(u, p);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Login failed.');
     } finally {
       setIsLoading(false);
     }
@@ -173,34 +159,6 @@ export const Login: React.FC = () => {
               <p className="text-xs text-zinc-400 mt-1">
                 Enter your username and password to sign in
               </p>
-            </div>
-
-            {/* Quick Demo Login Preset Buttons in Noir */}
-            <div className="mb-5 p-3 rounded-2xl bg-[#141416] border border-white/10 space-y-2">
-              <div className="flex items-center justify-between text-[11px] text-zinc-300 font-bold">
-                <span className="flex items-center gap-1">
-                  <Zap className="w-3.5 h-3.5 text-white" />
-                  Instant 1-Tap Demo Accounts:
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('sagar', '99313935287549051214')}
-                  className="py-1.5 px-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95 shadow"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>Sagar</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('something', '<yaade>')}
-                  className="py-1.5 px-2.5 rounded-xl bg-[#222226] hover:bg-[#2A2A30] text-white border border-white/15 text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>Something</span>
-                </button>
-              </div>
             </div>
 
             {/* Form */}
