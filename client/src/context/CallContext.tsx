@@ -149,7 +149,6 @@ const ICE_SERVERS: RTCConfiguration = {
       credential: 'openrelayproject',
     },
   ],
-  iceCandidatePoolSize: 10,
   bundlePolicy: 'max-bundle',
   rtcpMuxPolicy: 'require',
 };
@@ -786,18 +785,18 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // 5. ICE Candidate
     const handleIceCandidate = async (data: { candidate: any }) => {
-      if (peerConnectionRef.current && data.candidate) {
-        try {
-          if (peerConnectionRef.current.remoteDescription) {
-            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-          } else {
-            pendingCandidatesRef.current.push(data.candidate);
-          }
-        } catch (err) {
-          console.error('Error adding received ICE candidate:', err);
+      if (!data || !data.candidate) return;
+      try {
+        const candidateInit = data.candidate;
+        if (!candidateInit.candidate && candidateInit.candidate !== '') return;
+
+        if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidateInit));
+        } else {
+          pendingCandidatesRef.current.push(candidateInit);
         }
-      } else if (data.candidate) {
-        pendingCandidatesRef.current.push(data.candidate);
+      } catch (err) {
+        console.warn('Error adding received ICE candidate:', err);
       }
     };
 
@@ -877,7 +876,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (event.candidate && socket && targetUserIdRef.current) {
         socket.emit('call:ice-candidate', {
           targetUserId: targetUserIdRef.current,
-          candidate: event.candidate,
+          candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate,
         });
       }
     };
@@ -1025,10 +1024,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       await pc.setLocalDescription(offer);
 
+      const localOffer = pc.localDescription;
       socket.emit('call:initiate', {
         targetUserId: targetUser.id,
         type,
-        offer,
+        offer: localOffer ? (localOffer.toJSON ? localOffer.toJSON() : localOffer) : offer,
       });
     } catch (err: any) {
       console.error('Error starting call:', err);
@@ -1077,9 +1077,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
+      const localAnswer = pc.localDescription;
       socket.emit('call:accept', {
         callerId: callerInfo.callerId,
-        answer,
+        answer: localAnswer ? (localAnswer.toJSON ? localAnswer.toJSON() : localAnswer) : answer,
       });
       callSound.playConnectedChime();
       setCallState('connected');
