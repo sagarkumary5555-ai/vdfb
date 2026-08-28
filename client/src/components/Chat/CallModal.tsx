@@ -614,7 +614,7 @@ export const CallModal: React.FC = () => {
               onClick={() => setShowThemePicker(!showThemePicker)}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showThemePicker
-                  ? 'bg-purple-600 text-white border-purple-400 shadow-md'
+                  ? 'bg-white text-black border-white shadow-md'
                   : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
               }`}
               title="Ambient Studio Mood Wallpaper"
@@ -633,7 +633,7 @@ export const CallModal: React.FC = () => {
               }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showInCallChat
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-900/50'
+                  ? 'bg-white text-black border-white shadow-md'
                   : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
               }`}
               title="In-Call Chat Messenger"
@@ -652,7 +652,7 @@ export const CallModal: React.FC = () => {
               }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showSoundboardBar
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400 shadow-md'
+                  ? 'bg-white text-black border-white shadow-md'
                   : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
               }`}
               title="In-Call Sound Effects"
@@ -671,7 +671,7 @@ export const CallModal: React.FC = () => {
               }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showReactionsBar
-                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white border-pink-400 shadow-md'
+                  ? 'bg-white text-black border-white shadow-md'
                   : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
               }`}
               title="Send Reaction Burst"
@@ -693,7 +693,7 @@ export const CallModal: React.FC = () => {
               onClick={toggleVoiceIsolation}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 voiceIsolation
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                  ? 'bg-white text-black border-white shadow-sm'
                   : 'bg-black/60 hover:bg-black/80 text-zinc-400 border-white/10'
               }`}
               title={voiceIsolation ? 'Voice Isolation: ON' : 'Voice Isolation: OFF'}
@@ -998,10 +998,10 @@ export const CallModal: React.FC = () => {
       {/* In-Call Advanced Settings & Hardware Device Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
-          <div className="relative w-full max-w-md bg-[#0D1018] rounded-3xl border border-white/15 p-5 sm:p-6 shadow-2xl space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="relative w-full max-w-md bg-[#0E0E10] rounded-3xl border border-white/20 p-5 sm:p-6 shadow-2xl space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-blue-400" />
+                <Sliders className="w-5 h-5 text-white" />
                 <h3 className="text-sm font-bold text-white">Call Hardware & Audio Settings</h3>
               </div>
               <button
@@ -1013,33 +1013,33 @@ export const CallModal: React.FC = () => {
             </div>
 
             {/* Live Microphone Test VU Meter */}
-            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+            <div className="p-3.5 bg-[#141416] rounded-2xl border border-white/10 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-white">
                 <span className="flex items-center gap-1.5">
-                  <Mic className="w-4 h-4 text-emerald-400" />
+                  <Mic className="w-4 h-4 text-white" />
                   Your Mic Live Input Level
                 </span>
-                <span className="text-emerald-400">{localAudioLevel}%</span>
+                <span className="text-white font-mono">{localAudioLevel}%</span>
               </div>
-              <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden p-0.5 border border-white/10">
+              <div className="w-full h-2.5 bg-black rounded-full overflow-hidden p-0.5 border border-white/10">
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-100"
+                  className="h-full bg-white rounded-full transition-all duration-100"
                   style={{ width: `${Math.min(100, localAudioLevel * 1.2)}%` }}
                 />
               </div>
             </div>
 
             {/* 3-Band Equalizer */}
-            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+            <div className="p-3.5 bg-[#141416] rounded-2xl border border-white/10 space-y-2">
               <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Sliders className="w-4 h-4 text-indigo-400" />
+                <Sliders className="w-4 h-4 text-white" />
                 3-Band Master Equalizer
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1 text-[11px] text-zinc-300">
                 <div>
                   <div className="flex justify-between font-semibold">
                     <span>Bass</span>
-                    <span className="text-indigo-400">{equalizerBass}dB</span>
+                    <span className="text-white">{equalizerBass}dB</span>
                   </div>
                   <input
                     type="range"
@@ -1047,13 +1047,13 @@ export const CallModal: React.FC = () => {
                     max="12"
                     value={equalizerBass}
                     onChange={(e) => setEqualizerBass(parseInt(e.target.value))}
-                    className="w-full accent-indigo-500 cursor-pointer"
+                    className="w-full accent-white cursor-pointer"
                   />
                 </div>
                 <div>
                   <div className="flex justify-between font-semibold">
                     <span>Vocal</span>
-                    <span className="text-indigo-400">{equalizerVocal}dB</span>
+                    <span className="text-white">{equalizerVocal}dB</span>
                   </div>
                   <input
                     type="range"
@@ -1061,13 +1061,13 @@ export const CallModal: React.FC = () => {
                     max="12"
                     value={equalizerVocal}
                     onChange={(e) => setEqualizerVocal(parseInt(e.target.value))}
-                    className="w-full accent-indigo-500 cursor-pointer"
+                    className="w-full accent-white cursor-pointer"
                   />
                 </div>
                 <div>
                   <div className="flex justify-between font-semibold">
                     <span>Treble</span>
-                    <span className="text-indigo-400">{equalizerTreble}dB</span>
+                    <span className="text-white">{equalizerTreble}dB</span>
                   </div>
                   <input
                     type="range"
@@ -1075,20 +1075,20 @@ export const CallModal: React.FC = () => {
                     max="12"
                     value={equalizerTreble}
                     onChange={(e) => setEqualizerTreble(parseInt(e.target.value))}
-                    className="w-full accent-indigo-500 cursor-pointer"
+                    className="w-full accent-white cursor-pointer"
                   />
                 </div>
               </div>
             </div>
 
             {/* Noise Gate Sensitivity Slider */}
-            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+            <div className="p-3.5 bg-[#141416] rounded-2xl border border-white/10 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-white">
                 <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <Sparkles className="w-4 h-4 text-white" />
                   Noise Gate Suppression Threshold
                 </span>
-                <span className="text-amber-400">{noiseGateThreshold}</span>
+                <span className="text-white font-mono">{noiseGateThreshold}</span>
               </div>
               <input
                 type="range"
@@ -1097,7 +1097,7 @@ export const CallModal: React.FC = () => {
                 step="1"
                 value={noiseGateThreshold}
                 onChange={(e) => setNoiseGateThreshold(parseInt(e.target.value))}
-                className="w-full accent-amber-500 cursor-pointer"
+                className="w-full accent-white cursor-pointer"
               />
               <div className="flex justify-between text-[9px] text-zinc-400 font-semibold">
                 <span>5 (Sensitive)</span>
@@ -1107,13 +1107,13 @@ export const CallModal: React.FC = () => {
             </div>
 
             {/* Volume Booster Slider */}
-            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+            <div className="p-3.5 bg-[#141416] rounded-2xl border border-white/10 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-white">
                 <span className="flex items-center gap-1.5">
-                  <Volume2 className="w-4 h-4 text-blue-400" />
+                  <Volume2 className="w-4 h-4 text-white" />
                   Remote Voice Output Volume
                 </span>
-                <span className="text-blue-400">{Math.round(volumeBoost * 100)}%</span>
+                <span className="text-white font-mono">{Math.round(volumeBoost * 100)}%</span>
               </div>
               <input
                 type="range"
@@ -1122,7 +1122,7 @@ export const CallModal: React.FC = () => {
                 step="0.1"
                 value={volumeBoost}
                 onChange={(e) => setVolumeBoost(parseFloat(e.target.value))}
-                className="w-full accent-blue-500 cursor-pointer"
+                className="w-full accent-white cursor-pointer"
               />
               <div className="flex justify-between text-[9px] text-zinc-400 font-semibold">
                 <span>50%</span>
@@ -1133,10 +1133,10 @@ export const CallModal: React.FC = () => {
 
             {/* Video Resolution Preset Selector */}
             {callType === 'video' && (
-              <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+              <div className="p-3.5 bg-[#141416] rounded-2xl border border-white/10 space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-white">
                   <span>Video Resolution / Bandwidth Preset</span>
-                  <span className="text-blue-400 font-semibold uppercase">{videoQuality}</span>
+                  <span className="text-white font-semibold uppercase">{videoQuality}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {(['1080p', '720p', '360p'] as const).map((q) => (
@@ -1145,7 +1145,7 @@ export const CallModal: React.FC = () => {
                       onClick={() => setVideoQuality(q)}
                       className={`py-1.5 rounded-xl text-xs font-bold transition ${
                         videoQuality === q
-                          ? 'bg-blue-600 text-white shadow'
+                          ? 'bg-white text-black shadow'
                           : 'bg-white/5 hover:bg-white/10 text-zinc-400'
                       }`}
                     >
@@ -1158,7 +1158,7 @@ export const CallModal: React.FC = () => {
 
             {/* Self-View Mirroring Toggle */}
             {callType === 'video' && (
-              <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] flex items-center justify-between">
+              <div className="p-3.5 bg-[#141416] rounded-2xl border border-white/10 flex items-center justify-between">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <FlipHorizontal className="w-4 h-4 text-zinc-400" />
                   Mirror Self Camera View
@@ -1166,7 +1166,7 @@ export const CallModal: React.FC = () => {
                 <button
                   onClick={toggleSelfMirror}
                   className={`px-3 py-1 rounded-xl text-xs font-bold transition ${
-                    isSelfMirrored ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/10 text-zinc-400'
+                    isSelfMirrored ? 'bg-white text-black shadow' : 'bg-white/10 text-zinc-400'
                   }`}
                 >
                   {isSelfMirrored ? 'Mirrored (ON)' : 'Normal (OFF)'}
@@ -1175,16 +1175,16 @@ export const CallModal: React.FC = () => {
             )}
 
             {/* Speaker Audio Test Button */}
-            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] flex items-center justify-between">
+            <div className="p-3.5 bg-[#141416] rounded-2xl border border-white/10 flex items-center justify-between">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Speaker className="w-4 h-4 text-indigo-400" />
+                <Speaker className="w-4 h-4 text-white" />
                 Test Speaker Output Chime
               </span>
               <button
                 onClick={testSpeakerSound}
-                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 transition active:scale-95 shadow"
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-bold flex items-center gap-1 transition active:scale-95 shadow"
               >
-                <Play className="w-3 h-3" />
+                <Play className="w-3 h-3 fill-black" />
                 <span>Play Chime</span>
               </button>
             </div>
@@ -1193,13 +1193,13 @@ export const CallModal: React.FC = () => {
             {deviceCatalog.audioInputs.length > 0 && (
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                  <Mic className="w-4 h-4 text-emerald-400" />
+                  <Mic className="w-4 h-4 text-white" />
                   Microphone Input Device
                 </label>
                 <select
                   value={selectedAudioInput}
                   onChange={(e) => setSelectedAudioInput(e.target.value)}
-                  className="w-full p-2.5 bg-[#151923] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full p-2.5 bg-[#141416] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
                 >
                   <option value="">Default Microphone</option>
                   {deviceCatalog.audioInputs.map((d) => (
@@ -1215,13 +1215,13 @@ export const CallModal: React.FC = () => {
             {callType === 'video' && deviceCatalog.videoInputs.length > 0 && (
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                  <Camera className="w-4 h-4 text-blue-400" />
+                  <Camera className="w-4 h-4 text-white" />
                   Camera Video Device
                 </label>
                 <select
                   value={selectedVideoInput}
                   onChange={(e) => setSelectedVideoInput(e.target.value)}
-                  className="w-full p-2.5 bg-[#151923] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full p-2.5 bg-[#141416] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
                 >
                   <option value="">Default Camera</option>
                   {deviceCatalog.videoInputs.map((d) => (
@@ -1237,13 +1237,13 @@ export const CallModal: React.FC = () => {
             {deviceCatalog.audioOutputs.length > 0 && (
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                  <Speaker className="w-4 h-4 text-indigo-400" />
+                  <Speaker className="w-4 h-4 text-white" />
                   Speaker / Headphones Output
                 </label>
                 <select
                   value={selectedAudioOutput}
                   onChange={(e) => setSelectedAudioOutput(e.target.value)}
-                  className="w-full p-2.5 bg-[#151923] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full p-2.5 bg-[#141416] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white"
                 >
                   <option value="">Default Audio Output</option>
                   {deviceCatalog.audioOutputs.map((d) => (
@@ -1258,7 +1258,7 @@ export const CallModal: React.FC = () => {
             <div className="pt-2">
               <button
                 onClick={() => setShowSettingsModal(false)}
-                className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl shadow-lg hover:opacity-90 transition active:scale-95"
+                className="w-full py-2.5 bg-white text-black hover:bg-zinc-200 text-xs font-bold rounded-xl shadow-lg transition active:scale-95"
               >
                 Save & Close
               </button>
