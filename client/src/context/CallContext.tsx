@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useRef, ReactNod
 import { useSocket } from './SocketContext.js';
 import { callSound } from '../services/callSound.js';
 import { soundService } from '../services/sound.js';
+import { AudioDspService } from '../services/audioDsp.js';
 
 export type CallState = 'idle' | 'calling' | 'incoming' | 'connected' | 'ended';
 export type CallType = 'audio' | 'video';
@@ -42,6 +43,13 @@ interface CallContextType {
   voiceIsolation: boolean;
   peerMedia: PeerMediaState;
   callDuration: number;
+  localAudioLevel: number;
+  remoteAudioLevel: number;
+  isLocalSpeaking: boolean;
+  isRemoteSpeaking: boolean;
+  networkQuality: 'excellent' | 'good' | 'fair';
+  volumeBoost: number;
+  setVolumeBoost: (val: number) => void;
   startCall: (type: CallType, targetUser: ActivePartnerInfo) => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
@@ -127,6 +135,13 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   const [callDuration, setCallDuration] = useState(0);
+  const [localAudioLevel, setLocalAudioLevel] = useState(0);
+  const [remoteAudioLevel, setRemoteAudioLevel] = useState(0);
+  const [networkQuality, setNetworkQuality] = useState<'excellent' | 'good' | 'fair'>('excellent');
+  const [volumeBoost, setVolumeBoost] = useState(1.0);
+
+  const isLocalSpeaking = localAudioLevel > 15;
+  const isRemoteSpeaking = remoteAudioLevel > 15;
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const targetUserIdRef = useRef<string | null>(null);
@@ -135,8 +150,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const statsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const currentFacingModeRef = useRef<'user' | 'environment'>('user');
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const localAnalyserRef = useRef<AnalyserNode | null>(null);
+  const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
   // Dedicated remote audio player with auto-unlock listeners
   const playRemoteAudio = (stream: MediaStream) => {
@@ -145,7 +166,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (remoteAudioRef.current.srcObject !== stream) {
           remoteAudioRef.current.srcObject = stream;
         }
-        remoteAudioRef.current.volume = 1.0;
+        remoteAudioRef.current.volume = volumeBoost;
         remoteAudioRef.current.muted = false;
         const p = remoteAudioRef.current.play();
         if (p !== undefined) {
@@ -166,21 +187,137 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Call duration counter
+  // Real-time Web Audio Analyser Loop for both local & remote volume visualizers
+  useEffect(() => {
+    if (callState !== 'connected' && callState !== 'calling') {
+      setLocalAudioLevel(0);
+      setRemoteAudioLevel(0);
+      return;
+    }
+
+    try {
+      const ctx = AudioDspService.getContext();
+      audioContextRef.current = ctx;
+
+      // Local stream analyser
+      if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
+        try {
+          const localSrc = ctx.createMediaStreamSource(localStreamRef.current);
+          const localAnalyser = ctx.createAnalyser();
+          localAnalyser.fftSize = 64;
+          localAnalyser.smoothingTimeConstant = 0.5;
+          localSrc.connect(localAnalyser);
+          localAnalyserRef.current = localAnalyser;
+        } catch {
+          // Ignore
+        }
+      }
+
+      // Remote stream analyser & volume booster gain node
+      if (remoteStreamRef.current && remoteStreamRef.current.getAudioTracks().length > 0) {
+        try {
+          const remoteSrc = ctx.createMediaStreamSource(remoteStreamRef.current);
+          const remoteAnalyser = ctx.createAnalyser();
+          remoteAnalyser.fftSize = 64;
+          remoteAnalyser.smoothingTimeConstant = 0.5;
+
+          const gainNode = ctx.createGain();
+          gainNode.gain.setValueAtTime(volumeBoost, ctx.currentTime);
+          gainNodeRef.current = gainNode;
+
+          remoteSrc.connect(remoteAnalyser);
+          remoteAnalyser.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          remoteAnalyserRef.current = remoteAnalyser;
+        } catch {
+          // Ignore
+        }
+      }
+
+      const localData = new Uint8Array(32);
+      const remoteData = new Uint8Array(32);
+
+      const monitorAudioLevels = () => {
+        if (localAnalyserRef.current) {
+          localAnalyserRef.current.getByteFrequencyData(localData);
+          let sum = 0;
+          for (let i = 0; i < localData.length; i++) sum += localData[i];
+          const avg = sum / localData.length;
+          setLocalAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
+        }
+
+        if (remoteAnalyserRef.current) {
+          remoteAnalyserRef.current.getByteFrequencyData(remoteData);
+          let sum = 0;
+          for (let i = 0; i < remoteData.length; i++) sum += remoteData[i];
+          const avg = sum / remoteData.length;
+          setRemoteAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
+        }
+
+        animFrameRef.current = requestAnimationFrame(monitorAudioLevels);
+      };
+
+      animFrameRef.current = requestAnimationFrame(monitorAudioLevels);
+    } catch (e) {
+      console.warn('Audio level monitoring fallback:', e);
+    }
+
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, [callState, localStream, remoteStream]);
+
+  // Adjust volume boost gain node in real-time
+  useEffect(() => {
+    if (gainNodeRef.current && audioContextRef.current) {
+      gainNodeRef.current.gain.setValueAtTime(volumeBoost, audioContextRef.current.currentTime);
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.volume = Math.min(1.0, volumeBoost);
+    }
+  }, [volumeBoost]);
+
+  // Call duration counter & WebRTC connection stats monitor
   useEffect(() => {
     if (callState === 'connected') {
       setCallDuration(0);
       timerRef.current = setInterval(() => {
         setCallDuration((prev) => prev + 1);
       }, 1000);
+
+      // Periodically measure network quality
+      statsTimerRef.current = setInterval(async () => {
+        if (peerConnectionRef.current) {
+          try {
+            const stats = await peerConnectionRef.current.getStats();
+            stats.forEach((report) => {
+              if (report.type === 'candidate-pair' && report.currentRoundTripTime) {
+                const rtt = report.currentRoundTripTime * 1000;
+                if (rtt < 80) setNetworkQuality('excellent');
+                else if (rtt < 180) setNetworkQuality('good');
+                else setNetworkQuality('fair');
+              }
+            });
+          } catch {
+            // Safe ignore
+          }
+        }
+      }, 3000);
     } else {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      if (statsTimerRef.current) {
+        clearInterval(statsTimerRef.current);
+        statsTimerRef.current = null;
+      }
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (statsTimerRef.current) clearInterval(statsTimerRef.current);
     };
   }, [callState]);
 
@@ -188,6 +325,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const cleanupMedia = () => {
     callSound.stopRingtone();
     pendingCandidatesRef.current = [];
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
     if (rawStreamRef.current) {
       rawStreamRef.current.getTracks().forEach((t) => t.stop());
       rawStreamRef.current = null;
@@ -216,6 +357,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsScreenSharing(false);
     setIsPip(false);
     setPeerMedia({ isMuted: false, isVideoOff: false, isScreenSharing: false });
+    setLocalAudioLevel(0);
+    setRemoteAudioLevel(0);
   };
 
   // Socket WebRTC signaling listeners
@@ -737,6 +880,13 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         voiceIsolation,
         peerMedia,
         callDuration,
+        localAudioLevel,
+        remoteAudioLevel,
+        isLocalSpeaking,
+        isRemoteSpeaking,
+        networkQuality,
+        volumeBoost,
+        setVolumeBoost,
         startCall,
         acceptCall,
         rejectCall,
