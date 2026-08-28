@@ -202,6 +202,35 @@ export class SocketService {
         }
       });
 
+      socket.on('call:reaction', (data) => {
+        try {
+          const { targetUserId, emoji } = data || {};
+          if (targetUserId && emoji) {
+            this.io?.to(`user_${targetUserId}`).emit('call:reaction', {
+              senderId: userId,
+              senderName: displayName,
+              emoji,
+            });
+          }
+        } catch (err) {
+          console.error('call:reaction error:', err);
+        }
+      });
+
+      socket.on('call:ice-restart', (data) => {
+        try {
+          const { targetUserId, offer } = data || {};
+          if (targetUserId && offer) {
+            this.io?.to(`user_${targetUserId}`).emit('call:ice-restart', {
+              callerId: userId,
+              offer,
+            });
+          }
+        } catch (err) {
+          console.error('call:ice-restart error:', err);
+        }
+      });
+
       // Typing indicators for a conversation (Protected with null check!)
       socket.on('typing:start', (data?: { conversationId?: string }) => {
         try {

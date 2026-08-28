@@ -29,6 +29,19 @@ interface PeerMediaState {
   isScreenSharing: boolean;
 }
 
+export interface FloatingReaction {
+  id: string;
+  emoji: string;
+  senderName: string;
+  leftPercent: number;
+}
+
+export interface DeviceCatalog {
+  audioInputs: MediaDeviceInfo[];
+  videoInputs: MediaDeviceInfo[];
+  audioOutputs: MediaDeviceInfo[];
+}
+
 interface CallContextType {
   callState: CallState;
   callType: CallType;
@@ -50,6 +63,15 @@ interface CallContextType {
   networkQuality: 'excellent' | 'good' | 'fair';
   volumeBoost: number;
   setVolumeBoost: (val: number) => void;
+  floatingReactions: FloatingReaction[];
+  sendCallReaction: (emoji: string) => void;
+  deviceCatalog: DeviceCatalog;
+  selectedAudioInput: string;
+  selectedVideoInput: string;
+  selectedAudioOutput: string;
+  setSelectedAudioInput: (id: string) => Promise<void>;
+  setSelectedVideoInput: (id: string) => Promise<void>;
+  setSelectedAudioOutput: (id: string) => Promise<void>;
   startCall: (type: CallType, targetUser: ActivePartnerInfo) => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
@@ -139,6 +161,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [remoteAudioLevel, setRemoteAudioLevel] = useState(0);
   const [networkQuality, setNetworkQuality] = useState<'excellent' | 'good' | 'fair'>('excellent');
   const [volumeBoost, setVolumeBoost] = useState(1.0);
+  const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
+
+  // Device Management State
+  const [deviceCatalog, setDeviceCatalog] = useState<DeviceCatalog>({
+    audioInputs: [],
+    videoInputs: [],
+    audioOutputs: [],
+  });
+  const [selectedAudioInput, setSelectedAudioInputState] = useState('');
+  const [selectedVideoInput, setSelectedVideoInputState] = useState('');
+  const [selectedAudioOutput, setSelectedAudioOutputState] = useState('');
 
   const isLocalSpeaking = localAudioLevel > 15;
   const isRemoteSpeaking = remoteAudioLevel > 15;
@@ -158,6 +191,29 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
+
+  // Load hardware media devices
+  const refreshDevices = async () => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setDeviceCatalog({
+        audioInputs: devices.filter((d) => d.kind === 'audioinput'),
+        videoInputs: devices.filter((d) => d.kind === 'videoinput'),
+        audioOutputs: devices.filter((d) => d.kind === 'audiooutput'),
+      });
+    } catch {
+      // Safe ignore
+    }
+  };
+
+  useEffect(() => {
+    refreshDevices();
+    navigator.mediaDevices?.addEventListener?.('devicechange', refreshDevices);
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.('devicechange', refreshDevices);
+    };
+  }, []);
 
   // Dedicated remote audio player with auto-unlock listeners
   const playRemoteAudio = (stream: MediaStream) => {
@@ -321,6 +377,92 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [callState]);
 
+  // Floating Reaction Sender
+  const sendCallReaction = (emoji: string) => {
+    const reactionItem: FloatingReaction = {
+      id: `${Date.now()}_${Math.random()}`,
+      emoji,
+      senderName: 'You',
+      leftPercent: 20 + Math.random() * 60,
+    };
+    setFloatingReactions((prev) => [...prev, reactionItem]);
+    setTimeout(() => {
+      setFloatingReactions((prev) => prev.filter((r) => r.id !== reactionItem.id));
+    }, 2800);
+
+    if (socket && targetUserIdRef.current) {
+      socket.emit('call:reaction', {
+        targetUserId: targetUserIdRef.current,
+        emoji,
+      });
+    }
+  };
+
+  // Switch Audio Input Device
+  const setSelectedAudioInput = async (deviceId: string) => {
+    setSelectedAudioInputState(deviceId);
+    if (!peerConnectionRef.current || !localStreamRef.current) return;
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: { exact: deviceId },
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      const newAudioTrack = newStream.getAudioTracks()[0];
+      const sender = peerConnectionRef.current
+        .getSenders()
+        .find((s) => s.track && s.track.kind === 'audio');
+      if (sender && newAudioTrack) {
+        sender.replaceTrack(newAudioTrack);
+      }
+      localStreamRef.current.getAudioTracks().forEach((t) => t.stop());
+      localStreamRef.current.removeTrack(localStreamRef.current.getAudioTracks()[0]);
+      localStreamRef.current.addTrack(newAudioTrack);
+      setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+    } catch (e) {
+      console.warn('Error switching audio input:', e);
+    }
+  };
+
+  // Switch Video Input Camera Device
+  const setSelectedVideoInput = async (deviceId: string) => {
+    setSelectedVideoInputState(deviceId);
+    if (!peerConnectionRef.current || !localStreamRef.current) return;
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: deviceId } },
+      });
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const sender = peerConnectionRef.current
+        .getSenders()
+        .find((s) => s.track && s.track.kind === 'video');
+      if (sender && newVideoTrack) {
+        sender.replaceTrack(newVideoTrack);
+      }
+      localStreamRef.current.getVideoTracks().forEach((t) => t.stop());
+      localStreamRef.current.removeTrack(localStreamRef.current.getVideoTracks()[0]);
+      localStreamRef.current.addTrack(newVideoTrack);
+      setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+    } catch (e) {
+      console.warn('Error switching video input:', e);
+    }
+  };
+
+  // Switch Audio Output Device (Speaker / Headphones)
+  const setSelectedAudioOutput = async (deviceId: string) => {
+    setSelectedAudioOutputState(deviceId);
+    try {
+      if (remoteAudioRef.current && (remoteAudioRef.current as any).setSinkId) {
+        await (remoteAudioRef.current as any).setSinkId(deviceId);
+      }
+    } catch (e) {
+      console.warn('Audio output sink switching not supported on this browser:', e);
+    }
+  };
+
   // Clean local media tracks
   const cleanupMedia = () => {
     callSound.stopRingtone();
@@ -359,6 +501,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setPeerMedia({ isMuted: false, isVideoOff: false, isScreenSharing: false });
     setLocalAudioLevel(0);
     setRemoteAudioLevel(0);
+    setFloatingReactions([]);
   };
 
   // Socket WebRTC signaling listeners
@@ -457,12 +600,27 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }));
     };
 
+    // 7. Live In-Call Floating Reaction
+    const handleCallReaction = (data: { emoji: string; senderName: string }) => {
+      const reactionItem: FloatingReaction = {
+        id: `${Date.now()}_${Math.random()}`,
+        emoji: data.emoji,
+        senderName: data.senderName || 'Friend',
+        leftPercent: 20 + Math.random() * 60,
+      };
+      setFloatingReactions((prev) => [...prev, reactionItem]);
+      setTimeout(() => {
+        setFloatingReactions((prev) => prev.filter((r) => r.id !== reactionItem.id));
+      }, 2800);
+    };
+
     socket.on('call:incoming', handleIncomingCall);
     socket.on('call:accepted', handleCallAccepted);
     socket.on('call:rejected', handleCallRejected);
     socket.on('call:ended', handleCallEnded);
     socket.on('call:ice-candidate', handleIceCandidate);
     socket.on('call:peer-media-toggle', handlePeerMediaToggle);
+    socket.on('call:reaction', handleCallReaction);
 
     return () => {
       socket.off('call:incoming', handleIncomingCall);
@@ -471,6 +629,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       socket.off('call:ended', handleCallEnded);
       socket.off('call:ice-candidate', handleIceCandidate);
       socket.off('call:peer-media-toggle', handlePeerMediaToggle);
+      socket.off('call:reaction', handleCallReaction);
     };
   }, [socket, callState]);
 
@@ -887,6 +1046,15 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         networkQuality,
         volumeBoost,
         setVolumeBoost,
+        floatingReactions,
+        sendCallReaction,
+        deviceCatalog,
+        selectedAudioInput,
+        selectedVideoInput,
+        selectedAudioOutput,
+        setSelectedAudioInput,
+        setSelectedVideoInput,
+        setSelectedAudioOutput,
         startCall,
         acceptCall,
         rejectCall,

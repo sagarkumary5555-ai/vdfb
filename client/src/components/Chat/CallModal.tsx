@@ -15,9 +15,15 @@ import {
   ShieldCheck,
   Activity,
   Sliders,
+  Settings2,
+  X,
+  Camera,
+  Speaker,
 } from 'lucide-react';
 import { useCall } from '../../context/CallContext.js';
 import { Avatar } from '../Common/Avatar.js';
+
+const QUICK_REACTIONS = ['❤️', '🔥', '👏', '🎉', '😂', '💯'];
 
 export const CallModal: React.FC = () => {
   const {
@@ -40,6 +46,15 @@ export const CallModal: React.FC = () => {
     networkQuality,
     volumeBoost,
     setVolumeBoost,
+    floatingReactions,
+    sendCallReaction,
+    deviceCatalog,
+    selectedAudioInput,
+    selectedVideoInput,
+    selectedAudioOutput,
+    setSelectedAudioInput,
+    setSelectedVideoInput,
+    setSelectedAudioOutput,
     endCall,
     toggleMute,
     toggleVideo,
@@ -49,7 +64,8 @@ export const CallModal: React.FC = () => {
     togglePip,
   } = useCall();
 
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showReactionsBar, setShowReactionsBar] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -95,13 +111,12 @@ export const CallModal: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Generate 12 responsive dynamic waveform bar heights based on real-time audio volume
+  // Generate 14 responsive dynamic waveform bar heights based on real-time audio volume
   const getDynamicBarHeight = (barIndex: number): number => {
-    if (callState !== 'connected') return 20;
-    const baseHeight = 15;
-    const multiplier = (remoteAudioLevel / 100) * 85;
-    // Harmonic curve across bars
-    const factor = Math.sin((barIndex / 12) * Math.PI) * 0.8 + 0.3;
+    if (callState !== 'connected') return 15;
+    const baseHeight = 12;
+    const multiplier = (remoteAudioLevel / 100) * 88;
+    const factor = Math.sin((barIndex / 14) * Math.PI) * 0.85 + 0.25;
     return Math.min(100, Math.max(10, Math.round(baseHeight + multiplier * factor)));
   };
 
@@ -112,6 +127,20 @@ export const CallModal: React.FC = () => {
     return (
       <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 w-64 sm:w-72 bg-[#0E111A]/95 rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-slide-up flex flex-col select-none backdrop-blur-2xl">
         <audio ref={remoteAudioRef} autoPlay playsInline />
+        
+        {/* Floating Reactions Overlay */}
+        <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+          {floatingReactions.map((r) => (
+            <div
+              key={r.id}
+              className="absolute bottom-6 animate-float-up text-2xl filter drop-shadow-md select-none"
+              style={{ left: `${r.leftPercent}%` }}
+            >
+              {r.emoji}
+            </div>
+          ))}
+        </div>
+
         {/* PiP Video or Audio Header */}
         <div className="relative h-36 bg-[#07090E] flex items-center justify-center overflow-hidden">
           {isVideoOrScreenActive && remoteStream ? (
@@ -196,6 +225,20 @@ export const CallModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-2xl animate-fade-in select-none font-sans">
       <audio ref={remoteAudioRef} autoPlay playsInline />
+      
+      {/* Floating Reactions Across Screen */}
+      <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
+        {floatingReactions.map((r) => (
+          <div
+            key={r.id}
+            className="absolute bottom-20 animate-float-up text-4xl sm:text-5xl filter drop-shadow-2xl select-none"
+            style={{ left: `${r.leftPercent}%` }}
+          >
+            {r.emoji}
+          </div>
+        ))}
+      </div>
+
       <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-4xl sm:aspect-[16/10] bg-[#07090E] rounded-none sm:rounded-3xl border-0 sm:border border-white/[0.12] shadow-2xl overflow-hidden flex flex-col">
         
         {/* Remote Video Stream / Screen Share Full View */}
@@ -332,50 +375,33 @@ export const CallModal: React.FC = () => {
             {voiceIsolation && (
               <span className="hidden md:inline-flex items-center gap-1 text-[10px] text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 font-semibold backdrop-blur-md">
                 <Sparkles className="w-3 h-3 text-amber-400" />
-                Studio DSP Active
+                Studio DSP
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Volume Booster Slider Toggle */}
-            <div className="relative">
-              <button
-                onClick={() => setShowVolumeSlider(!showVolumeSlider)}
-                className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
-                  volumeBoost > 1.0
-                    ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-900/50'
-                    : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
-                }`}
-                title={`Volume Boost: ${Math.round(volumeBoost * 100)}%`}
-              >
-                <Sliders className="w-4 h-4" />
-              </button>
+            {/* Quick In-Call Reaction Emojis Button */}
+            <button
+              onClick={() => setShowReactionsBar(!showReactionsBar)}
+              className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
+                showReactionsBar
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white border-pink-400 shadow-md'
+                  : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
+              }`}
+              title="Send Reaction Burst"
+            >
+              <span className="text-sm">❤️</span>
+            </button>
 
-              {/* Volume Slider Dropdown */}
-              {showVolumeSlider && (
-                <div className="absolute right-0 top-12 p-3 bg-[#111420] border border-white/15 rounded-2xl shadow-2xl z-40 w-48 flex flex-col gap-2 backdrop-blur-xl animate-fade-in">
-                  <div className="flex items-center justify-between text-xs font-bold text-white">
-                    <span>Voice Output Volume</span>
-                    <span className="text-blue-400">{Math.round(volumeBoost * 100)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="2.0"
-                    step="0.1"
-                    value={volumeBoost}
-                    onChange={(e) => setVolumeBoost(parseFloat(e.target.value))}
-                    className="w-full accent-blue-500 cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[9px] text-zinc-400 font-semibold">
-                    <span>50%</span>
-                    <span>100% (Norm)</span>
-                    <span>200% (Boost)</span>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* In-Call Device & Audio Settings Modal Toggle */}
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="p-2.5 rounded-2xl bg-black/60 hover:bg-black/80 text-zinc-300 hover:text-white backdrop-blur-md transition active:scale-95 border border-white/10"
+              title="Call Settings (Mic, Camera, Volume Boost)"
+            >
+              <Settings2 className="w-4 h-4" />
+            </button>
 
             {/* Voice Isolation Quick Switch */}
             <button
@@ -401,6 +427,24 @@ export const CallModal: React.FC = () => {
           </div>
         </div>
 
+        {/* Floating Quick Reactions Toolbar */}
+        {showReactionsBar && (
+          <div className="absolute top-16 right-4 z-30 p-2 bg-[#121522]/95 border border-white/15 rounded-2xl shadow-2xl flex items-center gap-1 backdrop-blur-xl animate-slide-down">
+            {QUICK_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => {
+                  sendCallReaction(emoji);
+                  setShowReactionsBar(false);
+                }}
+                className="w-9 h-9 flex items-center justify-center rounded-xl text-lg hover:bg-white/10 hover:scale-125 active:scale-90 transition-transform"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Bottom Control Bar Dock */}
         <div className="absolute bottom-0 inset-x-0 z-20 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex items-center justify-center gap-3 sm:gap-4 pb-safe flex-wrap">
           {/* Mute Mic */}
@@ -409,6 +453,8 @@ export const CallModal: React.FC = () => {
             className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white transition-all duration-200 active:scale-90 shadow-xl ${
               isMuted
                 ? 'bg-red-500/80 border border-red-400 ring-2 ring-red-500/40 text-white'
+                : isLocalSpeaking
+                ? 'bg-emerald-600/80 border border-emerald-400 ring-2 ring-emerald-500/40 text-white animate-pulse'
                 : 'bg-white/15 hover:bg-white/25 backdrop-blur-xl border border-white/20'
             }`}
             title={isMuted ? 'Unmute Mic' : 'Mute Mic'}
@@ -463,6 +509,126 @@ export const CallModal: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* In-Call Advanced Settings & Hardware Device Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
+          <div className="relative w-full max-w-md bg-[#0D1018] rounded-3xl border border-white/15 p-5 sm:p-6 shadow-2xl space-y-4 animate-slide-up">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-blue-400" />
+                <h3 className="text-sm font-bold text-white">Call Hardware & Audio Settings</h3>
+              </div>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Volume Booster Slider */}
+            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-white">
+                <span className="flex items-center gap-1.5">
+                  <Volume2 className="w-4 h-4 text-blue-400" />
+                  Remote Voice Output Volume
+                </span>
+                <span className="text-blue-400">{Math.round(volumeBoost * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.1"
+                value={volumeBoost}
+                onChange={(e) => setVolumeBoost(parseFloat(e.target.value))}
+                className="w-full accent-blue-500 cursor-pointer"
+              />
+              <div className="flex justify-between text-[9px] text-zinc-400 font-semibold">
+                <span>50%</span>
+                <span>100% (Normal)</span>
+                <span>200% (2x Boost)</span>
+              </div>
+            </div>
+
+            {/* Microphone Selection */}
+            {deviceCatalog.audioInputs.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Mic className="w-4 h-4 text-emerald-400" />
+                  Microphone Input Device
+                </label>
+                <select
+                  value={selectedAudioInput}
+                  onChange={(e) => setSelectedAudioInput(e.target.value)}
+                  className="w-full p-2.5 bg-[#151923] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Default Microphone</option>
+                  {deviceCatalog.audioInputs.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Microphone (${d.deviceId.slice(0, 8)})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Camera Selection */}
+            {callType === 'video' && deviceCatalog.videoInputs.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-blue-400" />
+                  Camera Video Device
+                </label>
+                <select
+                  value={selectedVideoInput}
+                  onChange={(e) => setSelectedVideoInput(e.target.value)}
+                  className="w-full p-2.5 bg-[#151923] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Default Camera</option>
+                  {deviceCatalog.videoInputs.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Camera (${d.deviceId.slice(0, 8)})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Speaker Output Selection */}
+            {deviceCatalog.audioOutputs.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Speaker className="w-4 h-4 text-indigo-400" />
+                  Speaker / Headphones Output
+                </label>
+                <select
+                  value={selectedAudioOutput}
+                  onChange={(e) => setSelectedAudioOutput(e.target.value)}
+                  className="w-full p-2.5 bg-[#151923] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Default Audio Output</option>
+                  {deviceCatalog.audioOutputs.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Speaker (${d.deviceId.slice(0, 8)})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="pt-2">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl shadow-lg hover:opacity-90 transition active:scale-95"
+              >
+                Save & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
