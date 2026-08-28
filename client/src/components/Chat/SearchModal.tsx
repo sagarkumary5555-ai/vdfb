@@ -58,13 +58,13 @@ export const SearchModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-lg bg-[#121215] rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/15 shadow-2xl overflow-hidden animate-slide-up max-h-[85vh] sm:max-h-[85vh] flex flex-col pb-safe">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-2xl animate-fade-in select-none">
+      <div className="relative w-full max-w-lg bg-[#0C101A] rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/15 shadow-2xl overflow-hidden animate-slide-up max-h-[85vh] sm:max-h-[85vh] flex flex-col pb-safe">
         {/* Mobile Pull Handle */}
         <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mt-2.5 sm:hidden flex-shrink-0" />
 
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-[#0e0e11]">
+        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-[#080B12]">
           <div className="flex items-center gap-2">
             <Search className="w-5 h-5 text-white" />
             <h2 className="text-base sm:text-lg font-bold text-white">Search Messages</h2>
@@ -78,7 +78,7 @@ export const SearchModal: React.FC = () => {
         </div>
 
         {/* Search & Filter Form */}
-        <form onSubmit={handleSearch} className="p-4 sm:p-5 border-b border-white/10 space-y-3 flex-shrink-0 bg-[#121215]">
+        <form onSubmit={handleSearch} className="p-4 sm:p-5 border-b border-white/10 space-y-3 flex-shrink-0 bg-[#0C101A]">
           {/* Query Bar */}
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />

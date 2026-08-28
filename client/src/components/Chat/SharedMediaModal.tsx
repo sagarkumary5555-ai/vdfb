@@ -34,10 +34,10 @@ export const SharedMediaModal: React.FC = () => {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-2xl bg-[#121215] rounded-3xl border border-white/15 shadow-2xl overflow-hidden animate-slide-up max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-2xl animate-fade-in select-none">
+      <div className="relative w-full max-w-2xl bg-[#0C101A] rounded-3xl border border-white/[0.12] shadow-2xl overflow-hidden animate-slide-up max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-[#0e0e11]">
+        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-[#080B12]">
           <div className="flex items-center gap-2.5">
             <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">Shared Media & Files</h2>
             <span className="text-xs bg-white/10 text-white px-2.5 py-0.5 rounded-full border border-white/10 font-bold">
@@ -53,7 +53,7 @@ export const SharedMediaModal: React.FC = () => {
         </div>
 
         {/* Tab Filters */}
-        <div className="px-4 py-2.5 border-b border-white/5 flex items-center gap-1.5 overflow-x-auto custom-scrollbar bg-[#121215]">
+        <div className="px-4 py-2.5 border-b border-white/5 flex items-center gap-1.5 overflow-x-auto custom-scrollbar bg-[#0C101A]">
           {[
             { id: 'all', label: 'All Files' },
             { id: 'images', label: 'Photos', icon: Image },
