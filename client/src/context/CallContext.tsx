@@ -265,6 +265,20 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ctx.resume().catch(() => {});
       }
 
+      // 1. Dual Audio Strategy: Route to Web Audio destination directly
+      try {
+        if (ctx && stream.getAudioTracks().length > 0) {
+          const remoteSrc = ctx.createMediaStreamSource(stream);
+          const gainNode = ctx.createGain();
+          gainNode.gain.setValueAtTime(Math.min(1.0, Math.max(0.1, volumeBoost)), ctx.currentTime);
+          remoteSrc.connect(gainNode);
+          gainNode.connect(ctx.destination);
+        }
+      } catch (audioCtxErr) {
+        console.warn('Web Audio destination direct route note:', audioCtxErr);
+      }
+
+      // 2. Dual Audio Strategy: HTML5 Audio Element Playback
       let audioEl = remoteAudioRef.current || (document.getElementById('webrtc-remote-audio') as HTMLAudioElement);
       if (!audioEl) {
         audioEl = document.createElement('audio');
@@ -272,8 +286,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         audioEl.autoplay = true;
         (audioEl as any).playsInline = true;
         audioEl.style.position = 'fixed';
-        audioEl.style.top = '-9999px';
-        audioEl.style.left = '-9999px';
+        audioEl.style.bottom = '0px';
+        audioEl.style.right = '0px';
         audioEl.style.width = '1px';
         audioEl.style.height = '1px';
         audioEl.style.opacity = '0.01';

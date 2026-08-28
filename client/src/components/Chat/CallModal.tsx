@@ -132,6 +132,7 @@ export const CallModal: React.FC = () => {
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const modalAudioRef = useRef<HTMLAudioElement | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -147,13 +148,21 @@ export const CallModal: React.FC = () => {
     isScreenSharing ||
     peerMedia.isScreenSharing;
 
-  // Attach remote media stream for video visual display
+  // Attach remote media stream for video visual display & audio playback
   useEffect(() => {
-    if (remoteStream && remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch(() => {});
+    if (remoteStream) {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(() => {});
+      }
+      if (modalAudioRef.current) {
+        modalAudioRef.current.srcObject = remoteStream;
+        modalAudioRef.current.volume = Math.min(1.0, Math.max(0.1, volumeBoost));
+        modalAudioRef.current.muted = false;
+        modalAudioRef.current.play().catch(() => {});
+      }
     }
-  }, [remoteStream, isPip, isVideoOrScreenActive]);
+  }, [remoteStream, isPip, isVideoOrScreenActive, volumeBoost]);
 
   // Auto-scroll in-call chat
   useEffect(() => {
@@ -1254,6 +1263,9 @@ export const CallModal: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Embedded High-Fidelity Remote Audio Player */}
+      <audio ref={modalAudioRef} autoPlay playsInline className="hidden" />
     </div>
   );
 };
