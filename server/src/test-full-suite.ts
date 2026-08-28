@@ -252,14 +252,20 @@ async function runSuperComprehensiveTests() {
     await new Promise((r) => setTimeout(r, 150));
 
     // Diana listens for incoming message
-    const dianaMsgPromise = new Promise<any>((resolve) => {
-      socketDiana.on('message:new', (msg) => resolve(msg));
+    const dianaMsgPromise = new Promise<any>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Timed out waiting for socket message')), 4000);
+      socketDiana.on('message:new', (msg) => {
+        clearTimeout(timer);
+        resolve(msg);
+      });
     });
 
     socketCharlie.emit('message:send', {
       conversationId: directChatRes.conversation.id,
       recipientId: dianaId,
       content: 'Real-time WebSocket Test: 3D Animated Sticker 🔥✨',
+    }, (res: any) => {
+      if (res?.error) console.error('  ⚠️ socketCharlie message:send error:', res.error);
     });
 
     const rxMsg = await dianaMsgPromise;

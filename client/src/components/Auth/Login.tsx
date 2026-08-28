@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Sparkles, Shield, PhoneCall, ArrowRight, MessageSquare } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, Shield, PhoneCall, ArrowRight, MessageSquare, Zap } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { Register } from './Register.js';
 
@@ -15,6 +15,20 @@ export const Login: React.FC = () => {
   if (isRegisterMode) {
     return <Register onSwitchToLogin={() => setIsRegisterMode(false)} />;
   }
+
+  const handleQuickLogin = async (u: string, p: string) => {
+    setUsername(u);
+    setPassword(p);
+    setIsLoading(true);
+    setError(null);
+    try {
+      await login(u, p);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Login failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +59,9 @@ export const Login: React.FC = () => {
       <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto">
         
         {/* ========================================================= */}
-        {/* LEFT COLUMN: Original Brand Identity & Native 3D Mockup   */}
+        {/* LEFT COLUMN: Brand Identity & Native 3D Mockup            */}
         {/* ========================================================= */}
-        <div className="hidden lg:flex lg:col-span-7 flex-col items-start justify-center pr-4 space-y-8">
+        <div className="hidden lg:flex lg:col-span-7 flex-col items-start justify-center pr-4 space-y-7">
           {/* Custom Luxury Brand Logo & Name */}
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-white text-black flex items-center justify-center shadow-2xl shadow-white/10 ring-1 ring-white/20">
@@ -62,7 +76,7 @@ export const Login: React.FC = () => {
                   PRO
                 </span>
               </div>
-              <p className="text-xs text-zinc-400">Social Messaging, Groups & Studio Calls</p>
+              <p className="text-xs text-zinc-400">Social Messenger, Friends & HD Calling</p>
             </div>
           </div>
 
@@ -74,19 +88,16 @@ export const Login: React.FC = () => {
               </span>
               .
             </h1>
-            <p className="text-sm text-zinc-400 leading-relaxed pt-2">
-              Connect instantly with friends, share high-res media, and enjoy crystal-clear calls with zero ambient noise.
+            <p className="text-sm text-zinc-400 leading-relaxed pt-1">
+              Connect instantly with accepted friends, create private squads, share media, and make crystal-clear WebRTC voice & video calls.
             </p>
           </div>
 
-          {/* Native 100% Self-Contained 3D Vector Phone & Messenger UI (Zero broken image dependencies) */}
-          <div className="relative w-full max-w-md pt-2">
-            {/* Ambient Back Glow */}
+          {/* Native Self-Contained 3D Vector Phone Mockup */}
+          <div className="relative w-full max-w-md pt-1">
             <div className="absolute inset-0 bg-gradient-to-r from-zinc-800/30 to-zinc-900/30 rounded-3xl blur-xl" />
 
-            {/* Main Phone Frame */}
             <div className="relative bg-[#0d0d10] border border-white/15 rounded-3xl p-4 shadow-2xl space-y-3 ring-1 ring-white/10">
-              {/* Mockup Chat Header */}
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div className="flex items-center gap-2.5">
                   <div className="relative">
@@ -109,25 +120,21 @@ export const Login: React.FC = () => {
                 </div>
               </div>
 
-              {/* Mockup Message Stream */}
               <div className="space-y-2.5 py-1">
-                {/* Received Bubble */}
                 <div className="flex flex-col items-start max-w-[82%]">
                   <div className="px-3.5 py-2 rounded-2xl rounded-tl-sm bg-zinc-900 border border-white/10 text-xs text-zinc-100 shadow-sm">
-                    Hey! Voice Isolation is super crisp, fan noise is totally gone! 🎧✨
+                    Hey! Voice Isolation is super crisp, zero background noise! 🎧✨
                   </div>
                   <span className="text-[9px] text-zinc-400 mt-1 pl-1">10:42 PM</span>
                 </div>
 
-                {/* Sent Bubble */}
                 <div className="flex flex-col items-end ml-auto max-w-[82%]">
                   <div className="px-3.5 py-2 rounded-2xl rounded-tr-sm bg-white text-black font-medium text-xs shadow-md">
-                    Yes! Built with real-time DSP filters and WebRTC 🚀
+                    Yes! Built with real-time DSP filters & WebRTC 🚀
                   </div>
                   <span className="text-[9px] text-zinc-400 mt-1 pr-1">10:43 PM • Read</span>
                 </div>
 
-                {/* Audio Waveform Note Card */}
                 <div className="p-2.5 rounded-2xl bg-zinc-900/90 border border-white/10 flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-white text-black flex items-center justify-center">
                     <svg className="w-3.5 h-3.5 fill-black" viewBox="0 0 24 24">
@@ -152,7 +159,6 @@ export const Login: React.FC = () => {
                 </div>
               </div>
 
-              {/* Mockup Composer */}
               <div className="pt-2 flex items-center gap-2">
                 <div className="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-zinc-400">
                   Message Alex...
@@ -168,30 +174,30 @@ export const Login: React.FC = () => {
           <div className="flex items-center gap-6 text-xs text-zinc-400">
             <div className="flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-white" />
-              <span>End-to-End Encrypted</span>
+              <span>Friend Privacy Guard</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-white" />
-              <span>P2P WebRTC DSP</span>
+              <span>Real-Time WebSockets</span>
             </div>
           </div>
         </div>
 
         {/* ========================================================= */}
-        {/* RIGHT COLUMN: Clean Professional Sign In Form Card        */}
+        {/* RIGHT COLUMN: Sign In Card & 1-Click Fast Logins          */}
         {/* ========================================================= */}
         <div className="w-full lg:col-span-5 mx-auto">
           <div className="bg-[#101014] rounded-3xl p-6 sm:p-8 border border-white/12 shadow-2xl backdrop-blur-2xl">
             
             {/* Header */}
-            <div className="mb-6">
+            <div className="mb-5">
               <div className="lg:hidden flex items-center gap-2.5 mb-4">
                 <div className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center">
                   <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
-                <span className="text-base font-bold text-white tracking-tight">ChatUs</span>
+                <span className="text-base font-bold text-white tracking-tight">ChatUs PRO</span>
               </div>
 
               <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
@@ -202,8 +208,34 @@ export const Login: React.FC = () => {
               </p>
             </div>
 
+            {/* 1-Tap Quick Demo Credentials */}
+            <div className="mb-4 p-3 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
+                <Zap className="w-3 h-3 text-amber-400" />
+                <span>1-Tap Instant Sign-In</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('sagar', '99313935287549051214')}
+                  disabled={isLoading}
+                  className="py-1.5 px-2 bg-zinc-900 hover:bg-zinc-800 border border-white/15 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition active:scale-95 shadow"
+                >
+                  <span>👑 Sagar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('something', '<yaade>')}
+                  disabled={isLoading}
+                  className="py-1.5 px-2 bg-zinc-900 hover:bg-zinc-800 border border-white/15 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition active:scale-95 shadow"
+                >
+                  <span>💫 Something</span>
+                </button>
+              </div>
+            </div>
+
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               {error && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center gap-2 animate-fade-in">
                   <span>⚠️</span>
@@ -221,7 +253,6 @@ export const Login: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
                   placeholder="Enter your @username"
-                  autoFocus
                   required
                   className="w-full px-3.5 py-2.5 bg-zinc-900/90 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition"
                 />
@@ -271,7 +302,7 @@ export const Login: React.FC = () => {
             </form>
 
             {/* Divider */}
-            <div className="relative my-5">
+            <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-white/10" />
               </div>
@@ -291,9 +322,9 @@ export const Login: React.FC = () => {
             </button>
 
             {/* Footer Trust Signal */}
-            <div className="text-center pt-5 text-zinc-500 text-[10px] flex items-center justify-center gap-1">
+            <div className="text-center pt-4 text-zinc-500 text-[10px] flex items-center justify-center gap-1">
               <Shield className="w-3 h-3 text-zinc-400" />
-              <span>Encrypted Session • High-Speed WebRTC</span>
+              <span>Encrypted Session • High-Speed WebSockets</span>
             </div>
 
           </div>

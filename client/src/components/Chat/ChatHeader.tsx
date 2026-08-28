@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Video, ChevronLeft, Info, Users } from 'lucide-react';
+import { Phone, Video, ChevronLeft, Info, Users, Search, ShieldCheck } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useSocket } from '../../context/SocketContext.js';
 import { useChat } from '../../context/ChatContext.js';
@@ -13,7 +13,9 @@ export const ChatHeader: React.FC = () => {
     activePartner,
     activeConversation,
     setIsSharedMediaOpen,
+    setIsSearchOpen,
     setIsSidebarOpen,
+    friends,
   } = useChat();
   const { startCall, callState } = useCall();
 
@@ -37,6 +39,7 @@ export const ChatHeader: React.FC = () => {
   const partnerAvatar = isGroup ? null : activePartner?.avatarUrl;
 
   const isOnline = !isGroup && isUserOnline(activePartner?.id);
+  const isFriend = !isGroup && activePartner && friends.some((f) => f.id === activePartner.id);
   const lastSeenStr = !isGroup ? (getUserLastSeen(activePartner?.id) || activePartner?.lastSeen) : null;
 
   const formatSubtitle = () => {
@@ -62,6 +65,11 @@ export const ChatHeader: React.FC = () => {
         <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           Active now
+          {isFriend && (
+            <span className="text-emerald-500/80 font-normal flex items-center gap-0.5 text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+              <ShieldCheck className="w-3 h-3 text-emerald-400" /> Friends
+            </span>
+          )}
           {activePartner?.customStatus && (
             <span className="text-zinc-500 font-normal truncate">
               • {activePartner.customStatus}
@@ -74,7 +82,12 @@ export const ChatHeader: React.FC = () => {
     if (lastSeenStr) {
       try {
         const d = new Date(lastSeenStr);
-        return <span className="text-zinc-500">Active {formatDistanceToNowStrict(d)} ago</span>;
+        return (
+          <span className="text-zinc-500 flex items-center gap-1">
+            <span>Active {formatDistanceToNowStrict(d)} ago</span>
+            {isFriend && <span className="text-zinc-600">• Friend</span>}
+          </span>
+        );
       } catch {
         return <span className="text-zinc-500">Offline</span>;
       }
@@ -84,7 +97,7 @@ export const ChatHeader: React.FC = () => {
   };
 
   return (
-    <header className="h-16 px-4 sm:px-6 bg-black border-b border-white/10 flex items-center justify-between z-30 select-none flex-shrink-0">
+    <header className="h-16 px-4 sm:px-6 bg-[#0a0a0d] border-b border-white/10 flex items-center justify-between z-30 select-none flex-shrink-0">
       {/* Left: Mobile Back Button + Profile / Group Details */}
       <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
         <button
@@ -106,9 +119,16 @@ export const ChatHeader: React.FC = () => {
         />
 
         <div className="flex flex-col min-w-0 flex-1">
-          <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate leading-tight">
-            {titleName}
-          </h1>
+          <div className="flex items-center gap-1.5 truncate">
+            <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate leading-tight">
+              {titleName}
+            </h1>
+            {isGroup && (
+              <span className="text-[10px] font-bold text-zinc-400 bg-white/10 px-1.5 py-0.5 rounded-md flex-shrink-0">
+                GROUP
+              </span>
+            )}
+          </div>
 
           <div className="text-xs flex items-center gap-1.5 truncate leading-tight mt-0.5">
             {formatSubtitle()}
@@ -116,8 +136,16 @@ export const ChatHeader: React.FC = () => {
         </div>
       </div>
 
-      {/* Right: Actions (Instagram 📞, 📹, ℹ️) */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+      {/* Right: Actions (Search 🔍, Phone 📞, Video 📹, Info ℹ️) */}
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <button
+          onClick={() => setIsSearchOpen(true)}
+          className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl transition active:scale-95"
+          title="Search in messages (Ctrl+F)"
+        >
+          <Search className="w-4.5 h-4.5 stroke-[1.8]" />
+        </button>
+
         {!isGroup && activePartner && (
           <>
             <button
@@ -130,10 +158,10 @@ export const ChatHeader: React.FC = () => {
                 })
               }
               disabled={callState !== 'idle'}
-              className="p-2 text-white hover:text-zinc-300 hover:bg-white/10 rounded-full transition active:scale-95 disabled:opacity-30"
-              title={`Voice Call with ${activePartner.displayName}`}
+              className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl transition active:scale-95 disabled:opacity-30"
+              title={`HD Voice Call with ${activePartner.displayName}`}
             >
-              <Phone className="w-5 h-5 stroke-[1.8]" />
+              <Phone className="w-4.5 h-4.5 stroke-[1.8]" />
             </button>
 
             <button
@@ -146,20 +174,20 @@ export const ChatHeader: React.FC = () => {
                 })
               }
               disabled={callState !== 'idle'}
-              className="p-2 text-white hover:text-zinc-300 hover:bg-white/10 rounded-full transition active:scale-95 disabled:opacity-30"
-              title={`Video Call with ${activePartner.displayName}`}
+              className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl transition active:scale-95 disabled:opacity-30"
+              title={`HD Video Call with ${activePartner.displayName}`}
             >
-              <Video className="w-5 h-5 stroke-[1.8]" />
+              <Video className="w-4.5 h-4.5 stroke-[1.8]" />
             </button>
           </>
         )}
 
         <button
           onClick={() => setIsSharedMediaOpen(true)}
-          className="p-2 text-white hover:text-zinc-300 hover:bg-white/10 rounded-full transition active:scale-95"
-          title="Conversation Information & Shared Media"
+          className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl transition active:scale-95"
+          title="Shared Media & Conversation Info"
         >
-          <Info className="w-5 h-5 stroke-[1.8]" />
+          <Info className="w-4.5 h-4.5 stroke-[1.8]" />
         </button>
       </div>
     </header>
