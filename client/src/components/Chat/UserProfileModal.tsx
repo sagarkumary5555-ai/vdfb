@@ -84,10 +84,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
-      <div className="relative w-full max-w-sm bg-[#0D1018] rounded-3xl border border-white/[0.12] shadow-2xl overflow-hidden animate-slide-up flex flex-col">
+      <div className="relative w-full max-w-sm bg-[#0E0E10] rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-slide-up flex flex-col">
         
-        {/* Cover / Header Gradient */}
-        <div className="h-28 bg-gradient-to-r from-blue-900/60 via-indigo-950/80 to-[#0D1018] relative flex items-start justify-end p-3.5 border-b border-white/[0.08]">
+        {/* Cover / Header Monochrome */}
+        <div className="h-28 bg-[#141416] relative flex items-start justify-end p-3.5 border-b border-white/10">
           <button
             onClick={onClose}
             className="p-1.5 rounded-full bg-black/60 hover:bg-black text-zinc-300 hover:text-white transition border border-white/10"
@@ -106,7 +106,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
             className="relative cursor-pointer group"
             title="Click to view full photo"
           >
-            <div className="ring-4 ring-[#0D1018] rounded-full overflow-hidden shadow-2xl">
+            <div className="ring-4 ring-[#0E0E10] rounded-full overflow-hidden shadow-2xl">
               <Avatar
                 name={user.displayName}
                 username={user.username}

@@ -1,26 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Smile,
-  X,
-  Reply,
-  Edit2,
-  FileText,
-  Mic,
-  Square,
-  Sparkles,
   Send,
   Paperclip,
+  Smile,
+  Mic,
+  Square,
+  X,
 } from 'lucide-react';
 import { useChat } from '../../context/ChatContext.js';
 import { useSocket } from '../../context/SocketContext.js';
-import { uploadApi } from '../../services/api.js';
-import { AudioDspService } from '../../services/audioDsp.js';
-import { Attachment } from '../../types/index.js';
 import { StickerAndEmojiPicker } from './StickerAndEmojiPicker.js';
+import { AudioDspService } from '../../services/audioDsp.js';
+import { uploadApi } from '../../services/api.js';
 
 export const MessageComposer: React.FC = () => {
   const {
-    activeConversation,
     sendMessage,
     replyingTo,
     setReplyingTo,
@@ -28,25 +22,25 @@ export const MessageComposer: React.FC = () => {
     setEditingMessage,
     editMessage,
   } = useChat();
+
   const { emitTyping } = useSocket();
 
   const [text, setText] = useState('');
-  const [showPicker, setShowPicker] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-
-  // Voice Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [showPicker, setShowPicker] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimerRef = useRef<any>(null);
   const dspCleanupRef = useRef<(() => void) | null>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  // Sync editing message text
   useEffect(() => {
     if (editingMessage) {
       setText(editingMessage.content);
@@ -54,16 +48,23 @@ export const MessageComposer: React.FC = () => {
     }
   }, [editingMessage]);
 
+  // Auto resize textarea height
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
     }
   }, [text]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
-    emitTyping(e.target.value.length > 0, activeConversation?.id);
+    const val = e.target.value;
+    setText(val);
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    emitTyping(true);
+    typingTimeoutRef.current = window.setTimeout(() => {
+      emitTyping(false);
+    }, 2000);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -73,8 +74,56 @@ export const MessageComposer: React.FC = () => {
     }
   };
 
-  // Voice Recording with Studio Voice Isolation DSP
-  const startRecording = async () => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...files]);
+    }
+  };
+
+  const removeSelectedFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSend = async () => {
+    if (isUploading) return;
+    const content = text.trim();
+    if (!content && selectedFiles.length === 0) return;
+
+    if (editingMessage) {
+      await editMessage(editingMessage.id, content);
+      setEditingMessage(null);
+      setText('');
+      return;
+    }
+
+    setIsUploading(true);
+    let attachments: any[] = [];
+
+    if (selectedFiles.length > 0) {
+      try {
+        const uploadRes = await uploadApi.uploadFiles(selectedFiles);
+        attachments = uploadRes.files;
+      } catch (err: any) {
+        alert('Failed to upload attachment');
+        setIsUploading(false);
+        return;
+      }
+    }
+
+    setText('');
+    setSelectedFiles([]);
+    setShowPicker(false);
+
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+    await sendMessage(content, attachments);
+    setReplyingTo(null);
+    setIsUploading(false);
+  };
+
+  // Voice Note Recording via Web Audio DSP
+  const startRecordingVoice = async () => {
     try {
       const rawStream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -141,121 +190,71 @@ export const MessageComposer: React.FC = () => {
     }
   };
 
-  const stopRecording = () => {
+  const stopRecordingVoice = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     }
-  };
+  }, [isRecording]);
 
   const cancelRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.onstop = null;
+      audioChunksRef.current = [];
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      if (dspCleanupRef.current) {
-        dspCleanupRef.current();
-        dspCleanupRef.current = null;
-      }
-      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
     }
   };
 
-  const handleSend = async () => {
-    const trimmed = text.trim();
-    if (!trimmed && selectedFiles.length === 0) return;
-
-    if (editingMessage) {
-      await editMessage(editingMessage.id, trimmed);
-      setText('');
-      emitTyping(false);
-      return;
-    }
-
-    let uploadedAttachments: Attachment[] = [];
-    if (selectedFiles.length > 0) {
-      setIsUploading(true);
-      try {
-        const uploadResult = await uploadApi.uploadFiles(selectedFiles, (percent) => {
-          setUploadProgress(percent);
-        });
-        uploadedAttachments = uploadResult.files;
-      } catch (err: any) {
-        alert(err.response?.data?.error || 'Failed to upload attachments');
-        setIsUploading(false);
-        setUploadProgress(null);
-        return;
-      }
-      setIsUploading(false);
-      setUploadProgress(null);
-      setSelectedFiles([]);
-    }
-
-    await sendMessage(trimmed, uploadedAttachments);
-    setText('');
-    emitTyping(false);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...files]);
-    }
-  };
-
-  const removeSelectedFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSelectEmoji = (emoji: string) => {
-    setText((prev) => prev + emoji);
-    textareaRef.current?.focus();
-  };
-
-  const handleSendSticker = (stickerText: string) => {
-    sendMessage(stickerText);
-    setShowPicker(false);
+  const formatSeconds = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${mins}:${s < 10 ? '0' : ''}${s}`;
   };
 
   return (
-    <div className="p-3 sm:p-4 bg-[#090A0F] select-none relative z-20 flex-shrink-0 border-t border-white/[0.06]">
-      {/* Reply Banner */}
+    <footer className="p-3 sm:p-4 bg-[#08080A] border-t border-white/10 relative z-20 select-none">
+      {/* Hidden File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      {/* Replying Banner in B&W */}
       {replyingTo && (
-        <div className="mb-2 px-3.5 py-2 rounded-2xl bg-[#151923] border border-white/10 flex items-center justify-between animate-slide-up shadow-md">
-          <div className="flex items-center gap-2.5 truncate">
-            <div className="p-1.5 rounded-xl bg-blue-500/10 text-blue-400">
-              <Reply className="w-3.5 h-3.5" />
-            </div>
-            <div className="text-xs truncate">
-              <span className="text-zinc-400">Replying to </span>
-              <span className="font-bold text-white">{replyingTo.sender.displayName}</span>
-              <p className="text-zinc-400 text-[11px] truncate mt-0.5">{replyingTo.content || '[Attachment]'}</p>
+        <div className="mb-2 p-2.5 rounded-2xl bg-[#141416] border border-white/20 flex items-center justify-between animate-slide-up text-xs shadow-md">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-1 h-8 rounded-full bg-white flex-shrink-0" />
+            <div className="min-w-0">
+              <span className="font-bold text-white">
+                Replying to {replyingTo.sender.displayName}
+              </span>
+              <p className="text-zinc-400 truncate mt-0.5 max-w-sm sm:max-w-md">
+                {replyingTo.content || 'Attachment'}
+              </p>
             </div>
           </div>
           <button
             onClick={() => setReplyingTo(null)}
-            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-white/10 transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Editing Banner */}
+      {/* Editing Banner in B&W */}
       {editingMessage && (
-        <div className="mb-2 px-3.5 py-2 rounded-2xl bg-[#151923] border border-white/15 flex items-center justify-between animate-slide-up shadow-md">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-blue-500/10 text-blue-400">
-              <Edit2 className="w-3.5 h-3.5" />
-            </div>
-            <div className="text-xs text-white">
-              <span className="font-bold">Editing message</span>
+        <div className="mb-2 p-2.5 rounded-2xl bg-[#141416] border border-white/20 flex items-center justify-between animate-slide-up text-xs shadow-md">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-1 h-8 rounded-full bg-white flex-shrink-0" />
+            <div className="min-w-0">
+              <span className="font-bold text-white">Editing Message</span>
+              <p className="text-zinc-400 truncate mt-0.5">{editingMessage.content}</p>
             </div>
           </div>
           <button
@@ -263,26 +262,26 @@ export const MessageComposer: React.FC = () => {
               setEditingMessage(null);
               setText('');
             }}
-            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-white/10 transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Selected File Previews */}
+      {/* Selected File Previews in B&W */}
       {selectedFiles.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2 animate-slide-up">
           {selectedFiles.map((file, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#151923] border border-white/15 text-xs text-zinc-200 shadow-md"
+              className="flex items-center gap-2 p-2 rounded-xl bg-[#141416] border border-white/15 text-xs text-zinc-200"
             >
-              <FileText className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-              <span className="truncate max-w-[140px] text-xs font-medium">{file.name}</span>
+              <Paperclip className="w-3.5 h-3.5 text-white" />
+              <span className="max-w-[120px] truncate">{file.name}</span>
               <button
                 onClick={() => removeSelectedFile(idx)}
-                className="text-zinc-400 hover:text-red-400 p-0.5 rounded transition"
+                className="text-zinc-400 hover:text-white"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -291,127 +290,107 @@ export const MessageComposer: React.FC = () => {
         </div>
       )}
 
-      {/* Upload Progress Bar */}
-      {uploadProgress !== null && (
-        <div className="mb-2 w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
-          <div
-            className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-200"
-            style={{ width: `${uploadProgress}%` }}
-          />
-        </div>
-      )}
-
-      {/* Custom Sticker & 3D Emoji Picker */}
-      {showPicker && (
-        <StickerAndEmojiPicker
-          onSelectEmoji={handleSelectEmoji}
-          onSendSticker={handleSendSticker}
-          onClose={() => setShowPicker(false)}
-        />
-      )}
-
-      {/* Recording Mode Bar */}
+      {/* Recording HUD Overlay */}
       {isRecording ? (
-        <div className="flex items-center justify-between p-3 bg-[#131620] border border-red-500/30 rounded-2xl animate-fade-in shadow-2xl">
-          <div className="flex items-center gap-3 px-3">
-            <div className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Recording studio voice note... ({Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')})
-              </span>
-            </div>
+        <div className="flex items-center justify-between p-3 rounded-2xl bg-[#121214] border border-white/20 animate-fade-in shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-3.5 h-3.5 rounded-full bg-white animate-pulse" />
+            <span className="text-xs sm:text-sm font-bold text-white tracking-wide font-mono">
+              Recording Voice Note {formatSeconds(recordingDuration)}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 pr-1">
+          <div className="flex items-center gap-2">
             <button
-              type="button"
               onClick={cancelRecording}
-              className="px-3.5 py-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 text-xs font-semibold transition"
+              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-semibold transition"
             >
               Cancel
             </button>
             <button
-              type="button"
-              onClick={stopRecording}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center gap-1.5 text-xs font-bold shadow-lg active:scale-95 transition"
+              onClick={stopRecordingVoice}
+              className="px-4 py-1.5 bg-white hover:bg-zinc-200 text-black font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition"
             >
-              <Square className="w-3.5 h-3.5 fill-white" />
+              <Square className="w-3 h-3 fill-black" />
               <span>Send Voice</span>
             </button>
           </div>
         </div>
       ) : (
-        /* Luxury Composer Input Dock */
-        <div className="relative flex items-center gap-2 bg-[#0C101A] rounded-2xl border border-white/[0.1] p-2 focus-within:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-xl">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
-          {/* Left: Attachment & Emoji Buttons */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+        /* Main Composer Dock in B&W */
+        <div className="flex items-end gap-2">
+          <div className="flex-1 flex items-end bg-[#121214] border border-white/15 focus-within:border-white focus-within:ring-2 focus-within:ring-white/20 rounded-3xl p-1.5 px-3.5 transition-all shadow-lg min-h-[44px]">
+            {/* Attachment Button */}
             <button
-              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition"
-              title="Attach photos, videos, files"
+              className="p-2 text-zinc-400 hover:text-white rounded-full transition active:scale-95 flex-shrink-0 mb-0.5"
+              title="Attach photos, videos, audio & files"
             >
-              <Paperclip className="w-4 h-4 stroke-[1.8]" />
+              <Paperclip className="w-4 h-4" />
             </button>
 
+            {/* Sticker / Emoji Picker Button */}
             <button
-              type="button"
               onClick={() => setShowPicker(!showPicker)}
-              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition"
-              title="Emojis & 3D Animated Stickers"
+              className={`p-2 rounded-full transition active:scale-95 flex-shrink-0 mb-0.5 ${
+                showPicker
+                  ? 'text-black bg-white'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+              title="3D Stickers & Luxury Emojis"
             >
-              <Smile className="w-4 h-4 stroke-[1.8]" />
+              <Smile className="w-4 h-4" />
             </button>
+
+            {/* Expandable Text Input */}
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={text}
+              onChange={handleTextChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Message... (Press Enter to send)"
+              className="flex-1 bg-transparent text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none resize-none py-2 px-2 max-h-36 custom-scrollbar font-normal leading-relaxed"
+            />
           </div>
 
-          {/* Center: Expandable Textarea */}
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={text}
-            onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              editingMessage
-                ? 'Update your message...'
-                : `Type a message to ${activeConversation?.name || 'chat'}...`
-            }
-            className="flex-1 max-h-28 py-1 px-1.5 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
-          />
-
-          {/* Right Action: Voice Record / Send Button */}
-          {!text.trim() && selectedFiles.length === 0 ? (
+          {/* Action Button: Send or Voice Record in B&W */}
+          {text.trim() || selectedFiles.length > 0 ? (
             <button
-              type="button"
-              onClick={startRecording}
-              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white active:scale-95 transition shadow-sm flex-shrink-0"
-              title="Record Voice Note"
+              onClick={handleSend}
+              disabled={isUploading}
+              className="p-3 bg-white hover:bg-zinc-200 active:scale-95 text-black rounded-full shadow-lg transition flex items-center justify-center flex-shrink-0"
+              title="Send Message"
             >
-              <Mic className="w-4 h-4 text-emerald-400 stroke-[2]" />
+              <Send className="w-4 h-4 fill-black stroke-[2.5]" />
             </button>
           ) : (
             <button
-              type="button"
-              onClick={handleSend}
-              disabled={isUploading}
-              className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-950/50 active:scale-95 transition flex items-center gap-1.5 flex-shrink-0"
-              title="Send Message (Enter)"
+              onClick={startRecordingVoice}
+              className="p-3 bg-[#16161A] hover:bg-[#222228] active:scale-95 text-white border border-white/20 rounded-full shadow-md transition flex items-center justify-center flex-shrink-0"
+              title="Hold to Record Studio Voice Note"
             >
-              <span>Send</span>
-              <Send className="w-3.5 h-3.5 fill-white stroke-[1.5]" />
+              <Mic className="w-4 h-4" />
             </button>
           )}
         </div>
       )}
-    </div>
+
+      {/* Floating Sticker & Emoji Picker */}
+      {showPicker && (
+        <StickerAndEmojiPicker
+          onSelectEmoji={(emoji) => {
+            setText((prev) => prev + emoji);
+            textareaRef.current?.focus();
+          }}
+          onSendSticker={(stickerText) => {
+            sendMessage(stickerText, []);
+            setReplyingTo(null);
+            setShowPicker(false);
+          }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+    </footer>
   );
 };

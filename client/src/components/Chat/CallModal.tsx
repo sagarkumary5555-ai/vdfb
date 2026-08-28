@@ -40,10 +40,10 @@ import { Avatar } from '../Common/Avatar.js';
 const QUICK_REACTIONS = ['❤️', '🔥', '👏', '🎉', '😂', '💯', '😍', '🚀'];
 
 const THEME_BACKGROUNDS: Record<string, string> = {
-  aurora: 'bg-gradient-to-b from-[#0F1420] via-[#090C14] to-[#05070A]',
-  cyber: 'bg-gradient-to-b from-[#1C0F28] via-[#0E0716] to-[#07030C]',
-  emerald: 'bg-gradient-to-b from-[#091D17] via-[#06120E] to-[#030806]',
-  sunset: 'bg-gradient-to-b from-[#22130A] via-[#120904] to-[#080402]',
+  aurora: 'bg-black',
+  cyber: 'bg-[#0E0E10]',
+  emerald: 'bg-[#0A0A0C]',
+  sunset: 'bg-[#050505]',
 };
 
 const VIDEO_FILTER_STYLES: Record<string, string> = {

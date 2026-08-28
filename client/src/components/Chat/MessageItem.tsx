@@ -55,7 +55,7 @@ const getGifUrl = (text: string): string | null => {
 
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
-  isFirstInGroup = true,
+  isFirstInGroup: _isFirstInGroup = true,
   isLastInGroup = true,
 }) => {
   const { user } = useAuth();
@@ -71,7 +71,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isMe = message.senderId === user?.id || message.sender.username === user?.username;
   const isHighlighted = highlightedMessageId === message.id;
@@ -89,14 +88,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       particleCount: 24,
       spread: 60,
       origin: { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight },
-      colors: ['#3b82f6', '#6366f1', '#ec4899', '#ffffff'],
+      colors: ['#ffffff', '#a1a1aa', '#52525b', '#000000'],
     });
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
     setCopied(true);
-    setMobileMenuOpen(false);
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -105,13 +103,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       setIsDeleting(true);
       await deleteMessage(message.id);
       setIsDeleting(false);
-      setMobileMenuOpen(false);
     }
   };
 
   const handleReaction = (emoji: string) => {
     toggleReaction(message.id, emoji);
-    setMobileMenuOpen(false);
   };
 
   const renderAttachment = (att: Attachment) => {
@@ -123,7 +119,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       return (
         <div
           key={att.id}
-          className="mt-1 overflow-hidden rounded-2xl border border-white/10 max-w-xs sm:max-w-sm cursor-pointer group shadow-xl"
+          className="mt-1 overflow-hidden rounded-2xl border border-white/20 max-w-xs sm:max-w-sm cursor-pointer group shadow-xl bg-black"
         >
           <img
             src={fileUrl}
@@ -139,7 +135,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     // Video
     if (mime.startsWith('video/')) {
       return (
-        <div key={att.id} className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-xs sm:max-w-md bg-black shadow-xl">
+        <div key={att.id} className="mt-1 rounded-2xl overflow-hidden border border-white/20 max-w-xs sm:max-w-md bg-black shadow-xl">
           <video src={fileUrl} controls className="w-full max-h-56 sm:max-h-72" />
         </div>
       );
@@ -150,13 +146,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       return <VoiceNotePlayer key={att.id} src={fileUrl} isMe={isMe} />;
     }
 
-    // Document
-    const formatSize = (bytes: number) => {
-      if (bytes < 1024) return `${bytes} B`;
-      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    };
-
+    // Generic Document / File
     return (
       <a
         key={att.id}
@@ -164,46 +154,42 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         target="_blank"
         rel="noopener noreferrer"
         download={att.originalName}
-        className="mt-1 p-3 rounded-2xl bg-[#0D1017] border border-white/10 flex items-center justify-between gap-3 max-w-xs hover:border-white/25 transition group shadow-md"
+        className={`mt-1 flex items-center gap-3 p-3 rounded-2xl border ${
+          isMe
+            ? 'bg-black/10 border-black/20 text-black hover:bg-black/15'
+            : 'bg-[#18181A] border-white/15 text-white hover:bg-[#222226]'
+        } transition group max-w-xs sm:max-w-sm`}
       >
-        <div className="flex items-center gap-2.5 truncate">
-          <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex-shrink-0">
-            <FileText className="w-4 h-4" />
-          </div>
-          <div className="truncate">
-            <div className="text-xs font-semibold text-zinc-200 truncate group-hover:text-white">
-              {att.originalName}
-            </div>
-            <div className="text-[10px] text-zinc-400">{formatSize(att.size)}</div>
-          </div>
+        <div className={`p-2 rounded-xl ${isMe ? 'bg-black text-white' : 'bg-white text-black'}`}>
+          <FileText className="w-4 h-4" />
         </div>
-        <div className="p-1.5 rounded-xl bg-white/5 text-zinc-300 group-hover:text-white group-hover:bg-white/15 transition flex-shrink-0">
-          <Download className="w-3.5 h-3.5" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold truncate">{att.originalName}</p>
+          <p className={`text-[10px] ${isMe ? 'text-black/70' : 'text-zinc-400'}`}>
+            {(att.size / 1024).toFixed(1)} KB • Tap to open
+          </p>
         </div>
+        <Download className="w-4 h-4 opacity-70 group-hover:opacity-100 flex-shrink-0" />
       </a>
     );
   };
 
   return (
     <div
-      id={`msg-${message.id}`}
       onDoubleClick={handleDoubleClick}
-      onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-      className={`relative group flex gap-2 sm:gap-2.5 transition-all duration-150 ${
+      className={`group relative flex gap-2 py-0.5 px-1 sm:px-2 rounded-xl transition-colors duration-150 ${
         isMe ? 'flex-row-reverse' : 'flex-row'
-      } ${isLastInGroup ? 'mb-2.5' : 'mb-1'} ${isFirstInGroup ? 'mt-1.5' : ''} ${
-        isHighlighted ? 'bg-white/10 py-1.5 rounded-2xl px-2 ring-1 ring-blue-400/50' : ''
-      }`}
+      } ${isHighlighted ? 'bg-white/10 ring-1 ring-white/30' : 'hover:bg-white/[0.03]'}`}
     >
-      {/* Sender Avatar */}
-      <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 self-end">
+      {/* Sender Avatar (Only in Group Chats for others, or single DM) */}
+      <div className="flex-shrink-0 self-end mb-1">
         {!isMe && isLastInGroup ? (
           <Avatar
             name={message.sender.displayName}
             username={message.sender.username}
             avatarUrl={message.sender.avatarUrl}
             size="sm"
-            className="w-7 h-7 sm:w-8 sm:h-8 shadow-md"
+            className="w-7 h-7 sm:w-8 sm:h-8 shadow-md ring-1 ring-white/20"
           />
         ) : (
           <div className="w-7 sm:w-8" />
@@ -214,7 +200,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className={`relative max-w-[85%] sm:max-w-[72%] md:max-w-[58%] ${isMe ? 'items-end' : 'items-start'} flex flex-col min-w-0`}>
         {/* Pinned Tag */}
         {message.isPinned && (
-          <div className="flex items-center gap-1 text-[10px] text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30 mb-1 font-semibold shadow-xs">
+          <div className="flex items-center gap-1 text-[10px] text-white bg-white/15 px-2.5 py-0.5 rounded-full border border-white/30 mb-1 font-semibold">
             <Pin className="w-2.5 h-2.5" />
             <span>Pinned</span>
           </div>
@@ -225,15 +211,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <div
             className={`mb-1 p-2 rounded-xl text-xs max-w-full border-l-2 ${
               isMe
-                ? 'bg-blue-950/60 border-blue-400 text-blue-200 self-end shadow-xs'
-                : 'bg-[#151923] border-indigo-400 text-zinc-300 self-start shadow-xs'
+                ? 'bg-zinc-900 border-white text-zinc-300 self-end'
+                : 'bg-[#18181A] border-white text-zinc-300 self-start'
             }`}
           >
-            <div className="text-[10px] font-bold text-blue-300 flex items-center gap-1">
+            <div className="text-[10px] font-bold text-white flex items-center gap-1">
               <Reply className="w-2.5 h-2.5" />
               <span>{message.replyTo.sender.displayName}</span>
             </div>
-            <div className="text-zinc-200 text-[11px] truncate max-w-xs font-normal mt-0.5">
+            <div className="text-zinc-300 text-[11px] truncate max-w-xs font-normal mt-0.5">
               {message.replyTo.content || '[Attachment]'}
             </div>
           </div>
@@ -270,17 +256,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           </div>
         ) : (
-          /* 3. Main Message Bubble */
+          /* 3. Main Message Bubble in Pure Black & White */
           <div
             className={`relative px-4 py-2.5 text-sm leading-relaxed transition-all max-w-full overflow-hidden shadow-md ${
               isMe
-                ? `bg-gradient-to-tr from-blue-600 via-indigo-600 to-indigo-700 text-white font-normal ${
+                ? `bg-white text-black font-medium ${
                     isLastInGroup ? 'rounded-2xl rounded-br-xs' : 'rounded-2xl'
                   }`
-                : `bg-[#151923] border border-white/[0.08] text-zinc-100 ${
+                : `bg-[#141416] border border-white/15 text-white font-normal ${
                     isLastInGroup ? 'rounded-2xl rounded-bl-xs' : 'rounded-2xl'
                   }`
-            } ${message.isDeleted ? 'italic text-zinc-400 bg-zinc-900 border border-dashed border-white/20' : ''}`}
+            } ${message.isDeleted ? 'italic text-zinc-500 bg-zinc-900 border border-dashed border-white/20' : ''}`}
           >
             {/* Text Body */}
             <div className="whitespace-pre-wrap break-words select-text font-normal overflow-hidden">
@@ -297,7 +283,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             {/* Footer Metadata */}
             <div
               className={`flex items-center gap-1.5 text-[10px] mt-1 select-none font-medium ${
-                isMe ? 'justify-end text-blue-200' : 'justify-start text-zinc-400'
+                isMe ? 'justify-end text-zinc-600' : 'justify-start text-zinc-400'
               }`}
             >
               {message.isEdited && !message.isDeleted && (
@@ -309,7 +295,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         )}
 
-        {/* Reaction Badges */}
+        {/* Reaction Badges in B&W */}
         {message.reactions && message.reactions.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1 z-10 max-w-full">
             {message.reactions.map((r) => {
@@ -319,15 +305,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   key={r.emoji}
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleReaction(message.id, r.emoji);
+                    handleReaction(r.emoji);
                   }}
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-all active:scale-95 shadow-sm ${
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition border active:scale-95 ${
                     hasReacted
-                      ? 'bg-blue-600 text-white border-blue-400 ring-2 ring-blue-500/30'
-                      : 'bg-[#151923] border-white/10 text-zinc-300 hover:bg-white/10'
+                      ? 'bg-white text-black font-bold border-white shadow-sm'
+                      : 'bg-[#18181A] text-zinc-300 border-white/10 hover:border-white/30'
                   }`}
                 >
-                  <span className="text-sm">{r.emoji}</span>
+                  <span>{r.emoji}</span>
                   <span className="text-[10px] font-bold">{r.users.length}</span>
                 </button>
               );
@@ -336,87 +322,80 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         )}
       </div>
 
-      {/* Floating Action Menu */}
-      {!message.isDeleted && (
-        <div
-          className={`absolute -top-3.5 z-30 flex items-center gap-0.5 p-1 bg-[#10131B]/95 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl transition-all duration-200 max-w-[calc(100vw-2rem)] overflow-x-auto ${
-            mobileMenuOpen
-              ? 'opacity-100 scale-100 pointer-events-auto'
-              : 'opacity-0 scale-95 pointer-events-none sm:group-hover:opacity-100 sm:group-hover:scale-100 sm:group-hover:pointer-events-auto'
-          } ${isMe ? 'right-4 sm:right-12' : 'left-4 sm:left-12'}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center gap-0.5 pr-1 border-r border-white/10">
-            {POPULAR_REACTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => handleReaction(emoji)}
-                className="w-7 h-7 sm:w-6 sm:h-6 flex items-center justify-center rounded-lg text-base sm:text-sm hover:scale-125 active:scale-90 transition-transform"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => {
-              setReplyingTo(message);
-              setMobileMenuOpen(false);
-            }}
-            className="p-1.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/15 transition active:scale-95"
-            title="Reply"
-          >
-            <Reply className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-          </button>
-
-          <button
-            onClick={() => {
-              togglePin(message.id);
-              setMobileMenuOpen(false);
-            }}
-            className={`p-1.5 rounded-xl transition active:scale-95 ${
-              message.isPinned
-                ? 'text-amber-400 bg-amber-500/20'
-                : 'text-zinc-300 hover:text-white hover:bg-white/15'
-            }`}
-            title={message.isPinned ? 'Unpin' : 'Pin'}
-          >
-            <Pin className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-          </button>
-
-          <button
-            onClick={handleCopy}
-            className="p-1.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/15 transition active:scale-95"
-            title="Copy Text"
-          >
-            {copied ? <Check className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-400" /> : <Copy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
-          </button>
-
-          {isMe && (
+      {/* Hover Quick Action Toolbar (Desktop) in B&W */}
+      <div
+        className={`absolute top-0 ${
+          isMe ? 'left-4' : 'right-4'
+        } -translate-y-1/2 hidden group-hover:flex items-center bg-[#121214] border border-white/20 rounded-xl p-0.5 shadow-xl z-20 transition animate-fade-in`}
+      >
+        {/* Popular Reactions */}
+        <div className="flex items-center gap-0.5 pr-1 border-r border-white/10">
+          {POPULAR_REACTIONS.map((emoji) => (
             <button
-              onClick={() => {
-                setEditingMessage(message);
-                setMobileMenuOpen(false);
-              }}
-              className="p-1.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/15 transition active:scale-95"
-              title="Edit"
+              key={emoji}
+              onClick={() => handleReaction(emoji)}
+              className="p-1 hover:scale-125 transition active:scale-95 text-xs"
+              title={`React with ${emoji}`}
             >
-              <Edit2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+              {emoji}
             </button>
-          )}
-
-          {isMe && (
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="p-1.5 rounded-xl text-zinc-300 hover:text-red-400 hover:bg-red-500/20 transition active:scale-95"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-            </button>
-          )}
+          ))}
         </div>
-      )}
+
+        {/* Reply */}
+        <button
+          onClick={() => setReplyingTo(message)}
+          className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+          title="Reply"
+        >
+          <Reply className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Copy */}
+        <button
+          onClick={handleCopy}
+          className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+          title="Copy text"
+        >
+          {copied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+
+        {/* Pin */}
+        <button
+          onClick={() => togglePin(message.id)}
+          className={`p-1.5 rounded-lg transition ${
+            message.isPinned
+              ? 'text-white bg-white/20'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
+          }`}
+          title={message.isPinned ? 'Unpin' : 'Pin'}
+        >
+          <Pin className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Edit (Me only) */}
+        {isMe && !message.isDeleted && (
+          <button
+            onClick={() => setEditingMessage(message)}
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+            title="Edit"
+          >
+            <Edit2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {/* Delete (Me only) */}
+        {isMe && !message.isDeleted && (
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+            title="Delete"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 };

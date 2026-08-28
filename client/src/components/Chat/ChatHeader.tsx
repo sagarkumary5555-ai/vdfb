@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Video, ChevronLeft, Info, Users, Search, ShieldCheck, Sparkles } from 'lucide-react';
+import { Phone, Video, ChevronLeft, Info, Users, Search, CheckCircle2 } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useSocket } from '../../context/SocketContext.js';
 import { useChat } from '../../context/ChatContext.js';
@@ -55,7 +55,7 @@ export const ChatHeader: React.FC = () => {
     if (isGroup) {
       return (
         <span className="text-zinc-400 flex items-center gap-1.5 text-xs font-medium">
-          <Users className="w-3.5 h-3.5 text-blue-400" />
+          <Users className="w-3.5 h-3.5 text-white" />
           <span>{groupParticipantsCount ? `${groupParticipantsCount} members active` : 'Group conversation'}</span>
         </span>
       );
@@ -63,8 +63,7 @@ export const ChatHeader: React.FC = () => {
 
     if (isPartnerTyping) {
       return (
-        <span className="text-blue-400 font-bold animate-pulse flex items-center gap-1 text-xs">
-          <Sparkles className="w-3 h-3 text-blue-400" />
+        <span className="text-white font-bold animate-pulse flex items-center gap-1 text-xs">
           <span>typing...</span>
         </span>
       );
@@ -72,12 +71,12 @@ export const ChatHeader: React.FC = () => {
 
     if (isOnline) {
       return (
-        <span className="text-emerald-400 font-semibold flex items-center gap-1.5 text-xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50" />
+        <span className="text-white font-semibold flex items-center gap-1.5 text-xs">
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
           <span>Active now</span>
           {isFriend && (
-            <span className="text-emerald-300 font-medium flex items-center gap-0.5 text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
-              <ShieldCheck className="w-3 h-3 text-emerald-400" /> Verified Friend
+            <span className="text-zinc-300 font-medium flex items-center gap-0.5 text-[10px] bg-white/10 px-1.5 py-0.5 rounded-md border border-white/20">
+              <CheckCircle2 className="w-3 h-3 text-white" /> Verified Friend
             </span>
           )}
           {activePartner?.customStatus && (
@@ -107,7 +106,7 @@ export const ChatHeader: React.FC = () => {
   };
 
   return (
-    <header className="h-16 px-4 sm:px-6 bg-[#080B12]/95 border-b border-white/[0.08] backdrop-blur-2xl flex items-center justify-between z-30 select-none flex-shrink-0 shadow-lg">
+    <header className="h-16 px-4 sm:px-6 bg-[#08080A] border-b border-white/10 flex items-center justify-between z-30 select-none flex-shrink-0">
       {/* Left: Mobile Back Button + Profile / Group Details */}
       <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
         <button
@@ -120,8 +119,8 @@ export const ChatHeader: React.FC = () => {
 
         <div
           onClick={handleHeaderUserClick}
-          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group py-1 px-1.5 rounded-2xl hover:bg-white/[0.04] transition"
-          title="Click to view full user profile & stats"
+          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group py-1 px-1.5 rounded-2xl hover:bg-white/[0.05] transition"
+          title="Click to view full user profile"
         >
           <div className="relative">
             <Avatar
@@ -129,7 +128,7 @@ export const ChatHeader: React.FC = () => {
               username={partnerUsername}
               avatarUrl={partnerAvatar}
               size="md"
-              className="w-10 h-10 ring-2 ring-white/10 group-hover:ring-blue-400/50 transition-all shadow-md group-hover:scale-105"
+              className="w-10 h-10 ring-2 ring-white/20 group-hover:ring-white transition-all shadow-md group-hover:scale-105"
               isGroup={isGroup}
               status={!isGroup ? (isOnline ? 'online' : 'offline') : null}
             />
@@ -137,11 +136,11 @@ export const ChatHeader: React.FC = () => {
 
           <div className="flex flex-col min-w-0 flex-1">
             <div className="flex items-center gap-1.5 truncate">
-              <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate leading-tight group-hover:text-blue-300 transition">
+              <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate leading-tight group-hover:underline">
                 {titleName}
               </h1>
               {isGroup && (
-                <span className="text-[9px] uppercase tracking-wider font-extrabold text-indigo-300 bg-indigo-500/15 border border-indigo-500/30 px-1.5 py-0.5 rounded-md flex-shrink-0">
+                <span className="text-[9px] uppercase tracking-wider font-extrabold text-black bg-white px-1.5 py-0.5 rounded-md flex-shrink-0">
                   GROUP
                 </span>
               )}
@@ -154,11 +153,11 @@ export const ChatHeader: React.FC = () => {
         </div>
       </div>
 
-      {/* Right: Actions Dock (Search, HD Voice, HD Video, Shared Media) */}
+      {/* Right: Actions Dock (Search, HD Voice, HD Video, Shared Media) in B&W */}
       <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="p-2.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-2xl transition active:scale-95 border border-white/[0.04]"
+          className="p-2.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-2xl transition active:scale-95 border border-white/10"
           title="Search in messages (Ctrl+F)"
         >
           <Search className="w-4 h-4 stroke-[1.8]" />
@@ -176,11 +175,11 @@ export const ChatHeader: React.FC = () => {
                 })
               }
               disabled={callState !== 'idle'}
-              className="p-2.5 text-zinc-200 hover:text-white bg-[#141824] hover:bg-[#1E2436] border border-white/[0.08] hover:border-emerald-500/30 rounded-2xl transition active:scale-95 shadow-sm disabled:opacity-30 flex items-center gap-1.5"
+              className="p-2.5 text-white hover:bg-white hover:text-black bg-[#141416] border border-white/20 rounded-2xl transition active:scale-95 shadow-sm disabled:opacity-30 flex items-center gap-1.5"
               title={`HD Voice Call with ${activePartner.displayName}`}
             >
-              <Phone className="w-4 h-4 text-emerald-400 stroke-[1.8]" />
-              <span className="hidden md:inline text-xs font-semibold text-zinc-200">Call</span>
+              <Phone className="w-4 h-4 stroke-[1.8]" />
+              <span className="hidden md:inline text-xs font-semibold">Call</span>
             </button>
 
             <button
@@ -193,18 +192,18 @@ export const ChatHeader: React.FC = () => {
                 })
               }
               disabled={callState !== 'idle'}
-              className="p-2.5 text-zinc-200 hover:text-white bg-[#141824] hover:bg-[#1E2436] border border-white/[0.08] hover:border-blue-500/30 rounded-2xl transition active:scale-95 shadow-sm disabled:opacity-30 flex items-center gap-1.5"
+              className="p-2.5 text-white hover:bg-white hover:text-black bg-[#141416] border border-white/20 rounded-2xl transition active:scale-95 shadow-sm disabled:opacity-30 flex items-center gap-1.5"
               title={`HD Video Call with ${activePartner.displayName}`}
             >
-              <Video className="w-4 h-4 text-blue-400 stroke-[1.8]" />
-              <span className="hidden md:inline text-xs font-semibold text-zinc-200">Video</span>
+              <Video className="w-4 h-4 stroke-[1.8]" />
+              <span className="hidden md:inline text-xs font-semibold">Video</span>
             </button>
           </>
         )}
 
         <button
           onClick={() => setIsSharedMediaOpen(true)}
-          className="p-2.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-2xl transition active:scale-95 border border-white/[0.04]"
+          className="p-2.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-2xl transition active:scale-95 border border-white/10"
           title="Shared Media, Files & Audio"
         >
           <Info className="w-4 h-4 stroke-[1.8]" />

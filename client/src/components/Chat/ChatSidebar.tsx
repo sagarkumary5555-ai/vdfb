@@ -9,8 +9,7 @@ import {
   MessageSquare,
   UserPlus,
   UserCheck,
-  ShieldCheck,
-  CheckCheck,
+  Check,
 } from 'lucide-react';
 import { format, isToday, isYesterday, formatDistanceToNowStrict } from 'date-fns';
 import { useAuth } from '../../context/AuthContext.js';
@@ -60,13 +59,13 @@ export const ChatSidebar: React.FC = () => {
   });
 
   return (
-    <aside className="w-full h-[100dvh] bg-[#07090E] border-r border-white/[0.08] flex flex-col select-none flex-shrink-0 z-20 font-sans shadow-2xl">
+    <aside className="w-full h-[100dvh] bg-black border-r border-white/10 flex flex-col select-none flex-shrink-0 z-20 font-sans">
       {/* Top Header: Current User Profile + Action Tools */}
-      <div className="p-3.5 sm:p-4 border-b border-white/[0.08] flex items-center justify-between bg-[#0C101A]/95 backdrop-blur-2xl">
+      <div className="p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between bg-[#0A0A0C]">
         {/* User Monogram & Info */}
         <button
           onClick={() => setIsSettingsOpen(true)}
-          className="flex items-center gap-3 hover:opacity-95 transition text-left min-w-0 group"
+          className="flex items-center gap-3 hover:opacity-90 transition text-left min-w-0 group"
           title="Account Profile & Preferences"
         >
           <div className="relative">
@@ -76,18 +75,18 @@ export const ChatSidebar: React.FC = () => {
               avatarUrl={user?.avatarUrl}
               size="md"
               status="online"
-              className="ring-2 ring-white/10 group-hover:ring-blue-400/50 transition-all shadow-lg"
+              className="ring-2 ring-white/20 group-hover:ring-white transition-all shadow-lg"
             />
           </div>
           <div className="min-w-0">
             <div className="text-sm font-bold text-white tracking-tight truncate flex items-center gap-1.5">
-              <span className="group-hover:text-blue-300 transition">{user?.displayName || user?.username}</span>
-              <span className="text-[9px] uppercase tracking-wider font-extrabold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+              <span>{user?.displayName || user?.username}</span>
+              <span className="text-[9px] uppercase tracking-wider font-extrabold text-black bg-white px-1.5 py-0.5 rounded">
                 PRO
               </span>
             </div>
             <div className="text-[11px] text-zinc-400 truncate flex items-center gap-1 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-xs shadow-emerald-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               <span>Online • @{user?.username}</span>
             </div>
           </div>
@@ -103,7 +102,7 @@ export const ChatSidebar: React.FC = () => {
           >
             <UserCheck className="w-4 h-4 stroke-[1.8]" />
             {pendingFriendCount > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0F121C] animate-pulse" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-white ring-2 ring-black animate-pulse" />
             )}
           </button>
 
@@ -128,12 +127,12 @@ export const ChatSidebar: React.FC = () => {
       </div>
 
       {/* Prominent Quick Actions & Filter Search */}
-      <div className="p-3 border-b border-white/[0.06] bg-[#0A0D15]/85 backdrop-blur-md space-y-2.5">
+      <div className="p-3 border-b border-white/10 bg-[#08080A] space-y-2.5">
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => setIsNewChatModalOpen(true)}
-            className="py-2 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-950/50 flex items-center justify-center gap-1.5 transition"
+            className="py-2 px-2 bg-white hover:bg-zinc-200 active:scale-95 text-black rounded-xl text-xs font-bold shadow transition flex items-center justify-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
             <span>New Chat</span>
@@ -141,7 +140,7 @@ export const ChatSidebar: React.FC = () => {
 
           <button
             onClick={() => setIsNewChatModalOpen(true)}
-            className="py-2 px-2 bg-[#141824] hover:bg-[#1C2234] active:scale-95 text-zinc-200 hover:text-white border border-white/[0.08] rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5 transition"
+            className="py-2 px-2 bg-[#141416] hover:bg-[#1E1E22] active:scale-95 text-zinc-200 hover:text-white border border-white/10 rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5 transition"
           >
             <Users className="w-3.5 h-3.5 text-zinc-400" />
             <span>Group</span>
@@ -149,12 +148,12 @@ export const ChatSidebar: React.FC = () => {
 
           <button
             onClick={() => setIsFriendsModalOpen(true)}
-            className="py-2 px-2 bg-[#141824] hover:bg-[#1C2234] active:scale-95 text-zinc-300 hover:text-white border border-white/[0.08] rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5 transition relative"
+            className="py-2 px-2 bg-[#141416] hover:bg-[#1E1E22] active:scale-95 text-zinc-300 hover:text-white border border-white/10 rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5 transition relative"
           >
             <UserPlus className="w-3.5 h-3.5 text-zinc-400" />
             <span>Friends</span>
             {pendingFriendCount > 0 && (
-              <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-black text-[9px] font-black flex items-center justify-center animate-pulse">
+              <span className="w-3.5 h-3.5 rounded-full bg-white text-black text-[9px] font-black flex items-center justify-center animate-pulse">
                 {pendingFriendCount}
               </span>
             )}
@@ -169,7 +168,7 @@ export const ChatSidebar: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full pl-9 pr-8 py-2 bg-black/50 border border-white/[0.08] rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500/60 focus:bg-black/80 transition"
+            className="w-full pl-9 pr-8 py-2 bg-[#101014] border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-[#141418] transition"
           />
           {searchQuery && (
             <button
@@ -182,7 +181,7 @@ export const ChatSidebar: React.FC = () => {
         </div>
 
         {/* Segmented Filter Pills */}
-        <div className="flex items-center gap-1 pt-0.5 bg-black/40 p-1 rounded-xl border border-white/[0.04]">
+        <div className="flex items-center gap-1 pt-0.5 bg-black p-1 rounded-xl border border-white/10">
           {[
             { id: 'all', label: 'All Chats' },
             { id: 'direct', label: 'Direct' },
@@ -193,8 +192,8 @@ export const ChatSidebar: React.FC = () => {
               onClick={() => setFilterTab(tab.id as any)}
               className={`flex-1 py-1 px-2 rounded-lg text-xs font-semibold transition ${
                 filterTab === tab.id
-                  ? 'bg-gradient-to-r from-blue-600/30 to-indigo-600/30 text-white shadow-sm border border-blue-500/30'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-white text-black shadow font-bold'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
               {tab.label}
@@ -207,7 +206,7 @@ export const ChatSidebar: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
         {filteredConversations.length === 0 ? (
           <div className="py-16 text-center text-xs text-zinc-500 px-4 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto text-zinc-400 shadow-inner">
+            <div className="w-12 h-12 rounded-2xl bg-[#121214] border border-white/10 flex items-center justify-center mx-auto text-zinc-400 shadow-inner">
               <MessageSquare className="w-5 h-5 stroke-[1.8]" />
             </div>
             <p className="font-medium text-zinc-400">
@@ -265,11 +264,11 @@ export const ChatSidebar: React.FC = () => {
                 onClick={() => selectConversation(conv)}
                 className={`w-full p-3 rounded-2xl flex items-center gap-3 transition-all text-left group relative ${
                   isSelected
-                    ? 'bg-gradient-to-r from-blue-600/20 via-indigo-600/15 to-transparent border-l-2 border-blue-400 text-white shadow-xl shadow-black/50'
-                    : 'hover:bg-white/[0.04] text-zinc-300 border-l-2 border-transparent'
+                    ? 'bg-[#18181C] border border-white/20 text-white shadow-lg'
+                    : 'hover:bg-white/[0.05] text-zinc-300 border border-transparent'
                 }`}
               >
-                {/* Avatar with Live Status */}
+                {/* Avatar with Status */}
                 <Avatar
                   name={displayName || 'Chat'}
                   username={username}
@@ -290,7 +289,7 @@ export const ChatSidebar: React.FC = () => {
                     <span className="text-xs sm:text-sm font-bold text-white truncate flex items-center gap-1">
                       <span>{displayName}</span>
                       {!conv.isGroup && (
-                        <ShieldCheck className="w-3 h-3 text-emerald-400 inline flex-shrink-0" />
+                        <span className="text-[10px] text-zinc-400 font-mono">✓</span>
                       )}
                     </span>
                     {timeFormatted && (
@@ -306,19 +305,19 @@ export const ChatSidebar: React.FC = () => {
                         conv.unreadCount > 0
                           ? 'text-white font-bold'
                           : isPartnerOnline && !conv.lastMessage
-                          ? 'text-emerald-400 font-medium'
+                          ? 'text-zinc-200 font-medium'
                           : 'text-zinc-400'
                       }`}
                     >
                       {conv.lastMessage && conv.lastMessage.senderId === user?.id && (
-                        <CheckCheck className="w-3.5 h-3.5 text-blue-400 inline flex-shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-zinc-300 inline flex-shrink-0" />
                       )}
                       <span className="truncate">{subtitleText}</span>
                     </p>
 
-                    {/* Unread Counter Badge */}
+                    {/* Unread Counter Badge in B&W */}
                     {conv.unreadCount > 0 && (
-                      <span className="px-1.5 min-w-4 h-4 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/50 animate-pulse">
+                      <span className="px-1.5 min-w-4 h-4 rounded-full bg-white text-black text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow">
                         {conv.unreadCount}
                       </span>
                     )}

@@ -111,26 +111,20 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] w-screen bg-[#06080E] flex items-center justify-center p-4 sm:p-6 lg:p-12 font-sans select-none text-white overflow-y-auto">
-      {/* Background ambient lighting */}
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* 2-Column Professional Architecture */}
+    <div className="relative min-h-[100dvh] w-screen bg-black flex items-center justify-center p-4 sm:p-6 lg:p-12 font-sans select-none text-white overflow-y-auto">
+      {/* 2-Column Responsive Architecture */}
       <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto">
         
-        {/* LEFT COLUMN: Original Brand Identity */}
+        {/* LEFT COLUMN: Brand Identity */}
         <div className="hidden lg:flex lg:col-span-6 flex-col items-start justify-center pr-4 space-y-7">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-blue-500/20 ring-1 ring-white/20">
-              <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <div className="w-12 h-12 rounded-2xl bg-white text-black flex items-center justify-center font-black text-xl shadow-2xl ring-1 ring-white/20">
+              CU
             </div>
             <div>
               <div className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                 <span>ChatUs</span>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded-md border border-blue-500/30">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-black bg-white px-2 py-0.5 rounded-md">
                   PRO
                 </span>
               </div>
@@ -150,14 +144,14 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
           {/* Key Feature List */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-3 text-xs text-zinc-300">
-              <div className="p-1.5 rounded-lg bg-[#141824] border border-white/10 text-blue-400">
+              <div className="p-1.5 rounded-lg bg-[#141416] border border-white/10 text-white">
                 <Sparkles className="w-4 h-4" />
               </div>
               <span>Studio Voice Isolation with zero background noise</span>
             </div>
 
             <div className="flex items-center gap-3 text-xs text-zinc-300">
-              <div className="p-1.5 rounded-lg bg-[#141824] border border-white/10 text-emerald-400">
+              <div className="p-1.5 rounded-lg bg-[#141416] border border-white/10 text-white">
                 <Shield className="w-4 h-4" />
               </div>
               <span>Encrypted Direct Messaging & WebRTC Calling</span>
@@ -165,16 +159,14 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Sign Up Form */}
+        {/* RIGHT COLUMN: Sign Up Form in B&W */}
         <div className="w-full lg:col-span-6 mx-auto">
-          <div className="bg-[#0C101A]/95 rounded-3xl p-6 sm:p-8 border border-white/12 shadow-2xl backdrop-blur-2xl">
+          <div className="bg-[#0E0E10] rounded-3xl p-6 sm:p-8 border border-white/15 shadow-2xl">
             
             <div className="mb-5">
               <div className="lg:hidden flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center">
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                <div className="w-8 h-8 rounded-xl bg-white text-black flex items-center justify-center font-bold">
+                  CU
                 </div>
                 <span className="text-base font-bold text-white tracking-tight">ChatUs</span>
               </div>
@@ -196,7 +188,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
               )}
 
               {/* Drag & Drop Avatar Uploader */}
-              <div className="flex items-center gap-3.5 p-2.5 bg-[#141824] rounded-2xl border border-white/10">
+              <div className="flex items-center gap-3.5 p-2.5 bg-[#141416] rounded-2xl border border-white/10">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -212,10 +204,10 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                   onClick={() => fileInputRef.current?.click()}
                   className={`relative w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer transition overflow-hidden group flex-shrink-0 ${
                     isDragging
-                      ? 'border-blue-400 bg-blue-500/20 scale-105'
+                      ? 'border-white bg-white/20 scale-105'
                       : avatarPreview
                       ? 'border-white/40 bg-black'
-                      : 'border-white/20 bg-black hover:border-blue-400/50'
+                      : 'border-white/20 bg-black hover:border-white/50'
                   }`}
                   title="Drag & drop photo or click to upload"
                 >
@@ -242,7 +234,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-blue-400 font-semibold hover:underline"
+                      className="text-white font-bold underline hover:text-zinc-300"
                     >
                       Browse Device
                     </button>
@@ -271,7 +263,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                   placeholder="e.g. alex"
                   autoFocus
                   required
-                  className="w-full px-3.5 py-2.5 bg-[#141824] border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:bg-[#1A2030] transition"
+                  className="w-full px-3.5 py-2.5 bg-[#141416] border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-[#1A1A1E] transition"
                 />
               </div>
 
@@ -285,7 +277,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="e.g. Alex Rivera"
-                  className="w-full px-3.5 py-2.5 bg-[#141824] border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:bg-[#1A2030] transition"
+                  className="w-full px-3.5 py-2.5 bg-[#141416] border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-[#1A1A1E] transition"
                 />
               </div>
 
@@ -301,7 +293,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 4 characters"
                     required
-                    className="w-full px-3.5 pr-10 py-2.5 bg-[#141824] border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:bg-[#1A2030] transition"
+                    className="w-full px-3.5 pr-10 py-2.5 bg-[#141416] border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-[#1A1A1E] transition"
                   />
                   <button
                     type="button"
@@ -323,7 +315,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell friends what you're working on..."
-                  className="w-full px-3.5 py-2 bg-[#141824] border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:bg-[#1A2030] transition resize-none"
+                  className="w-full px-3.5 py-2 bg-[#141416] border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-[#1A1A1E] transition resize-none"
                 />
               </div>
 
@@ -331,10 +323,10 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-95 active:scale-[0.98] text-white font-bold rounded-xl shadow-xl shadow-indigo-950/50 transition disabled:opacity-50 text-xs sm:text-sm flex items-center justify-center gap-2 mt-2"
+                className="w-full py-3 px-4 bg-white hover:bg-zinc-200 active:scale-[0.98] text-black font-bold rounded-xl shadow-lg transition disabled:opacity-50 text-xs sm:text-sm flex items-center justify-center gap-2 mt-2"
               >
                 {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   <>
                     <UserPlus className="w-4 h-4" />
@@ -350,7 +342,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                 Already have an account?{' '}
                 <button
                   onClick={onSwitchToLogin}
-                  className="text-blue-400 font-bold hover:underline"
+                  className="text-white font-bold hover:underline"
                 >
                   Sign In
                 </button>

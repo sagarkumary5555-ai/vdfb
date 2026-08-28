@@ -116,18 +116,18 @@ export const FriendsModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
-      <div className="relative w-full max-w-md bg-[#0D1018] rounded-3xl border border-white/[0.12] shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[88vh]">
+      <div className="relative w-full max-w-md bg-[#0E0E10] rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[88vh]">
         
         {/* Header Bar */}
-        <div className="p-4 border-b border-white/[0.08] flex items-center justify-between bg-[#111420] flex-shrink-0">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#141416] flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-indigo-950/50">
+            <div className="p-2 rounded-xl bg-white text-black font-bold shadow-md">
               <Users className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
                 <span>Friends & Network</span>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <ShieldCheck className="w-3.5 h-3.5 text-white" />
               </h2>
               <div className="text-[10px] text-zinc-400">Manage connections, squads and pending requests</div>
             </div>

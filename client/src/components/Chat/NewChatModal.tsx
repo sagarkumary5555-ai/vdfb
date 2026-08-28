@@ -100,9 +100,9 @@ export const NewChatModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-2xl animate-fade-in select-none">
-      <div className="relative w-full max-w-md bg-[#0C101A] rounded-3xl border border-white/[0.12] shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[88vh]">
+      <div className="relative w-full max-w-md bg-[#0E0E10] rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[88vh]">
         {/* Header with Mode Switcher Tabs */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#080B12]">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#141416]">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTab('direct')}
