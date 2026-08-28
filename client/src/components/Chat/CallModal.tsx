@@ -29,6 +29,8 @@ import {
   Info,
   Radio,
   Palette,
+  Disc,
+  Filter,
 } from 'lucide-react';
 import { useCall } from '../../context/CallContext.js';
 import { useChat } from '../../context/ChatContext.js';
@@ -42,6 +44,14 @@ const THEME_BACKGROUNDS: Record<string, string> = {
   cyber: 'bg-gradient-to-b from-[#1C0F28] via-[#0E0716] to-[#07030C]',
   emerald: 'bg-gradient-to-b from-[#091D17] via-[#06120E] to-[#030806]',
   sunset: 'bg-gradient-to-b from-[#22130A] via-[#120904] to-[#080402]',
+};
+
+const VIDEO_FILTER_STYLES: Record<string, string> = {
+  none: '',
+  blur: 'filter backdrop-blur-md brightness-105',
+  cyber: 'filter hue-rotate-15 contrast-125 saturate-150',
+  noir: 'filter grayscale contrast-125 brightness-90',
+  warm: 'filter sepia-[0.35] saturate-125 brightness-105',
 };
 
 export const CallModal: React.FC = () => {
@@ -87,6 +97,17 @@ export const CallModal: React.FC = () => {
     setAmbientTheme,
     noiseGateThreshold,
     setNoiseGateThreshold,
+    isRecording,
+    startRecording,
+    stopRecording,
+    videoFilter,
+    setVideoFilter,
+    equalizerBass,
+    equalizerVocal,
+    equalizerTreble,
+    setEqualizerBass,
+    setEqualizerVocal,
+    setEqualizerTreble,
     endCall,
     toggleMute,
     toggleVideo,
@@ -105,6 +126,7 @@ export const CallModal: React.FC = () => {
   const [showInCallChat, setShowInCallChat] = useState(false);
   const [showDiagnosticsHUD, setShowDiagnosticsHUD] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showFilterPicker, setShowFilterPicker] = useState(false);
   const [chatInputText, setChatInputText] = useState('');
   const [isPushToTalking, setIsPushToTalking] = useState(false);
 
@@ -299,7 +321,7 @@ export const CallModal: React.FC = () => {
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${VIDEO_FILTER_STYLES[videoFilter] || ''}`}
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-3">
@@ -401,7 +423,7 @@ export const CallModal: React.FC = () => {
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              className="w-full h-full object-contain"
+              className={`w-full h-full object-contain ${VIDEO_FILTER_STYLES[videoFilter] || ''}`}
             />
             {peerMedia.isScreenSharing && (
               <div className="absolute top-16 left-4 sm:top-5 sm:left-5 z-20 px-3 py-1 bg-black/80 rounded-full border border-white/20 text-xs font-semibold text-white flex items-center gap-1.5 backdrop-blur-md shadow-lg">
@@ -412,6 +434,15 @@ export const CallModal: React.FC = () => {
             
             {/* Snapshot & Fullscreen Quick Actions */}
             <div className="absolute top-16 right-4 sm:top-5 sm:right-5 z-20 flex items-center gap-2">
+              <button
+                onClick={() => setShowFilterPicker(!showFilterPicker)}
+                className={`p-2 rounded-xl backdrop-blur-md border transition active:scale-95 ${
+                  videoFilter !== 'none' ? 'bg-purple-600 text-white border-purple-400' : 'bg-black/60 hover:bg-black/80 text-white border-white/10'
+                }`}
+                title="Camera Video Filter Presets"
+              >
+                <Filter className="w-4 h-4" />
+              </button>
               <button
                 onClick={captureSnapshot}
                 className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/10 transition active:scale-95"
@@ -523,7 +554,7 @@ export const CallModal: React.FC = () => {
                 autoPlay
                 playsInline
                 muted
-                className={`w-full h-full object-cover ${isScreenSharing || !isSelfMirrored ? '' : '-scale-x-100'}`}
+                className={`w-full h-full object-cover ${VIDEO_FILTER_STYLES[videoFilter] || ''} ${isScreenSharing || !isSelfMirrored ? '' : '-scale-x-100'}`}
               />
             )}
             <div className="absolute bottom-1 left-2 text-[9px] font-bold text-white bg-black/80 px-2 py-0.5 rounded backdrop-blur-xs flex items-center gap-1 border border-white/10">
@@ -532,7 +563,7 @@ export const CallModal: React.FC = () => {
           </div>
         )}
 
-        {/* Top Header Bar: Network Quality, DSP Indicator, Timer, PiP Button */}
+        {/* Top Header Bar: Network Quality, Recording, Timer, PiP Button */}
         <div className="absolute top-0 inset-x-0 z-20 p-4 bg-gradient-to-b from-black/85 via-black/40 to-transparent flex items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Live Timer Pill */}
@@ -543,10 +574,24 @@ export const CallModal: React.FC = () => {
               </span>
             </div>
 
+            {/* Live Recording Badge / Toggle */}
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`px-3 py-1 rounded-full border backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition active:scale-95 ${
+                isRecording
+                  ? 'bg-red-600 text-white border-red-400 shadow-md animate-pulse'
+                  : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
+              }`}
+              title={isRecording ? 'Stop Call Recording' : 'Start Audio Recording'}
+            >
+              <Disc className={`w-3.5 h-3.5 ${isRecording ? 'animate-spin text-white' : 'text-red-400'}`} />
+              <span>{isRecording ? 'REC Live' : 'Record'}</span>
+            </button>
+
             {/* Network Quality Badge */}
             <button
               onClick={() => setShowDiagnosticsHUD(!showDiagnosticsHUD)}
-              className="flex items-center gap-1 text-[10px] text-zinc-300 bg-black/60 hover:bg-black/80 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-md transition cursor-pointer"
+              className="hidden sm:flex items-center gap-1 text-[10px] text-zinc-300 bg-black/60 hover:bg-black/80 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-md transition cursor-pointer"
               title="Click to toggle WebRTC Diagnostics HUD"
             >
               <Activity className="w-3 h-3 text-emerald-400" />
@@ -584,6 +629,7 @@ export const CallModal: React.FC = () => {
                 setShowReactionsBar(false);
                 setShowSoundboardBar(false);
                 setShowThemePicker(false);
+                setShowFilterPicker(false);
               }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showInCallChat
@@ -602,6 +648,7 @@ export const CallModal: React.FC = () => {
                 setShowReactionsBar(false);
                 setShowInCallChat(false);
                 setShowThemePicker(false);
+                setShowFilterPicker(false);
               }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showSoundboardBar
@@ -620,6 +667,7 @@ export const CallModal: React.FC = () => {
                 setShowSoundboardBar(false);
                 setShowInCallChat(false);
                 setShowThemePicker(false);
+                setShowFilterPicker(false);
               }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showReactionsBar
@@ -663,6 +711,26 @@ export const CallModal: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Video Filter Presets Toolbar */}
+        {showFilterPicker && (
+          <div className="absolute top-16 right-4 z-30 p-2.5 bg-[#121522]/95 border border-white/15 rounded-2xl shadow-2xl flex items-center gap-1.5 backdrop-blur-xl animate-slide-down">
+            {(['none', 'blur', 'cyber', 'noir', 'warm'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => {
+                  setVideoFilter(f);
+                  setShowFilterPicker(false);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition ${
+                  videoFilter === f ? 'bg-purple-600 text-white' : 'bg-white/10 text-zinc-300 hover:bg-white/20'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Ambient Mood Theme Picker Popup */}
         {showThemePicker && (
@@ -958,6 +1026,58 @@ export const CallModal: React.FC = () => {
                   className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-100"
                   style={{ width: `${Math.min(100, localAudioLevel * 1.2)}%` }}
                 />
+              </div>
+            </div>
+
+            {/* 3-Band Equalizer */}
+            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+              <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Sliders className="w-4 h-4 text-indigo-400" />
+                3-Band Master Equalizer
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-1 text-[11px] text-zinc-300">
+                <div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Bass</span>
+                    <span className="text-indigo-400">{equalizerBass}dB</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="12"
+                    value={equalizerBass}
+                    onChange={(e) => setEqualizerBass(parseInt(e.target.value))}
+                    className="w-full accent-indigo-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Vocal</span>
+                    <span className="text-indigo-400">{equalizerVocal}dB</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="12"
+                    value={equalizerVocal}
+                    onChange={(e) => setEqualizerVocal(parseInt(e.target.value))}
+                    className="w-full accent-indigo-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Treble</span>
+                    <span className="text-indigo-400">{equalizerTreble}dB</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="12"
+                    value={equalizerTreble}
+                    onChange={(e) => setEqualizerTreble(parseInt(e.target.value))}
+                    className="w-full accent-indigo-500 cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
 

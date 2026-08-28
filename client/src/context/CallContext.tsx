@@ -84,6 +84,17 @@ interface CallContextType {
   setAmbientTheme: (theme: 'aurora' | 'cyber' | 'emerald' | 'sunset') => void;
   noiseGateThreshold: number;
   setNoiseGateThreshold: (val: number) => void;
+  isRecording: boolean;
+  startRecording: () => void;
+  stopRecording: () => void;
+  videoFilter: 'none' | 'blur' | 'cyber' | 'noir' | 'warm';
+  setVideoFilter: (f: 'none' | 'blur' | 'cyber' | 'noir' | 'warm') => void;
+  equalizerBass: number;
+  equalizerVocal: number;
+  equalizerTreble: number;
+  setEqualizerBass: (v: number) => void;
+  setEqualizerVocal: (v: number) => void;
+  setEqualizerTreble: (v: number) => void;
   startCall: (type: CallType, targetUser: ActivePartnerInfo) => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
@@ -191,6 +202,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isSelfMirrored, setIsSelfMirrored] = useState(true);
   const [ambientTheme, setAmbientTheme] = useState<'aurora' | 'cyber' | 'emerald' | 'sunset'>('aurora');
   const [noiseGateThreshold, setNoiseGateThreshold] = useState(18);
+  const [isRecording, setIsRecording] = useState(false);
+  const [videoFilter, setVideoFilter] = useState<'none' | 'blur' | 'cyber' | 'noir' | 'warm'>('none');
+  const [equalizerBass, setEqualizerBass] = useState(0);
+  const [equalizerVocal, setEqualizerVocal] = useState(0);
+  const [equalizerTreble, setEqualizerTreble] = useState(0);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
   const isLocalSpeaking = localAudioLevel > 15;
   const isRemoteSpeaking = remoteAudioLevel > 15;
@@ -549,8 +568,71 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     callSound.playDing();
   };
 
+  // Start Mixed Audio Recording
+  const startRecording = () => {
+    try {
+      const ctx = AudioDspService.getContext();
+      const mixedDest = ctx.createMediaStreamDestination();
+
+      if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
+        try {
+          const localSrc = ctx.createMediaStreamSource(localStreamRef.current);
+          localSrc.connect(mixedDest);
+        } catch {}
+      }
+
+      if (remoteStreamRef.current && remoteStreamRef.current.getAudioTracks().length > 0) {
+        try {
+          const remoteSrc = ctx.createMediaStreamSource(remoteStreamRef.current);
+          remoteSrc.connect(mixedDest);
+        } catch {}
+      }
+
+      const recorder = new MediaRecorder(mixedDest.stream);
+      recordedChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        if (recordedChunksRef.current.length > 0) {
+          const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `call-recording-${Date.now()}.webm`;
+          a.click();
+          recordedChunksRef.current = [];
+        }
+      };
+
+      recorder.start(1000);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch (err) {
+      console.warn('Call recording failed to start:', err);
+    }
+  };
+
+  // Stop Recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+    setIsRecording(false);
+  };
+
   // Clean local media tracks
   const cleanupMedia = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+    setIsRecording(false);
     callSound.stopRingtone();
     pendingCandidatesRef.current = [];
     if (animFrameRef.current) {
@@ -1196,6 +1278,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAmbientTheme,
         noiseGateThreshold,
         setNoiseGateThreshold,
+        isRecording,
+        startRecording,
+        stopRecording,
+        videoFilter,
+        setVideoFilter,
+        equalizerBass,
+        equalizerVocal,
+        equalizerTreble,
+        setEqualizerBass,
+        setEqualizerVocal,
+        setEqualizerTreble,
         startCall,
         acceptCall,
         rejectCall,
