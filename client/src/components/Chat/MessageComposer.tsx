@@ -8,8 +8,8 @@ import {
   Mic,
   Square,
   Sparkles,
-  Heart,
-  Image as ImageIcon,
+  Send,
+  Paperclip,
 } from 'lucide-react';
 import { useChat } from '../../context/ChatContext.js';
 import { useSocket } from '../../context/SocketContext.js';
@@ -224,23 +224,23 @@ export const MessageComposer: React.FC = () => {
   };
 
   return (
-    <div className="p-3 sm:p-5 bg-black select-none relative z-20 flex-shrink-0">
+    <div className="p-3 sm:p-4 bg-[#090A0F] select-none relative z-20 flex-shrink-0 border-t border-white/[0.06]">
       {/* Reply Banner */}
       {replyingTo && (
-        <div className="mb-2 px-3.5 py-1.5 rounded-2xl bg-[#262626] border border-white/10 flex items-center justify-between animate-slide-up">
-          <div className="flex items-center gap-2 truncate">
-            <div className="p-1 rounded-lg bg-white/10 text-white">
+        <div className="mb-2 px-3.5 py-2 rounded-2xl bg-[#151923] border border-white/10 flex items-center justify-between animate-slide-up shadow-md">
+          <div className="flex items-center gap-2.5 truncate">
+            <div className="p-1.5 rounded-xl bg-blue-500/10 text-blue-400">
               <Reply className="w-3.5 h-3.5" />
             </div>
             <div className="text-xs truncate">
               <span className="text-zinc-400">Replying to </span>
-              <span className="font-semibold text-white">{replyingTo.sender.displayName}</span>
-              <p className="text-zinc-400 text-[11px] truncate">{replyingTo.content || '[Attachment]'}</p>
+              <span className="font-bold text-white">{replyingTo.sender.displayName}</span>
+              <p className="text-zinc-400 text-[11px] truncate mt-0.5">{replyingTo.content || '[Attachment]'}</p>
             </div>
           </div>
           <button
             onClick={() => setReplyingTo(null)}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -249,11 +249,13 @@ export const MessageComposer: React.FC = () => {
 
       {/* Editing Banner */}
       {editingMessage && (
-        <div className="mb-2 px-3.5 py-1.5 rounded-2xl bg-[#262626] border border-white/15 flex items-center justify-between animate-slide-up">
+        <div className="mb-2 px-3.5 py-2 rounded-2xl bg-[#151923] border border-white/15 flex items-center justify-between animate-slide-up shadow-md">
           <div className="flex items-center gap-2">
-            <Edit2 className="w-3.5 h-3.5 text-white" />
+            <div className="p-1.5 rounded-xl bg-blue-500/10 text-blue-400">
+              <Edit2 className="w-3.5 h-3.5" />
+            </div>
             <div className="text-xs text-white">
-              <span className="font-semibold">Editing message</span>
+              <span className="font-bold">Editing message</span>
             </div>
           </div>
           <button
@@ -261,7 +263,7 @@ export const MessageComposer: React.FC = () => {
               setEditingMessage(null);
               setText('');
             }}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -270,17 +272,17 @@ export const MessageComposer: React.FC = () => {
 
       {/* Selected File Previews */}
       {selectedFiles.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1.5 animate-slide-up">
+        <div className="mb-2 flex flex-wrap gap-2 animate-slide-up">
           {selectedFiles.map((file, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#262626] border border-white/15 text-xs text-zinc-200 shadow"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#151923] border border-white/15 text-xs text-zinc-200 shadow-md"
             >
-              <FileText className="w-3.5 h-3.5 text-white flex-shrink-0" />
-              <span className="truncate max-w-[140px] text-xs">{file.name}</span>
+              <FileText className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+              <span className="truncate max-w-[140px] text-xs font-medium">{file.name}</span>
               <button
                 onClick={() => removeSelectedFile(idx)}
-                className="text-zinc-400 hover:text-red-400 p-0.5"
+                className="text-zinc-400 hover:text-red-400 p-0.5 rounded transition"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -293,7 +295,7 @@ export const MessageComposer: React.FC = () => {
       {uploadProgress !== null && (
         <div className="mb-2 w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
           <div
-            className="bg-white h-full transition-all duration-200"
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-200"
             style={{ width: `${uploadProgress}%` }}
           />
         </div>
@@ -310,13 +312,13 @@ export const MessageComposer: React.FC = () => {
 
       {/* Recording Mode Bar */}
       {isRecording ? (
-        <div className="flex items-center justify-between p-3 bg-[#18181b] border border-white/20 rounded-full animate-fade-in shadow-2xl">
+        <div className="flex items-center justify-between p-3 bg-[#131620] border border-red-500/30 rounded-2xl animate-fade-in shadow-2xl">
           <div className="flex items-center gap-3 px-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+            <div className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-zinc-400" />
-                Recording voice note... ({Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')})
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                Recording studio voice note... ({Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')})
               </span>
             </div>
           </div>
@@ -325,23 +327,23 @@ export const MessageComposer: React.FC = () => {
             <button
               type="button"
               onClick={cancelRecording}
-              className="px-3 py-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 text-xs font-semibold"
+              className="px-3.5 py-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 text-xs font-semibold transition"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={stopRecording}
-              className="px-4 py-1.5 rounded-full bg-white text-black flex items-center gap-1.5 text-xs font-bold shadow active:scale-95 transition"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center gap-1.5 text-xs font-bold shadow-lg active:scale-95 transition"
             >
-              <Square className="w-3.5 h-3.5 fill-black" />
-              <span>Send</span>
+              <Square className="w-3.5 h-3.5 fill-white" />
+              <span>Send Voice</span>
             </button>
           </div>
         </div>
       ) : (
-        /* Instagram Pill Input Bar */
-        <div className="relative flex items-center gap-2 bg-[#262626] rounded-full border border-white/10 px-3.5 py-1.5 focus-within:border-white/30 transition-all shadow-md">
+        /* Luxury Composer Input Dock */
+        <div className="relative flex items-center gap-2 bg-[#12151F] rounded-2xl border border-white/[0.08] p-2 focus-within:border-indigo-500/50 transition-all shadow-xl">
           <input
             ref={fileInputRef}
             type="file"
@@ -350,15 +352,26 @@ export const MessageComposer: React.FC = () => {
             className="hidden"
           />
 
-          {/* Left: Emoji Button */}
-          <button
-            type="button"
-            onClick={() => setShowPicker(!showPicker)}
-            className={`p-1.5 rounded-full text-white hover:opacity-80 active:scale-95 transition flex-shrink-0`}
-            title="Emojis & Stickers"
-          >
-            <Smile className="w-6 h-6 stroke-[1.8]" />
-          </button>
+          {/* Left: Attachment & Emoji Buttons */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition"
+              title="Attach photos, videos, files"
+            >
+              <Paperclip className="w-4 h-4 stroke-[1.8]" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowPicker(!showPicker)}
+              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition"
+              title="Emojis & 3D Animated Stickers"
+            >
+              <Smile className="w-4 h-4 stroke-[1.8]" />
+            </button>
+          </div>
 
           {/* Center: Expandable Textarea */}
           <textarea
@@ -370,50 +383,31 @@ export const MessageComposer: React.FC = () => {
             placeholder={
               editingMessage
                 ? 'Update your message...'
-                : 'Message...'
+                : `Type a message to ${activeConversation?.name || 'chat'}...`
             }
-            className="flex-1 max-h-28 py-1.5 px-1 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
+            className="flex-1 max-h-28 py-1 px-1.5 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
           />
 
-          {/* Right Action Icons (Mic 🎙️, Gallery 🖼️, Heart 🤍 / Send) */}
+          {/* Right Action: Voice Record / Send Button */}
           {!text.trim() && selectedFiles.length === 0 ? (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                type="button"
-                onClick={startRecording}
-                className="p-1.5 rounded-full text-white hover:opacity-80 active:scale-95 transition"
-                title="Record voice note"
-              >
-                <Mic className="w-6 h-6 stroke-[1.8]" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-1.5 rounded-full text-white hover:opacity-80 active:scale-95 transition"
-                title="Send photo or video"
-              >
-                <ImageIcon className="w-6 h-6 stroke-[1.8]" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => sendMessage('❤️')}
-                className="p-1.5 rounded-full text-white hover:opacity-80 active:scale-90 transition"
-                title="Like"
-              >
-                <Heart className="w-6 h-6 stroke-[1.8]" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={startRecording}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white active:scale-95 transition shadow-sm flex-shrink-0"
+              title="Record Voice Note"
+            >
+              <Mic className="w-4 h-4 text-emerald-400 stroke-[2]" />
+            </button>
           ) : (
             <button
               type="button"
               onClick={handleSend}
               disabled={isUploading}
-              className="px-3 py-1.5 text-sm font-bold text-blue-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 flex-shrink-0"
-              title="Send (Enter)"
+              className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-950/50 active:scale-95 transition flex items-center gap-1.5 flex-shrink-0"
+              title="Send Message (Enter)"
             >
-              Send
+              <span>Send</span>
+              <Send className="w-3.5 h-3.5 fill-white stroke-[1.5]" />
             </button>
           )}
         </div>

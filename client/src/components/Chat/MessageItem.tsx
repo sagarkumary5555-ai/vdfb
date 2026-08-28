@@ -86,10 +86,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     e.stopPropagation();
     toggleReaction(message.id, '❤️');
     confetti({
-      particleCount: 20,
-      spread: 50,
+      particleCount: 24,
+      spread: 60,
       origin: { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight },
-      colors: ['#ffffff', '#a1a1aa', '#52525b'],
+      colors: ['#3b82f6', '#6366f1', '#ec4899', '#ffffff'],
     });
   };
 
@@ -123,13 +123,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       return (
         <div
           key={att.id}
-          className="mt-1 overflow-hidden rounded-2xl border border-white/10 max-w-xs sm:max-w-sm cursor-pointer group shadow-lg"
+          className="mt-1 overflow-hidden rounded-2xl border border-white/10 max-w-xs sm:max-w-sm cursor-pointer group shadow-xl"
         >
           <img
             src={fileUrl}
             alt={att.originalName}
             onClick={() => openLightbox(fileUrl, att.originalName)}
-            className="w-full max-h-56 sm:max-h-72 object-cover hover:scale-[1.015] transition-transform duration-200"
+            className="w-full max-h-56 sm:max-h-72 object-cover hover:scale-[1.02] transition-transform duration-200"
             loading="lazy"
           />
         </div>
@@ -139,7 +139,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     // Video
     if (mime.startsWith('video/')) {
       return (
-        <div key={att.id} className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-xs sm:max-w-md bg-black shadow-lg">
+        <div key={att.id} className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-xs sm:max-w-md bg-black shadow-xl">
           <video src={fileUrl} controls className="w-full max-h-56 sm:max-h-72" />
         </div>
       );
@@ -164,10 +164,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         target="_blank"
         rel="noopener noreferrer"
         download={att.originalName}
-        className="mt-1 p-2.5 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-between gap-2.5 max-w-xs hover:border-white/30 transition group shadow-md"
+        className="mt-1 p-3 rounded-2xl bg-[#0D1017] border border-white/10 flex items-center justify-between gap-3 max-w-xs hover:border-white/25 transition group shadow-md"
       >
-        <div className="flex items-center gap-2 truncate">
-          <div className="p-1.5 rounded-xl bg-white/10 text-white flex-shrink-0">
+        <div className="flex items-center gap-2.5 truncate">
+          <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex-shrink-0">
             <FileText className="w-4 h-4" />
           </div>
           <div className="truncate">
@@ -177,7 +177,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <div className="text-[10px] text-zinc-400">{formatSize(att.size)}</div>
           </div>
         </div>
-        <div className="p-1 rounded-xl bg-white/5 text-zinc-300 group-hover:text-white group-hover:bg-white/20 transition flex-shrink-0">
+        <div className="p-1.5 rounded-xl bg-white/5 text-zinc-300 group-hover:text-white group-hover:bg-white/15 transition flex-shrink-0">
           <Download className="w-3.5 h-3.5" />
         </div>
       </a>
@@ -191,8 +191,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
       className={`relative group flex gap-2 sm:gap-2.5 transition-all duration-150 ${
         isMe ? 'flex-row-reverse' : 'flex-row'
-      } ${isLastInGroup ? 'mb-2' : 'mb-0.5'} ${isFirstInGroup ? 'mt-1' : ''} ${
-        isHighlighted ? 'bg-white/10 py-1.5 rounded-2xl px-2 ring-1 ring-white/30' : ''
+      } ${isLastInGroup ? 'mb-2.5' : 'mb-1'} ${isFirstInGroup ? 'mt-1.5' : ''} ${
+        isHighlighted ? 'bg-white/10 py-1.5 rounded-2xl px-2 ring-1 ring-blue-400/50' : ''
       }`}
     >
       {/* Sender Avatar */}
@@ -203,7 +203,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             username={message.sender.username}
             avatarUrl={message.sender.avatarUrl}
             size="sm"
-            className="w-7 h-7 sm:w-8 sm:h-8"
+            className="w-7 h-7 sm:w-8 sm:h-8 shadow-md"
           />
         ) : (
           <div className="w-7 sm:w-8" />
@@ -214,9 +214,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className={`relative max-w-[85%] sm:max-w-[72%] md:max-w-[58%] ${isMe ? 'items-end' : 'items-start'} flex flex-col min-w-0`}>
         {/* Pinned Tag */}
         {message.isPinned && (
-          <div className="flex items-center gap-1 text-[10px] text-white bg-white/15 px-2 py-0.5 rounded-full border border-white/20 mb-1 font-semibold shadow-xs">
+          <div className="flex items-center gap-1 text-[10px] text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30 mb-1 font-semibold shadow-xs">
             <Pin className="w-2.5 h-2.5" />
-            Pinned
+            <span>Pinned</span>
           </div>
         )}
 
@@ -225,15 +225,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <div
             className={`mb-1 p-2 rounded-xl text-xs max-w-full border-l-2 ${
               isMe
-                ? 'bg-zinc-800 border-white text-zinc-300 self-end shadow-xs'
-                : 'bg-zinc-900 border-zinc-500 text-zinc-300 self-start shadow-xs'
+                ? 'bg-blue-950/60 border-blue-400 text-blue-200 self-end shadow-xs'
+                : 'bg-[#151923] border-indigo-400 text-zinc-300 self-start shadow-xs'
             }`}
           >
-            <div className="text-[10px] font-semibold text-zinc-300 flex items-center gap-1">
+            <div className="text-[10px] font-bold text-blue-300 flex items-center gap-1">
               <Reply className="w-2.5 h-2.5" />
-              {message.replyTo.sender.displayName}
+              <span>{message.replyTo.sender.displayName}</span>
             </div>
-            <div className="text-zinc-200 text-[11px] truncate max-w-xs font-normal">
+            <div className="text-zinc-200 text-[11px] truncate max-w-xs font-normal mt-0.5">
               {message.replyTo.content || '[Attachment]'}
             </div>
           </div>
@@ -272,10 +272,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         ) : (
           /* 3. Main Message Bubble */
           <div
-            className={`relative px-4 py-2.5 text-sm leading-relaxed transition-all max-w-full overflow-hidden ${
+            className={`relative px-4 py-2.5 text-sm leading-relaxed transition-all max-w-full overflow-hidden shadow-md ${
               isMe
-                ? `bg-white text-black font-normal ${isLastInGroup ? 'rounded-2xl rounded-br-xs' : 'rounded-2xl'}`
-                : `bg-[#262626] text-white ${isLastInGroup ? 'rounded-2xl rounded-bl-xs' : 'rounded-2xl'}`
+                ? `bg-gradient-to-tr from-blue-600 via-indigo-600 to-indigo-700 text-white font-normal ${
+                    isLastInGroup ? 'rounded-2xl rounded-br-xs' : 'rounded-2xl'
+                  }`
+                : `bg-[#151923] border border-white/[0.08] text-zinc-100 ${
+                    isLastInGroup ? 'rounded-2xl rounded-bl-xs' : 'rounded-2xl'
+                  }`
             } ${message.isDeleted ? 'italic text-zinc-400 bg-zinc-900 border border-dashed border-white/20' : ''}`}
           >
             {/* Text Body */}
@@ -293,7 +297,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             {/* Footer Metadata */}
             <div
               className={`flex items-center gap-1.5 text-[10px] mt-1 select-none font-medium ${
-                isMe ? 'justify-end text-zinc-500' : 'justify-start text-zinc-400'
+                isMe ? 'justify-end text-blue-200' : 'justify-start text-zinc-400'
               }`}
             >
               {message.isEdited && !message.isDeleted && (
@@ -317,14 +321,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     e.stopPropagation();
                     toggleReaction(message.id, r.emoji);
                   }}
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border transition-all active:scale-95 shadow-xs ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-all active:scale-95 shadow-sm ${
                     hasReacted
-                      ? 'bg-white text-black border-white ring-1 ring-white/50'
-                      : 'bg-zinc-900 border-white/10 text-zinc-300 hover:bg-white/10'
+                      ? 'bg-blue-600 text-white border-blue-400 ring-2 ring-blue-500/30'
+                      : 'bg-[#151923] border-white/10 text-zinc-300 hover:bg-white/10'
                   }`}
                 >
                   <span className="text-sm">{r.emoji}</span>
-                  <span className="text-[10px]">{r.users.length}</span>
+                  <span className="text-[10px] font-bold">{r.users.length}</span>
                 </button>
               );
             })}
@@ -335,7 +339,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       {/* Floating Action Menu */}
       {!message.isDeleted && (
         <div
-          className={`absolute -top-3.5 z-30 flex items-center gap-0.5 p-1 bg-black/90 rounded-2xl border border-white/15 shadow-xl transition-all duration-200 max-w-[calc(100vw-2rem)] overflow-x-auto ${
+          className={`absolute -top-3.5 z-30 flex items-center gap-0.5 p-1 bg-[#10131B]/95 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl transition-all duration-200 max-w-[calc(100vw-2rem)] overflow-x-auto ${
             mobileMenuOpen
               ? 'opacity-100 scale-100 pointer-events-auto'
               : 'opacity-0 scale-95 pointer-events-none sm:group-hover:opacity-100 sm:group-hover:scale-100 sm:group-hover:pointer-events-auto'
@@ -347,7 +351,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               <button
                 key={emoji}
                 onClick={() => handleReaction(emoji)}
-                className="w-7 h-7 sm:w-6 sm:h-6 flex items-center justify-center rounded-lg text-base sm:text-sm hover:scale-130 active:scale-90 transition-transform"
+                className="w-7 h-7 sm:w-6 sm:h-6 flex items-center justify-center rounded-lg text-base sm:text-sm hover:scale-125 active:scale-90 transition-transform"
               >
                 {emoji}
               </button>
@@ -372,7 +376,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             }}
             className={`p-1.5 rounded-xl transition active:scale-95 ${
               message.isPinned
-                ? 'text-white bg-white/20'
+                ? 'text-amber-400 bg-amber-500/20'
                 : 'text-zinc-300 hover:text-white hover:bg-white/15'
             }`}
             title={message.isPinned ? 'Unpin' : 'Pin'}

@@ -83,11 +83,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-sm bg-[#121215] rounded-3xl border border-white/15 shadow-2xl overflow-hidden animate-slide-up flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
+      <div className="relative w-full max-w-sm bg-[#0D1018] rounded-3xl border border-white/[0.12] shadow-2xl overflow-hidden animate-slide-up flex flex-col">
         
         {/* Cover / Header Gradient */}
-        <div className="h-28 bg-gradient-to-tr from-zinc-800 via-zinc-900 to-black relative flex items-start justify-end p-3 border-b border-white/10">
+        <div className="h-28 bg-gradient-to-r from-blue-900/60 via-indigo-950/80 to-[#0D1018] relative flex items-start justify-end p-3.5 border-b border-white/[0.08]">
           <button
             onClick={onClose}
             className="p-1.5 rounded-full bg-black/60 hover:bg-black text-zinc-300 hover:text-white transition border border-white/10"
@@ -106,7 +106,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
             className="relative cursor-pointer group"
             title="Click to view full photo"
           >
-            <div className="ring-4 ring-[#121215] rounded-full overflow-hidden shadow-2xl">
+            <div className="ring-4 ring-[#0D1018] rounded-full overflow-hidden shadow-2xl">
               <Avatar
                 name={user.displayName}
                 username={user.username}
@@ -160,7 +160,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
 
           {/* Custom Status / Bio Card */}
           {(user.customStatus || user.bio) && (
-            <div className="w-full p-3.5 bg-zinc-950/80 rounded-2xl border border-white/10 text-left space-y-1.5">
+            <div className="w-full p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] text-left space-y-1.5 shadow-sm">
               {user.customStatus && (
                 <div className="text-xs font-semibold text-white flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -182,7 +182,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
                 onClose();
                 startDirectChatWithUser(user);
               }}
-              className="py-2 px-3 rounded-xl bg-white text-black font-bold text-xs shadow hover:bg-zinc-200 transition active:scale-95 flex flex-col items-center justify-center gap-1"
+              className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-950/50 transition active:scale-95 flex flex-col items-center justify-center gap-1"
             >
               <MessageSquare className="w-4 h-4" />
               <span>Chat</span>
@@ -191,24 +191,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
             <button
               onClick={() => handleStartCall('audio')}
               disabled={callState !== 'idle'}
-              className="py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs border border-white/10 transition active:scale-95 flex flex-col items-center justify-center gap-1 disabled:opacity-40"
+              className="py-2.5 px-3 rounded-xl bg-[#151923] hover:bg-[#1D2230] text-zinc-200 hover:text-white font-semibold text-xs border border-white/[0.08] transition active:scale-95 flex flex-col items-center justify-center gap-1 disabled:opacity-40 shadow-sm"
             >
-              <Phone className="w-4 h-4" />
+              <Phone className="w-4 h-4 text-emerald-400" />
               <span>Voice</span>
             </button>
 
             <button
               onClick={() => handleStartCall('video')}
               disabled={callState !== 'idle'}
-              className="py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs border border-white/10 transition active:scale-95 flex flex-col items-center justify-center gap-1 disabled:opacity-40"
+              className="py-2.5 px-3 rounded-xl bg-[#151923] hover:bg-[#1D2230] text-zinc-200 hover:text-white font-semibold text-xs border border-white/[0.08] transition active:scale-95 flex flex-col items-center justify-center gap-1 disabled:opacity-40 shadow-sm"
             >
-              <Video className="w-4 h-4" />
+              <Video className="w-4 h-4 text-blue-400" />
               <span>Video</span>
             </button>
           </div>
 
           {/* Secondary Actions */}
-          <div className="w-full pt-2 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400">
+          <div className="w-full pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs text-zinc-400">
             <button
               onClick={() => {
                 onClose();
@@ -233,7 +233,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClos
               <button
                 onClick={handleSendFriendReq}
                 disabled={isProcessing}
-                className="flex items-center gap-1 text-white font-bold hover:underline transition"
+                className="flex items-center gap-1 text-blue-400 font-bold hover:underline transition"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>Add Friend</span>

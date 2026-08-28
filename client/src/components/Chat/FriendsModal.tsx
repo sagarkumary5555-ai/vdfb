@@ -8,6 +8,7 @@ import {
   Check,
   MessageSquare,
   Trash2,
+  ShieldCheck,
 } from 'lucide-react';
 import { useChat } from '../../context/ChatContext.js';
 import { useSocket } from '../../context/SocketContext.js';
@@ -114,18 +115,21 @@ export const FriendsModal: React.FC = () => {
   if (!isFriendsModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-md bg-[#121215] rounded-3xl border border-white/15 shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[88vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
+      <div className="relative w-full max-w-md bg-[#0D1018] rounded-3xl border border-white/[0.12] shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[88vh]">
         
         {/* Header Bar */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0e0e11] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-white text-black font-bold">
+        <div className="p-4 border-b border-white/[0.08] flex items-center justify-between bg-[#111420] flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-indigo-950/50">
               <Users className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white tracking-tight">Friends & Connections</h2>
-              <div className="text-[10px] text-zinc-400">Only friends can direct chat & join groups</div>
+              <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
+                <span>Friends & Network</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              </h2>
+              <div className="text-[10px] text-zinc-400">Manage connections, squads and pending requests</div>
             </div>
           </div>
 
@@ -157,12 +161,12 @@ export const FriendsModal: React.FC = () => {
         )}
 
         {/* Tab Switcher Pills */}
-        <div className="p-2 border-b border-white/10 bg-[#0a0a0d] flex items-center gap-1 flex-shrink-0">
+        <div className="p-2 border-b border-white/[0.08] bg-[#090A0F] flex items-center gap-1.5 flex-shrink-0">
           <button
             onClick={() => setActiveTab('friends')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               activeTab === 'friends'
-                ? 'bg-white text-black shadow'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-950/50'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -174,7 +178,7 @@ export const FriendsModal: React.FC = () => {
             onClick={() => setActiveTab('requests')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 relative ${
               activeTab === 'requests'
-                ? 'bg-white text-black shadow'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-950/50'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -191,7 +195,7 @@ export const FriendsModal: React.FC = () => {
             onClick={() => setActiveTab('add')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               activeTab === 'add'
-                ? 'bg-white text-black shadow'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-950/50'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -201,20 +205,20 @@ export const FriendsModal: React.FC = () => {
         </div>
 
         {/* Tab Body */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar bg-[#121215]">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar bg-[#0D1018]">
           
           {/* TAB 1: FRIENDS LIST */}
           {activeTab === 'friends' && (
             friends.length === 0 ? (
               <div className="py-16 text-center text-xs text-zinc-500 space-y-3 px-4">
                 <Users className="w-8 h-8 mx-auto text-zinc-600" />
-                <p className="font-medium">No friends added yet.</p>
+                <p className="font-medium">No friends connected yet.</p>
                 <button
                   onClick={() => setActiveTab('add')}
-                  className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 flex items-center gap-1.5 mx-auto"
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl shadow-lg hover:opacity-90 transition active:scale-95 flex items-center gap-1.5 mx-auto"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
-                  <span>Add Your First Friend</span>
+                  <span>Send First Friend Request</span>
                 </button>
               </div>
             ) : (
@@ -223,7 +227,7 @@ export const FriendsModal: React.FC = () => {
                 return (
                   <div
                     key={f.id}
-                    className="p-3 rounded-2xl bg-zinc-900/90 border border-white/10 flex items-center justify-between gap-3 group hover:border-white/20 transition"
+                    className="p-3 rounded-2xl bg-[#151923] border border-white/[0.08] flex items-center justify-between gap-3 group hover:border-white/20 transition shadow-sm"
                   >
                     <div
                       onClick={() => viewUserProfile(f)}
@@ -238,7 +242,10 @@ export const FriendsModal: React.FC = () => {
                         status={isOnline ? 'online' : 'offline'}
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate group-hover:underline">{f.displayName}</div>
+                        <div className="text-xs font-bold text-white truncate group-hover:underline flex items-center gap-1">
+                          <span>{f.displayName}</span>
+                          <ShieldCheck className="w-3 h-3 text-emerald-400 inline" />
+                        </div>
                         <div className="text-[10px] text-zinc-400 truncate">@{f.username}</div>
                         {f.customStatus && (
                           <div className="text-[10px] text-zinc-500 truncate mt-0.5">{f.customStatus}</div>
@@ -248,8 +255,11 @@ export const FriendsModal: React.FC = () => {
 
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
-                        onClick={() => startDirectChatWithUser(f)}
-                        className="px-3 py-1.5 rounded-xl bg-white text-black text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-200 transition active:scale-95 shadow"
+                        onClick={() => {
+                          setIsFriendsModalOpen(false);
+                          startDirectChatWithUser(f);
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-white text-black text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-200 transition active:scale-95 shadow"
                         title="Start Chat"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
@@ -281,14 +291,14 @@ export const FriendsModal: React.FC = () => {
                 </div>
 
                 {incomingRequests.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-zinc-500 border border-white/5 rounded-2xl bg-zinc-950/40">
+                  <div className="py-6 text-center text-xs text-zinc-500 border border-white/5 rounded-2xl bg-black/40">
                     No pending incoming friend requests
                   </div>
                 ) : (
                   incomingRequests.map((req) => (
                     <div
                       key={req.id}
-                      className="p-3 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-between gap-3"
+                      className="p-3 rounded-2xl bg-[#151923] border border-white/[0.08] flex items-center justify-between gap-3 shadow-sm"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar
@@ -307,7 +317,7 @@ export const FriendsModal: React.FC = () => {
                         <button
                           onClick={() => handleAccept(req.user.id)}
                           disabled={processingId === req.user.id}
-                          className="px-3 py-1.5 rounded-xl bg-white text-black text-xs font-bold flex items-center gap-1 hover:bg-zinc-200 transition active:scale-95 shadow"
+                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold flex items-center gap-1 hover:opacity-90 transition active:scale-95 shadow"
                         >
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
                           <span>Accept</span>
@@ -337,7 +347,7 @@ export const FriendsModal: React.FC = () => {
                   {outgoingRequests.map((req) => (
                     <div
                       key={req.id}
-                      className="p-2.5 rounded-2xl bg-zinc-950/60 border border-white/5 flex items-center justify-between gap-3"
+                      className="p-2.5 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Avatar
@@ -352,7 +362,7 @@ export const FriendsModal: React.FC = () => {
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-semibold text-zinc-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/5">
+                      <span className="text-[10px] font-semibold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
                         Pending...
                       </span>
                     </div>
@@ -365,8 +375,8 @@ export const FriendsModal: React.FC = () => {
           {/* TAB 3: ADD FRIEND */}
           {activeTab === 'add' && (
             <div className="space-y-4">
-              {/* Quick Add by exact Username or User ID */}
-              <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-white/10 space-y-2.5">
+              {/* Quick Add by exact Username */}
+              <div className="p-3.5 rounded-2xl bg-[#151923] border border-white/[0.08] space-y-2.5 shadow-sm">
                 <label className="block text-xs font-bold text-white">
                   Send Direct Friend Request
                 </label>
@@ -376,12 +386,12 @@ export const FriendsModal: React.FC = () => {
                     value={searchTarget}
                     onChange={(e) => setSearchTarget(e.target.value)}
                     placeholder="Enter @username (e.g. something)"
-                    className="flex-1 px-3.5 py-2 bg-zinc-950 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white"
+                    className="flex-1 px-3.5 py-2 bg-[#090A0F] border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50"
                   />
                   <button
                     onClick={() => searchTarget.trim() && handleSendRequest(searchTarget.trim())}
                     disabled={!searchTarget.trim() || processingId === searchTarget.trim()}
-                    className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl shadow hover:bg-zinc-200 transition active:scale-95 disabled:opacity-40"
+                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl shadow hover:opacity-90 transition active:scale-95 disabled:opacity-40"
                   >
                     Send
                   </button>
@@ -400,7 +410,7 @@ export const FriendsModal: React.FC = () => {
                     value={searchQuery}
                     onChange={(e) => handleSearchUsers(e.target.value)}
                     placeholder="Type name or @username..."
-                    className="w-full pl-9 pr-4 py-2 bg-zinc-950 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white"
+                    className="w-full pl-9 pr-4 py-2 bg-[#090A0F] border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50"
                   />
                 </div>
 
@@ -417,7 +427,7 @@ export const FriendsModal: React.FC = () => {
                       return (
                         <div
                           key={u.id}
-                          className="p-2.5 rounded-2xl bg-zinc-900/60 border border-white/10 flex items-center justify-between gap-3"
+                          className="p-2.5 rounded-2xl bg-[#151923] border border-white/[0.08] flex items-center justify-between gap-3"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <Avatar
@@ -440,10 +450,10 @@ export const FriendsModal: React.FC = () => {
                             <button
                               onClick={() => handleSendRequest(u.username)}
                               disabled={processingId === u.username}
-                              className="px-3 py-1.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-zinc-200 transition active:scale-95 shadow flex items-center gap-1"
+                              className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl hover:opacity-90 transition active:scale-95 shadow flex items-center gap-1"
                             >
                               <UserPlus className="w-3.5 h-3.5" />
-                              <span>Add Friend</span>
+                              <span>Add</span>
                             </button>
                           )}
                         </div>
