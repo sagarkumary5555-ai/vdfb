@@ -217,6 +217,21 @@ export class SocketService {
         }
       });
 
+      socket.on('call:soundboard', (data) => {
+        try {
+          const { targetUserId, soundType } = data || {};
+          if (targetUserId && soundType) {
+            this.io?.to(`user_${targetUserId}`).emit('call:soundboard', {
+              senderId: userId,
+              senderName: displayName,
+              soundType,
+            });
+          }
+        } catch (err) {
+          console.error('call:soundboard error:', err);
+        }
+      });
+
       socket.on('call:ice-restart', (data) => {
         try {
           const { targetUserId, offer } = data || {};

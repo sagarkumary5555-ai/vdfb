@@ -65,6 +65,9 @@ interface CallContextType {
   setVolumeBoost: (val: number) => void;
   floatingReactions: FloatingReaction[];
   sendCallReaction: (emoji: string) => void;
+  sendSoundboardEffect: (soundType: 'applause' | 'cheer' | 'ding' | 'trumpet') => void;
+  callEndToast: { duration: number; type: CallType; partnerName: string } | null;
+  clearCallEndToast: () => void;
   deviceCatalog: DeviceCatalog;
   selectedAudioInput: string;
   selectedVideoInput: string;
@@ -162,6 +165,9 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [networkQuality, setNetworkQuality] = useState<'excellent' | 'good' | 'fair'>('excellent');
   const [volumeBoost, setVolumeBoost] = useState(1.0);
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
+  const [callEndToast, setCallEndToast] = useState<{ duration: number; type: CallType; partnerName: string } | null>(null);
+
+  const clearCallEndToast = () => setCallEndToast(null);
 
   // Device Management State
   const [deviceCatalog, setDeviceCatalog] = useState<DeviceCatalog>({
@@ -398,6 +404,29 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Soundboard Effect Sender
+  const sendSoundboardEffect = (soundType: 'applause' | 'cheer' | 'ding' | 'trumpet') => {
+    if (soundType === 'applause') callSound.playApplause();
+    else if (soundType === 'cheer') callSound.playCheer();
+    else if (soundType === 'ding') callSound.playDing();
+    else if (soundType === 'trumpet') callSound.playTrumpet();
+
+    const emojiMap: Record<string, string> = {
+      applause: '👏',
+      cheer: '🎉',
+      ding: '🔔',
+      trumpet: '🎺',
+    };
+    sendCallReaction(emojiMap[soundType] || '🎵');
+
+    if (socket && targetUserIdRef.current) {
+      socket.emit('call:soundboard', {
+        targetUserId: targetUserIdRef.current,
+        soundType,
+      });
+    }
+  };
+
   // Switch Audio Input Device
   const setSelectedAudioInput = async (deviceId: string) => {
     setSelectedAudioInputState(deviceId);
@@ -568,6 +597,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // 4. Call Ended by Partner
     const handleCallEnded = () => {
       callSound.playEndCallTone();
+      if (callDuration > 0) {
+        setCallEndToast({
+          duration: callDuration,
+          type: callType,
+          partnerName: activePartnerInfo?.displayName || callerInfo?.callerName || 'Friend',
+        });
+        setTimeout(() => setCallEndToast(null), 6000);
+      }
       setCallState('ended');
       setTimeout(() => {
         cleanupMedia();
@@ -614,6 +651,31 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }, 2800);
     };
 
+    // 8. Live In-Call Soundboard Effect
+    const handleSoundboard = (data: { soundType: 'applause' | 'cheer' | 'ding' | 'trumpet'; senderName: string }) => {
+      if (data.soundType === 'applause') callSound.playApplause();
+      else if (data.soundType === 'cheer') callSound.playCheer();
+      else if (data.soundType === 'ding') callSound.playDing();
+      else if (data.soundType === 'trumpet') callSound.playTrumpet();
+
+      const emojiMap: Record<string, string> = {
+        applause: '👏',
+        cheer: '🎉',
+        ding: '🔔',
+        trumpet: '🎺',
+      };
+      const reactionItem: FloatingReaction = {
+        id: `${Date.now()}_${Math.random()}`,
+        emoji: emojiMap[data.soundType] || '🎵',
+        senderName: data.senderName || 'Friend',
+        leftPercent: 20 + Math.random() * 60,
+      };
+      setFloatingReactions((prev) => [...prev, reactionItem]);
+      setTimeout(() => {
+        setFloatingReactions((prev) => prev.filter((r) => r.id !== reactionItem.id));
+      }, 2800);
+    };
+
     socket.on('call:incoming', handleIncomingCall);
     socket.on('call:accepted', handleCallAccepted);
     socket.on('call:rejected', handleCallRejected);
@@ -621,6 +683,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     socket.on('call:ice-candidate', handleIceCandidate);
     socket.on('call:peer-media-toggle', handlePeerMediaToggle);
     socket.on('call:reaction', handleCallReaction);
+    socket.on('call:soundboard', handleSoundboard);
 
     return () => {
       socket.off('call:incoming', handleIncomingCall);
@@ -630,6 +693,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       socket.off('call:ice-candidate', handleIceCandidate);
       socket.off('call:peer-media-toggle', handlePeerMediaToggle);
       socket.off('call:reaction', handleCallReaction);
+      socket.off('call:soundboard', handleSoundboard);
     };
   }, [socket, callState]);
 
@@ -836,6 +900,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // End active call
   const endCall = () => {
     callSound.playEndCallTone();
+    if (callDuration > 0) {
+      setCallEndToast({
+        duration: callDuration,
+        type: callType,
+        partnerName: activePartnerInfo?.displayName || callerInfo?.callerName || 'Friend',
+      });
+      setTimeout(() => setCallEndToast(null), 6000);
+    }
     if (socket && targetUserIdRef.current) {
       socket.emit('call:end', {
         targetUserId: targetUserIdRef.current,
@@ -1048,6 +1120,9 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setVolumeBoost,
         floatingReactions,
         sendCallReaction,
+        sendSoundboardEffect,
+        callEndToast,
+        clearCallEndToast,
         deviceCatalog,
         selectedAudioInput,
         selectedVideoInput,

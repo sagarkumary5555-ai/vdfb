@@ -19,11 +19,13 @@ import {
   X,
   Camera,
   Speaker,
+  Music,
+  Maximize,
 } from 'lucide-react';
 import { useCall } from '../../context/CallContext.js';
 import { Avatar } from '../Common/Avatar.js';
 
-const QUICK_REACTIONS = ['❤️', '🔥', '👏', '🎉', '😂', '💯'];
+const QUICK_REACTIONS = ['❤️', '🔥', '👏', '🎉', '😂', '💯', '😍', '🚀'];
 
 export const CallModal: React.FC = () => {
   const {
@@ -40,6 +42,7 @@ export const CallModal: React.FC = () => {
     voiceIsolation,
     peerMedia,
     callDuration,
+    localAudioLevel,
     remoteAudioLevel,
     isRemoteSpeaking,
     isLocalSpeaking,
@@ -48,6 +51,9 @@ export const CallModal: React.FC = () => {
     setVolumeBoost,
     floatingReactions,
     sendCallReaction,
+    sendSoundboardEffect,
+    callEndToast,
+    clearCallEndToast,
     deviceCatalog,
     selectedAudioInput,
     selectedVideoInput,
@@ -66,10 +72,12 @@ export const CallModal: React.FC = () => {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showReactionsBar, setShowReactionsBar] = useState(false);
+  const [showSoundboardBar, setShowSoundboardBar] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const videoContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Attach local media stream
   useEffect(() => {
@@ -99,16 +107,20 @@ export const CallModal: React.FC = () => {
     }
   }, [remoteStream, isPip, isVideoOrScreenActive, volumeBoost]);
 
-  if (callState === 'idle' || callState === 'incoming') return null;
-
-  const partnerName = activePartnerInfo?.displayName || callerInfo?.callerName || 'Friend';
-  const partnerUsername = activePartnerInfo?.username || callerInfo?.callerUsername || 'user';
-  const partnerAvatar = activePartnerInfo?.avatarUrl || callerInfo?.callerAvatar || null;
-
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Toggle true browser fullscreen for video / screen sharing
+  const toggleBrowserFullscreen = () => {
+    if (!videoContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      videoContainerRef.current.requestFullscreen().catch(() => {});
+    }
   };
 
   // Generate 14 responsive dynamic waveform bar heights based on real-time audio volume
@@ -119,6 +131,38 @@ export const CallModal: React.FC = () => {
     const factor = Math.sin((barIndex / 14) * Math.PI) * 0.85 + 0.25;
     return Math.min(100, Math.max(10, Math.round(baseHeight + multiplier * factor)));
   };
+
+  // ========================================================
+  // Call Ended Toast Banner (when not in a call)
+  // ========================================================
+  if (callState === 'idle' || callState === 'incoming') {
+    if (callEndToast) {
+      return (
+        <div className="fixed top-6 right-6 z-50 animate-slide-up select-none">
+          <div className="flex items-center gap-3 px-4 py-3 bg-[#0D1018]/95 border border-white/20 rounded-2xl shadow-2xl backdrop-blur-xl">
+            <div className="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/30">
+              <PhoneOff className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-xs font-bold text-white">Call Ended with {callEndToast.partnerName}</span>
+              <span className="text-[10px] text-zinc-400">Duration: {formatTimer(callEndToast.duration)} • Encrypted Opus 48kHz</span>
+            </div>
+            <button
+              onClick={clearCallEndToast}
+              className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 ml-2"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  const partnerName = activePartnerInfo?.displayName || callerInfo?.callerName || 'Friend';
+  const partnerUsername = activePartnerInfo?.username || callerInfo?.callerUsername || 'user';
+  const partnerAvatar = activePartnerInfo?.avatarUrl || callerInfo?.callerAvatar || null;
 
   // ========================================================
   // Floating Picture-in-Picture (PiP) Mode
@@ -239,8 +283,10 @@ export const CallModal: React.FC = () => {
         ))}
       </div>
 
-      <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-4xl sm:aspect-[16/10] bg-[#07090E] rounded-none sm:rounded-3xl border-0 sm:border border-white/[0.12] shadow-2xl overflow-hidden flex flex-col">
-        
+      <div
+        ref={videoContainerRef}
+        className="relative w-full h-[100dvh] sm:h-auto sm:max-w-4xl sm:aspect-[16/10] bg-[#07090E] rounded-none sm:rounded-3xl border-0 sm:border border-white/[0.12] shadow-2xl overflow-hidden flex flex-col"
+      >
         {/* Remote Video Stream / Screen Share Full View */}
         {isVideoOrScreenActive && remoteStream ? (
           <div className="relative flex-1 w-full h-full bg-black overflow-hidden flex items-center justify-center">
@@ -256,6 +302,15 @@ export const CallModal: React.FC = () => {
                 <span>{partnerName}'s Screen (1080p HD)</span>
               </div>
             )}
+            
+            {/* Cinema Fullscreen Button */}
+            <button
+              onClick={toggleBrowserFullscreen}
+              className="absolute top-16 right-4 sm:top-5 sm:right-5 z-20 p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/10"
+              title="Toggle Cinema Fullscreen"
+            >
+              <Maximize className="w-4 h-4" />
+            </button>
           </div>
         ) : (
           /* Voice Call Visualizer & Active Speaker Stage */
@@ -381,9 +436,28 @@ export const CallModal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Soundboard Sound Effects Button */}
+            <button
+              onClick={() => {
+                setShowSoundboardBar(!showSoundboardBar);
+                setShowReactionsBar(false);
+              }}
+              className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
+                showSoundboardBar
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400 shadow-md'
+                  : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
+              }`}
+              title="In-Call Sound Effects"
+            >
+              <Music className="w-4 h-4" />
+            </button>
+
             {/* Quick In-Call Reaction Emojis Button */}
             <button
-              onClick={() => setShowReactionsBar(!showReactionsBar)}
+              onClick={() => {
+                setShowReactionsBar(!showReactionsBar);
+                setShowSoundboardBar(false);
+              }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showReactionsBar
                   ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white border-pink-400 shadow-md'
@@ -426,6 +500,52 @@ export const CallModal: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Floating Soundboard Toolbar */}
+        {showSoundboardBar && (
+          <div className="absolute top-16 right-4 z-30 p-2.5 bg-[#121522]/95 border border-white/15 rounded-2xl shadow-2xl flex items-center gap-2 backdrop-blur-xl animate-slide-down">
+            <button
+              onClick={() => {
+                sendSoundboardEffect('applause');
+                setShowSoundboardBar(false);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white flex items-center gap-1.5 transition active:scale-95"
+            >
+              <span>👏</span>
+              <span>Applause</span>
+            </button>
+            <button
+              onClick={() => {
+                sendSoundboardEffect('cheer');
+                setShowSoundboardBar(false);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white flex items-center gap-1.5 transition active:scale-95"
+            >
+              <span>🎉</span>
+              <span>Cheer</span>
+            </button>
+            <button
+              onClick={() => {
+                sendSoundboardEffect('ding');
+                setShowSoundboardBar(false);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white flex items-center gap-1.5 transition active:scale-95"
+            >
+              <span>🔔</span>
+              <span>Ding</span>
+            </button>
+            <button
+              onClick={() => {
+                sendSoundboardEffect('trumpet');
+                setShowSoundboardBar(false);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white flex items-center gap-1.5 transition active:scale-95"
+            >
+              <span>🎺</span>
+              <span>Fanfare</span>
+            </button>
+          </div>
+        )}
 
         {/* Floating Quick Reactions Toolbar */}
         {showReactionsBar && (
@@ -525,6 +645,23 @@ export const CallModal: React.FC = () => {
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Live Microphone Test VU Meter */}
+            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-white">
+                <span className="flex items-center gap-1.5">
+                  <Mic className="w-4 h-4 text-emerald-400" />
+                  Your Mic Live Input Level
+                </span>
+                <span className="text-emerald-400">{localAudioLevel}%</span>
+              </div>
+              <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden p-0.5 border border-white/10">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-100"
+                  style={{ width: `${Math.min(100, localAudioLevel * 1.2)}%` }}
+                />
+              </div>
             </div>
 
             {/* Volume Booster Slider */}
