@@ -90,7 +90,7 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ src, isMe = fa
 
   return (
     <div className={`flex items-center gap-3 p-2 sm:p-2.5 rounded-2xl ${
-      isMe ? 'bg-black/25' : 'bg-dark-950/70'
+      isMe ? 'bg-black/30' : 'bg-[#080B12]/80'
     } border border-white/10 select-none max-w-xs sm:max-w-sm mt-1.5 shadow-inner`}>
       <audio ref={audioRef} src={src} preload="metadata" />
 
@@ -100,8 +100,8 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ src, isMe = fa
         onClick={togglePlay}
         className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition active:scale-95 flex-shrink-0 ${
           isMe
-            ? 'bg-white text-dark-950 shadow-md hover:bg-slate-100'
-            : 'bg-gradient-to-tr from-brand-rose to-brand-purple text-white shadow-md hover:opacity-90'
+            ? 'bg-white text-black shadow-md hover:bg-zinc-200'
+            : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md hover:opacity-90 shadow-blue-500/20'
         }`}
       >
         {isPlaying ? (
@@ -129,10 +129,10 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ src, isMe = fa
                   isPlayed
                     ? isMe
                       ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]'
-                      : 'bg-brand-pink shadow-[0_0_8px_rgba(244,63,94,0.6)]'
+                      : 'bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.6)]'
                     : isMe
                     ? 'bg-white/35 group-hover:bg-white/50'
-                    : 'bg-slate-600/60 group-hover:bg-slate-500'
+                    : 'bg-zinc-700/60 group-hover:bg-zinc-600'
                 }`}
                 style={{
                   height: `${h}%`,
@@ -144,12 +144,13 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ src, isMe = fa
         </div>
 
         {/* Time & Speed Controls */}
-        <div className="flex items-center justify-between text-[10px] text-slate-300 font-medium px-0.5 mt-0.5">
+        <div className="flex items-center justify-between text-[10px] text-zinc-300 font-medium px-0.5 mt-0.5">
           <span>{formatTime(isPlaying ? currentTime : totalDuration || currentTime)}</span>
           <button
             type="button"
             onClick={cyclePlaybackRate}
-            className="px-1.5 py-0.2 rounded-md bg-white/10 hover:bg-white/20 text-[9px] font-bold text-slate-200 transition"
+            className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white font-bold transition"
+            title="Cycle speed"
           >
             {playbackRate}x
           </button>
