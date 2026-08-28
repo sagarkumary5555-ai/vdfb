@@ -132,7 +132,6 @@ export const CallModal: React.FC = () => {
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -148,21 +147,13 @@ export const CallModal: React.FC = () => {
     isScreenSharing ||
     peerMedia.isScreenSharing;
 
-  // Attach remote media stream for video and direct audio playback
+  // Attach remote media stream for video visual display
   useEffect(() => {
-    if (remoteStream) {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch(() => {});
-      }
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.volume = Math.min(1.0, volumeBoost);
-        remoteAudioRef.current.muted = false;
-        remoteAudioRef.current.play().catch(() => {});
-      }
+    if (remoteStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
     }
-  }, [remoteStream, isPip, isVideoOrScreenActive, volumeBoost]);
+  }, [remoteStream, isPip, isVideoOrScreenActive]);
 
   // Auto-scroll in-call chat
   useEffect(() => {
@@ -299,8 +290,6 @@ export const CallModal: React.FC = () => {
   if (isPip) {
     return (
       <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 w-64 sm:w-72 bg-[#0E111A]/95 rounded-3xl border border-white/20 shadow-2xl overflow-hidden animate-slide-up flex flex-col select-none backdrop-blur-2xl">
-        <audio ref={remoteAudioRef} autoPlay playsInline />
-        
         {/* Floating Reactions Overlay */}
         <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
           {floatingReactions.map((r) => (
@@ -397,8 +386,6 @@ export const CallModal: React.FC = () => {
   // ========================================================
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-2xl animate-fade-in select-none font-sans">
-      <audio ref={remoteAudioRef} autoPlay playsInline />
-      
       {/* Floating Reactions Across Screen */}
       <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
         {floatingReactions.map((r) => (

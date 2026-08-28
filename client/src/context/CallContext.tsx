@@ -227,7 +227,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const audioContextRef = useRef<AudioContext | null>(null);
   const localAnalyserRef = useRef<AnalyserNode | null>(null);
   const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
   // Load hardware media devices
@@ -255,25 +254,50 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Dedicated remote audio player with auto-unlock listeners
   const playRemoteAudio = (stream: MediaStream) => {
+    if (!stream) return;
     try {
+      // Ensure all incoming audio tracks are explicitly enabled
+      stream.getAudioTracks().forEach((track) => {
+        track.enabled = true;
+      });
+
+      const ctx = AudioDspService.getContext();
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
       if (remoteAudioRef.current) {
-        if (remoteAudioRef.current.srcObject !== stream) {
-          remoteAudioRef.current.srcObject = stream;
+        const audioEl = remoteAudioRef.current;
+        if (audioEl.srcObject !== stream) {
+          audioEl.srcObject = stream;
         }
-        remoteAudioRef.current.volume = volumeBoost;
-        remoteAudioRef.current.muted = false;
-        const p = remoteAudioRef.current.play();
-        if (p !== undefined) {
-          p.catch((err) => {
-            console.warn('Autoplay prevented remote audio, waiting for user gesture unlock:', err);
-            const unlock = () => {
-              remoteAudioRef.current?.play().catch(() => {});
-              window.removeEventListener('click', unlock);
-              window.removeEventListener('touchstart', unlock);
-            };
-            window.addEventListener('click', unlock, { once: true });
-            window.addEventListener('touchstart', unlock, { once: true });
-          });
+        audioEl.volume = Math.min(1.0, Math.max(0.1, volumeBoost));
+        audioEl.muted = false;
+
+        const playPromise = audioEl.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('🔊 WebRTC remote audio playing cleanly');
+            })
+            .catch((err) => {
+              console.warn('Autoplay prevented remote audio, waiting for user gesture unlock:', err);
+              const unlock = () => {
+                audioEl.muted = false;
+                audioEl.play().catch(() => {});
+                if (ctx && ctx.state === 'suspended') {
+                  ctx.resume().catch(() => {});
+                }
+                window.removeEventListener('click', unlock);
+                window.removeEventListener('touchstart', unlock);
+                window.removeEventListener('pointerdown', unlock);
+                window.removeEventListener('keydown', unlock);
+              };
+              window.addEventListener('click', unlock, { once: true });
+              window.addEventListener('touchstart', unlock, { once: true });
+              window.addEventListener('pointerdown', unlock, { once: true });
+              window.addEventListener('keydown', unlock, { once: true });
+            });
         }
       }
     } catch (e) {
@@ -291,9 +315,12 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       const ctx = AudioDspService.getContext();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
       audioContextRef.current = ctx;
 
-      // Local stream analyser
+      // Local stream analyser for visual VU meter
       if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
         try {
           const localSrc = ctx.createMediaStreamSource(localStreamRef.current);
@@ -307,21 +334,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      // Remote stream analyser & volume booster gain node
+      // Remote stream analyser for visual speaking indicator & waveform
       if (remoteStreamRef.current && remoteStreamRef.current.getAudioTracks().length > 0) {
         try {
           const remoteSrc = ctx.createMediaStreamSource(remoteStreamRef.current);
           const remoteAnalyser = ctx.createAnalyser();
           remoteAnalyser.fftSize = 64;
           remoteAnalyser.smoothingTimeConstant = 0.5;
-
-          const gainNode = ctx.createGain();
-          gainNode.gain.setValueAtTime(volumeBoost, ctx.currentTime);
-          gainNodeRef.current = gainNode;
-
           remoteSrc.connect(remoteAnalyser);
-          remoteAnalyser.connect(gainNode);
-          gainNode.connect(ctx.destination);
           remoteAnalyserRef.current = remoteAnalyser;
         } catch {
           // Ignore
@@ -363,13 +383,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [callState, localStream, remoteStream]);
 
-  // Adjust volume boost gain node in real-time
+  // Adjust volume boost in real-time
   useEffect(() => {
-    if (gainNodeRef.current && audioContextRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(volumeBoost, audioContextRef.current.currentTime);
-    }
     if (remoteAudioRef.current) {
-      remoteAudioRef.current.volume = Math.min(1.0, volumeBoost);
+      remoteAudioRef.current.volume = Math.min(1.0, Math.max(0.1, volumeBoost));
     }
   }, [volumeBoost]);
 
@@ -959,7 +976,21 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLocalStream(stream);
 
       const pc = createPeerConnection();
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      
+      // Ensure audio transceivers for lossless bidirectional audio
+      try {
+        pc.addTransceiver('audio', { direction: 'sendrecv' });
+        if (type === 'video') {
+          pc.addTransceiver('video', { direction: 'sendrecv' });
+        }
+      } catch (e) {
+        // Fallback for older browsers
+      }
+
+      stream.getTracks().forEach((track) => {
+        track.enabled = true;
+        pc.addTrack(track, stream);
+      });
 
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
@@ -986,13 +1017,31 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     soundService.unlockAudio();
     callSound.stopRingtone();
+
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = false;
+    }
+
     try {
       const stream = await acquireProcessedStream(callerInfo.type);
       localStreamRef.current = stream;
       setLocalStream(stream);
 
       const pc = createPeerConnection();
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      try {
+        pc.addTransceiver('audio', { direction: 'sendrecv' });
+        if (callerInfo.type === 'video') {
+          pc.addTransceiver('video', { direction: 'sendrecv' });
+        }
+      } catch (e) {
+        // Fallback for older browsers
+      }
+
+      stream.getTracks().forEach((track) => {
+        track.enabled = true;
+        pc.addTrack(track, stream);
+      });
 
       await pc.setRemoteDescription(new RTCSessionDescription(callerInfo.offer));
 
@@ -1006,7 +1055,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      const answer = await pc.createAnswer();
+      const answer = await pc.createAnswer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
       await pc.setLocalDescription(answer);
 
       socket.emit('call:accept', {
