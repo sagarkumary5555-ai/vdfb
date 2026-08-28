@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Sparkles, Shield, PhoneCall, ArrowRight, MessageSquare, Zap } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, Shield, PhoneCall, ArrowRight, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { Register } from './Register.js';
 
@@ -15,20 +15,6 @@ export const Login: React.FC = () => {
   if (isRegisterMode) {
     return <Register onSwitchToLogin={() => setIsRegisterMode(false)} />;
   }
-
-  const handleQuickLogin = async (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    setIsLoading(true);
-    setError(null);
-    try {
-      await login(u, p);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Login failed.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,16 +36,16 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] w-screen bg-[#060608] flex items-center justify-center p-4 sm:p-6 lg:p-12 font-sans select-none text-white overflow-y-auto">
-      {/* Background ambient lighting */}
+    <div className="relative min-h-[100dvh] w-screen bg-[#060608] flex items-center justify-center p-4 sm:p-6 lg:p-12 font-sans select-none text-white overflow-x-hidden overflow-y-auto">
+      {/* Background ambient luxury lighting */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-zinc-800/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-zinc-900/30 rounded-full blur-3xl pointer-events-none" />
 
-      {/* 2-Column Professional Architecture Container */}
+      {/* 2-Column Responsive Architecture Container */}
       <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto">
         
         {/* ========================================================= */}
-        {/* LEFT COLUMN: Brand Identity & Native 3D Mockup            */}
+        {/* LEFT COLUMN: Brand Identity & 3D Mockup (Hidden on mobile)*/}
         {/* ========================================================= */}
         <div className="hidden lg:flex lg:col-span-7 flex-col items-start justify-center pr-4 space-y-7">
           {/* Custom Luxury Brand Logo & Name */}
@@ -89,7 +75,7 @@ export const Login: React.FC = () => {
               .
             </h1>
             <p className="text-sm text-zinc-400 leading-relaxed pt-1">
-              Connect instantly with accepted friends, create private squads, share media, and make crystal-clear WebRTC voice & video calls.
+              Connect instantly with friends, create private squads, share lossless media, and make crystal-clear WebRTC voice & video calls.
             </p>
           </div>
 
@@ -184,20 +170,28 @@ export const Login: React.FC = () => {
         </div>
 
         {/* ========================================================= */}
-        {/* RIGHT COLUMN: Sign In Card & 1-Click Fast Logins          */}
+        {/* RIGHT COLUMN: Ultra-Clean Sign In Form Card               */}
         {/* ========================================================= */}
-        <div className="w-full lg:col-span-5 mx-auto">
+        <div className="w-full lg:col-span-5 mx-auto max-w-md">
           <div className="bg-[#101014] rounded-3xl p-6 sm:p-8 border border-white/12 shadow-2xl backdrop-blur-2xl">
             
             {/* Header */}
-            <div className="mb-5">
-              <div className="lg:hidden flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center">
-                  <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-white text-black flex items-center justify-center shadow-lg">
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
-                <span className="text-base font-bold text-white tracking-tight">ChatUs PRO</span>
+                <div>
+                  <div className="text-base font-extrabold text-white tracking-tight flex items-center gap-1.5">
+                    <span>ChatUs</span>
+                    <span className="text-[9px] uppercase font-bold tracking-widest text-zinc-400 bg-white/10 px-1.5 py-0.5 rounded-md border border-white/10">
+                      PRO
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">Secure Social Messenger</p>
+                </div>
               </div>
 
               <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
@@ -208,34 +202,8 @@ export const Login: React.FC = () => {
               </p>
             </div>
 
-            {/* 1-Tap Quick Demo Credentials */}
-            <div className="mb-4 p-3 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                <Zap className="w-3 h-3 text-amber-400" />
-                <span>1-Tap Instant Sign-In</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('sagar', '99313935287549051214')}
-                  disabled={isLoading}
-                  className="py-1.5 px-2 bg-zinc-900 hover:bg-zinc-800 border border-white/15 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition active:scale-95 shadow"
-                >
-                  <span>👑 Sagar</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('something', '<yaade>')}
-                  disabled={isLoading}
-                  className="py-1.5 px-2 bg-zinc-900 hover:bg-zinc-800 border border-white/15 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition active:scale-95 shadow"
-                >
-                  <span>💫 Something</span>
-                </button>
-              </div>
-            </div>
-
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-3.5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center gap-2 animate-fade-in">
                   <span>⚠️</span>
@@ -254,7 +222,7 @@ export const Login: React.FC = () => {
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
                   placeholder="Enter your @username"
                   required
-                  className="w-full px-3.5 py-2.5 bg-zinc-900/90 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900/90 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition shadow-inner"
                 />
               </div>
 
@@ -272,12 +240,12 @@ export const Login: React.FC = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
-                    className="w-full px-3.5 pr-10 py-2.5 bg-zinc-900/90 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition"
+                    className="w-full px-3.5 pr-10 py-2.5 bg-zinc-900/90 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:bg-zinc-900 transition shadow-inner"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-white"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-white transition"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -288,7 +256,7 @@ export const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 px-4 bg-white hover:bg-zinc-200 active:scale-[0.98] text-black font-bold rounded-xl shadow-lg transition disabled:opacity-50 text-xs sm:text-sm flex items-center justify-center gap-2 mt-2"
+                className="w-full py-3 px-4 bg-white hover:bg-zinc-200 active:scale-[0.98] text-black font-bold rounded-xl shadow-xl transition disabled:opacity-50 text-xs sm:text-sm flex items-center justify-center gap-2 mt-2"
               >
                 {isLoading ? (
                   <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto" />
@@ -302,7 +270,7 @@ export const Login: React.FC = () => {
             </form>
 
             {/* Divider */}
-            <div className="relative my-4">
+            <div className="relative my-5">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-white/10" />
               </div>
@@ -322,7 +290,7 @@ export const Login: React.FC = () => {
             </button>
 
             {/* Footer Trust Signal */}
-            <div className="text-center pt-4 text-zinc-500 text-[10px] flex items-center justify-center gap-1">
+            <div className="text-center pt-5 text-zinc-500 text-[10px] flex items-center justify-center gap-1">
               <Shield className="w-3 h-3 text-zinc-400" />
               <span>Encrypted Session • High-Speed WebSockets</span>
             </div>
