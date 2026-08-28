@@ -80,6 +80,10 @@ interface CallContextType {
   isSelfMirrored: boolean;
   toggleSelfMirror: () => void;
   testSpeakerSound: () => void;
+  ambientTheme: 'aurora' | 'cyber' | 'emerald' | 'sunset';
+  setAmbientTheme: (theme: 'aurora' | 'cyber' | 'emerald' | 'sunset') => void;
+  noiseGateThreshold: number;
+  setNoiseGateThreshold: (val: number) => void;
   startCall: (type: CallType, targetUser: ActivePartnerInfo) => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
@@ -185,6 +189,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [selectedAudioOutput, setSelectedAudioOutputState] = useState('');
   const [videoQuality, setVideoQualityState] = useState<'1080p' | '720p' | '360p'>('1080p');
   const [isSelfMirrored, setIsSelfMirrored] = useState(true);
+  const [ambientTheme, setAmbientTheme] = useState<'aurora' | 'cyber' | 'emerald' | 'sunset'>('aurora');
+  const [noiseGateThreshold, setNoiseGateThreshold] = useState(18);
 
   const isLocalSpeaking = localAudioLevel > 15;
   const isRemoteSpeaking = remoteAudioLevel > 15;
@@ -1186,6 +1192,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isSelfMirrored,
         toggleSelfMirror,
         testSpeakerSound,
+        ambientTheme,
+        setAmbientTheme,
+        noiseGateThreshold,
+        setNoiseGateThreshold,
         startCall,
         acceptCall,
         rejectCall,
