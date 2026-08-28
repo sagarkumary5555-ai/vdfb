@@ -21,8 +21,15 @@ import {
   Speaker,
   Music,
   Maximize,
+  MessageSquare,
+  Send,
+  Camera as SnapshotIcon,
+  Play,
+  FlipHorizontal,
 } from 'lucide-react';
 import { useCall } from '../../context/CallContext.js';
+import { useChat } from '../../context/ChatContext.js';
+import { useAuth } from '../../context/AuthContext.js';
 import { Avatar } from '../Common/Avatar.js';
 
 const QUICK_REACTIONS = ['❤️', '🔥', '👏', '🎉', '😂', '💯', '😍', '🚀'];
@@ -61,6 +68,11 @@ export const CallModal: React.FC = () => {
     setSelectedAudioInput,
     setSelectedVideoInput,
     setSelectedAudioOutput,
+    videoQuality,
+    setVideoQuality,
+    isSelfMirrored,
+    toggleSelfMirror,
+    testSpeakerSound,
     endCall,
     toggleMute,
     toggleVideo,
@@ -70,14 +82,20 @@ export const CallModal: React.FC = () => {
     togglePip,
   } = useCall();
 
+  const { messages, sendMessage } = useChat();
+  const { user: currentUser } = useAuth();
+
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showReactionsBar, setShowReactionsBar] = useState(false);
   const [showSoundboardBar, setShowSoundboardBar] = useState(false);
+  const [showInCallChat, setShowInCallChat] = useState(false);
+  const [chatInputText, setChatInputText] = useState('');
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
+  const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
   // Attach local media stream
   useEffect(() => {
@@ -107,6 +125,12 @@ export const CallModal: React.FC = () => {
     }
   }, [remoteStream, isPip, isVideoOrScreenActive, volumeBoost]);
 
+  useEffect(() => {
+    if (showInCallChat && chatBottomRef.current) {
+      chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [showInCallChat, messages]);
+
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -120,6 +144,41 @@ export const CallModal: React.FC = () => {
       document.exitFullscreen().catch(() => {});
     } else {
       videoContainerRef.current.requestFullscreen().catch(() => {});
+    }
+  };
+
+  // Take High-Res Call Snapshot
+  const captureSnapshot = () => {
+    if (!remoteVideoRef.current) return;
+    try {
+      const video = remoteVideoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `call-snapshot-${Date.now()}.png`;
+        a.click();
+      }
+    } catch (e) {
+      console.warn('Snapshot capture fallback:', e);
+    }
+  };
+
+  // Send In-Call Chat Message
+  const handleSendInCallMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInputText.trim()) return;
+    const text = chatInputText.trim();
+    setChatInputText('');
+    try {
+      await sendMessage(text);
+    } catch {
+      // Safe ignore
     }
   };
 
@@ -303,14 +362,23 @@ export const CallModal: React.FC = () => {
               </div>
             )}
             
-            {/* Cinema Fullscreen Button */}
-            <button
-              onClick={toggleBrowserFullscreen}
-              className="absolute top-16 right-4 sm:top-5 sm:right-5 z-20 p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/10"
-              title="Toggle Cinema Fullscreen"
-            >
-              <Maximize className="w-4 h-4" />
-            </button>
+            {/* Snapshot & Fullscreen Quick Actions */}
+            <div className="absolute top-16 right-4 sm:top-5 sm:right-5 z-20 flex items-center gap-2">
+              <button
+                onClick={captureSnapshot}
+                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/10 transition active:scale-95"
+                title="Capture HD Snapshot"
+              >
+                <SnapshotIcon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={toggleBrowserFullscreen}
+                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/10 transition active:scale-95"
+                title="Toggle Cinema Fullscreen"
+              >
+                <Maximize className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ) : (
           /* Voice Call Visualizer & Active Speaker Stage */
@@ -399,7 +467,7 @@ export const CallModal: React.FC = () => {
                 autoPlay
                 playsInline
                 muted
-                className={`w-full h-full object-cover ${isScreenSharing ? '' : '-scale-x-100'}`}
+                className={`w-full h-full object-cover ${isScreenSharing || !isSelfMirrored ? '' : '-scale-x-100'}`}
               />
             )}
             <div className="absolute bottom-1 left-2 text-[9px] font-bold text-white bg-black/80 px-2 py-0.5 rounded backdrop-blur-xs flex items-center gap-1 border border-white/10">
@@ -436,11 +504,29 @@ export const CallModal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* In-Call Instant Chat Drawer Toggle */}
+            <button
+              onClick={() => {
+                setShowInCallChat(!showInCallChat);
+                setShowReactionsBar(false);
+                setShowSoundboardBar(false);
+              }}
+              className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
+                showInCallChat
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-900/50'
+                  : 'bg-black/60 hover:bg-black/80 text-zinc-300 border-white/10'
+              }`}
+              title="In-Call Chat Messenger"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+
             {/* Soundboard Sound Effects Button */}
             <button
               onClick={() => {
                 setShowSoundboardBar(!showSoundboardBar);
                 setShowReactionsBar(false);
+                setShowInCallChat(false);
               }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showSoundboardBar
@@ -457,6 +543,7 @@ export const CallModal: React.FC = () => {
               onClick={() => {
                 setShowReactionsBar(!showReactionsBar);
                 setShowSoundboardBar(false);
+                setShowInCallChat(false);
               }}
               className={`p-2.5 rounded-2xl border transition active:scale-95 backdrop-blur-md ${
                 showReactionsBar
@@ -500,6 +587,65 @@ export const CallModal: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* In-Call Slide-Out Mini Chat Drawer */}
+        {showInCallChat && (
+          <div className="absolute top-16 right-0 bottom-24 z-30 w-72 sm:w-80 bg-[#0E111A]/95 border-l border-white/15 rounded-l-3xl shadow-2xl flex flex-col backdrop-blur-2xl animate-slide-left overflow-hidden">
+            <div className="p-3 border-b border-white/10 flex items-center justify-between bg-[#151923]">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-blue-400" />
+                <span className="text-xs font-bold text-white">In-Call Chat</span>
+              </div>
+              <button
+                onClick={() => setShowInCallChat(false)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Messages Feed */}
+            <div className="flex-1 p-3 overflow-y-auto space-y-2.5 custom-scrollbar text-xs">
+              {messages.slice(-20).map((msg) => {
+                const isMe = msg.senderId === currentUser?.id;
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                  >
+                    <div
+                      className={`px-3 py-2 rounded-2xl max-w-[85%] break-words ${
+                        isMe
+                          ? 'bg-blue-600 text-white rounded-br-none'
+                          : 'bg-[#1C2230] text-zinc-200 rounded-bl-none border border-white/10'
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* Quick In-Call Message Input */}
+            <form onSubmit={handleSendInCallMessage} className="p-2 bg-[#121520] border-t border-white/10 flex items-center gap-1.5">
+              <input
+                type="text"
+                value={chatInputText}
+                onChange={(e) => setChatInputText(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1 bg-[#1A2030] text-white text-xs px-3 py-2 rounded-xl border border-white/10 focus:outline-none focus:border-blue-500"
+              />
+              <button
+                type="submit"
+                className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition active:scale-95"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          </div>
+        )}
 
         {/* Floating Soundboard Toolbar */}
         {showSoundboardBar && (
@@ -633,7 +779,7 @@ export const CallModal: React.FC = () => {
       {/* In-Call Advanced Settings & Hardware Device Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
-          <div className="relative w-full max-w-md bg-[#0D1018] rounded-3xl border border-white/15 p-5 sm:p-6 shadow-2xl space-y-4 animate-slide-up">
+          <div className="relative w-full max-w-md bg-[#0D1018] rounded-3xl border border-white/15 p-5 sm:p-6 shadow-2xl space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-blue-400" />
@@ -687,6 +833,64 @@ export const CallModal: React.FC = () => {
                 <span>100% (Normal)</span>
                 <span>200% (2x Boost)</span>
               </div>
+            </div>
+
+            {/* Video Resolution Preset Selector */}
+            {callType === 'video' && (
+              <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-white">
+                  <span>Video Resolution / Bandwidth Preset</span>
+                  <span className="text-blue-400 font-semibold uppercase">{videoQuality}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['1080p', '720p', '360p'] as const).map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => setVideoQuality(q)}
+                      className={`py-1.5 rounded-xl text-xs font-bold transition ${
+                        videoQuality === q
+                          ? 'bg-blue-600 text-white shadow'
+                          : 'bg-white/5 hover:bg-white/10 text-zinc-400'
+                      }`}
+                    >
+                      {q === '1080p' ? '1080p HD' : q === '720p' ? '720p' : '360p Saver'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Self-View Mirroring Toggle */}
+            {callType === 'video' && (
+              <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <FlipHorizontal className="w-4 h-4 text-zinc-400" />
+                  Mirror Self Camera View
+                </span>
+                <button
+                  onClick={toggleSelfMirror}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition ${
+                    isSelfMirrored ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/10 text-zinc-400'
+                  }`}
+                >
+                  {isSelfMirrored ? 'Mirrored (ON)' : 'Normal (OFF)'}
+                </button>
+              </div>
+            )}
+
+            {/* Speaker Audio Test Button */}
+            <div className="p-3.5 bg-[#151923] rounded-2xl border border-white/[0.08] flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Speaker className="w-4 h-4 text-indigo-400" />
+                Test Speaker Output Chime
+              </span>
+              <button
+                onClick={testSpeakerSound}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 transition active:scale-95 shadow"
+              >
+                <Play className="w-3 h-3" />
+                <span>Play Chime</span>
+              </button>
             </div>
 
             {/* Microphone Selection */}

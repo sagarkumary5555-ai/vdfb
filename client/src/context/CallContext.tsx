@@ -75,6 +75,11 @@ interface CallContextType {
   setSelectedAudioInput: (id: string) => Promise<void>;
   setSelectedVideoInput: (id: string) => Promise<void>;
   setSelectedAudioOutput: (id: string) => Promise<void>;
+  videoQuality: '1080p' | '720p' | '360p';
+  setVideoQuality: (q: '1080p' | '720p' | '360p') => Promise<void>;
+  isSelfMirrored: boolean;
+  toggleSelfMirror: () => void;
+  testSpeakerSound: () => void;
   startCall: (type: CallType, targetUser: ActivePartnerInfo) => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
@@ -178,6 +183,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [selectedAudioInput, setSelectedAudioInputState] = useState('');
   const [selectedVideoInput, setSelectedVideoInputState] = useState('');
   const [selectedAudioOutput, setSelectedAudioOutputState] = useState('');
+  const [videoQuality, setVideoQualityState] = useState<'1080p' | '720p' | '360p'>('1080p');
+  const [isSelfMirrored, setIsSelfMirrored] = useState(true);
 
   const isLocalSpeaking = localAudioLevel > 15;
   const isRemoteSpeaking = remoteAudioLevel > 15;
@@ -490,6 +497,50 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (e) {
       console.warn('Audio output sink switching not supported on this browser:', e);
     }
+  };
+
+  // Switch Video Quality / Resolution Preset
+  const setVideoQuality = async (q: '1080p' | '720p' | '360p') => {
+    setVideoQualityState(q);
+    if (!peerConnectionRef.current || !localStreamRef.current || isScreenSharing) return;
+    try {
+      const dimensions =
+        q === '1080p'
+          ? { width: { ideal: 1920 }, height: { ideal: 1080 } }
+          : q === '720p'
+          ? { width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { width: { ideal: 640 }, height: { ideal: 360 } };
+
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          ...dimensions,
+          facingMode: currentFacingModeRef.current,
+        },
+      });
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const sender = peerConnectionRef.current
+        .getSenders()
+        .find((s) => s.track && s.track.kind === 'video');
+      if (sender && newVideoTrack) {
+        sender.replaceTrack(newVideoTrack);
+      }
+      localStreamRef.current.getVideoTracks().forEach((t) => t.stop());
+      localStreamRef.current.removeTrack(localStreamRef.current.getVideoTracks()[0]);
+      localStreamRef.current.addTrack(newVideoTrack);
+      setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+    } catch (e) {
+      console.warn('Error adjusting video quality:', e);
+    }
+  };
+
+  // Toggle Self-View Mirroring
+  const toggleSelfMirror = () => {
+    setIsSelfMirrored((prev) => !prev);
+  };
+
+  // Test Speaker Sound
+  const testSpeakerSound = () => {
+    callSound.playDing();
   };
 
   // Clean local media tracks
@@ -1130,6 +1181,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSelectedAudioInput,
         setSelectedVideoInput,
         setSelectedAudioOutput,
+        videoQuality,
+        setVideoQuality,
+        isSelfMirrored,
+        toggleSelfMirror,
+        testSpeakerSound,
         startCall,
         acceptCall,
         rejectCall,
