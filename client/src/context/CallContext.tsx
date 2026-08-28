@@ -1032,7 +1032,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
-        offerToReceiveVideo: type === 'video',
+        offerToReceiveVideo: true,
       });
       await pc.setLocalDescription(offer);
 
@@ -1198,6 +1198,77 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('voice_isolation', nextVal.toString());
   };
 
+  // Stop Screen Sharing Helper
+  const stopScreenShare = async () => {
+    if (!peerConnectionRef.current) return;
+
+    try {
+      if (callType === 'video') {
+        const camStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: currentFacingModeRef.current },
+        });
+        const newVideoTrack = camStream.getVideoTracks()[0];
+
+        let sender = peerConnectionRef.current
+          .getSenders()
+          .find((s) => s.track?.kind === 'video');
+
+        if (!sender) {
+          const trans = peerConnectionRef.current
+            .getTransceivers()
+            .find((t) => t.receiver?.track?.kind === 'video');
+          if (trans) sender = trans.sender;
+        }
+
+        if (sender && newVideoTrack) {
+          await sender.replaceTrack(newVideoTrack);
+        }
+
+        if (localStreamRef.current) {
+          const oldTracks = localStreamRef.current.getVideoTracks();
+          oldTracks.forEach((t) => t.stop());
+          oldTracks.forEach((t) => localStreamRef.current?.removeTrack(t));
+          localStreamRef.current.addTrack(newVideoTrack);
+          setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+        }
+      } else {
+        // In audio call, stop transmitting video
+        let sender = peerConnectionRef.current
+          .getSenders()
+          .find((s) => s.track?.kind === 'video');
+
+        if (!sender) {
+          const trans = peerConnectionRef.current
+            .getTransceivers()
+            .find((t) => t.receiver?.track?.kind === 'video');
+          if (trans) sender = trans.sender;
+        }
+
+        if (sender) {
+          await sender.replaceTrack(null as any);
+        }
+
+        if (localStreamRef.current) {
+          const oldTracks = localStreamRef.current.getVideoTracks();
+          oldTracks.forEach((t) => t.stop());
+          oldTracks.forEach((t) => localStreamRef.current?.removeTrack(t));
+          setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+        }
+      }
+
+      setIsScreenSharing(false);
+      if (socket && targetUserIdRef.current) {
+        socket.emit('call:media-toggle', {
+          targetUserId: targetUserIdRef.current,
+          isScreenSharing: false,
+        });
+      }
+    } catch (err) {
+      console.error('Error reverting screen share:', err);
+      setIsScreenSharing(false);
+    }
+  };
+
   // Toggle Screen Sharing (Universal across Voice and Video calls)
   const toggleScreenShare = async () => {
     if (!peerConnectionRef.current) {
@@ -1206,91 +1277,79 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     if (isScreenSharing) {
+      await stopScreenShare();
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      alert('Screen sharing is not supported on this browser/device.');
+      return;
+    }
+
+    try {
+      let screenStream: MediaStream;
       try {
-        if (callType === 'video') {
-          const camStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: currentFacingModeRef.current },
-          });
-          const newVideoTrack = camStream.getVideoTracks()[0];
-          const sender = peerConnectionRef.current
-            .getSenders()
-            .find((s) => s.track && s.track.kind === 'video');
-
-          if (sender && newVideoTrack) {
-            sender.replaceTrack(newVideoTrack);
-          }
-
-          if (localStreamRef.current) {
-            const oldTracks = localStreamRef.current.getVideoTracks();
-            oldTracks.forEach((t) => t.stop());
-            localStreamRef.current.removeTrack(oldTracks[0]);
-            localStreamRef.current.addTrack(newVideoTrack);
-            setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
-          }
-        } else {
-          // In audio call, stop the video track
-          const sender = peerConnectionRef.current
-            .getSenders()
-            .find((s) => s.track && s.track.kind === 'video');
-          if (sender) {
-            sender.replaceTrack(null as any);
-          }
-          if (localStreamRef.current) {
-            const oldTracks = localStreamRef.current.getVideoTracks();
-            oldTracks.forEach((t) => t.stop());
-          }
-        }
-
-        setIsScreenSharing(false);
-        if (socket && targetUserIdRef.current) {
-          socket.emit('call:media-toggle', {
-            targetUserId: targetUserIdRef.current,
-            isScreenSharing: false,
-          });
-        }
-      } catch (err) {
-        console.error('Error reverting screen share:', err);
-      }
-    } else {
-      try {
-        const screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
+        screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
           video: {
             cursor: 'always',
             displaySurface: 'monitor',
-          },
+            frameRate: { ideal: 30, max: 60 },
+          } as any,
           audio: true,
         });
-        const screenTrack = screenStream.getVideoTracks()[0];
+      } catch (errWithAudio) {
+        // Fallback without display audio
+        screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
+          video: {
+            cursor: 'always',
+            frameRate: { ideal: 30, max: 60 },
+          } as any,
+        });
+      }
 
-        screenTrack.onended = () => {
-          toggleScreenShare();
-        };
+      const screenTrack = screenStream.getVideoTracks()[0];
+      if (!screenTrack) {
+        throw new Error('No video track returned from screen share');
+      }
 
-        const sender = peerConnectionRef.current
-          .getSenders()
-          .find((s) => s.track && s.track.kind === 'video');
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
 
-        if (sender) {
-          sender.replaceTrack(screenTrack);
-        } else {
-          peerConnectionRef.current.addTrack(screenTrack, screenStream);
-        }
+      let sender = peerConnectionRef.current
+        .getSenders()
+        .find((s) => s.track?.kind === 'video');
 
-        if (localStreamRef.current) {
-          localStreamRef.current.addTrack(screenTrack);
-          setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
-        } else {
-          setLocalStream(screenStream);
-        }
+      if (!sender) {
+        const trans = peerConnectionRef.current
+          .getTransceivers()
+          .find((t) => t.receiver?.track?.kind === 'video');
+        if (trans) sender = trans.sender;
+      }
 
-        setIsScreenSharing(true);
-        if (socket && targetUserIdRef.current) {
-          socket.emit('call:media-toggle', {
-            targetUserId: targetUserIdRef.current,
-            isScreenSharing: true,
-          });
-        }
-      } catch (err) {
+      if (sender) {
+        await sender.replaceTrack(screenTrack);
+      } else {
+        peerConnectionRef.current.addTrack(screenTrack, screenStream);
+      }
+
+      if (localStreamRef.current) {
+        localStreamRef.current.getVideoTracks().forEach((t) => localStreamRef.current?.removeTrack(t));
+        localStreamRef.current.addTrack(screenTrack);
+        setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+      } else {
+        setLocalStream(screenStream);
+      }
+
+      setIsScreenSharing(true);
+      if (socket && targetUserIdRef.current) {
+        socket.emit('call:media-toggle', {
+          targetUserId: targetUserIdRef.current,
+          isScreenSharing: true,
+        });
+      }
+    } catch (err: any) {
+      if (err.name !== 'NotAllowedError') {
         console.error('Screen sharing canceled or failed:', err);
       }
     }
