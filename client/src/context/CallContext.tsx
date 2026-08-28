@@ -265,10 +265,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ctx.resume().catch(() => {});
       }
 
-      let audioEl = remoteAudioRef.current;
-      if (!audioEl) {
-        audioEl = document.getElementById('webrtc-remote-audio') as HTMLAudioElement;
-      }
+      let audioEl = remoteAudioRef.current || (document.getElementById('webrtc-remote-audio') as HTMLAudioElement);
       if (!audioEl) {
         audioEl = document.createElement('audio');
         audioEl.id = 'webrtc-remote-audio';
@@ -284,7 +281,9 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         document.body.appendChild(audioEl);
       }
 
-      audioEl.srcObject = stream;
+      if (audioEl.srcObject !== stream) {
+        audioEl.srcObject = stream;
+      }
       audioEl.volume = Math.min(1.0, Math.max(0.1, volumeBoost));
       audioEl.muted = false;
 
@@ -295,7 +294,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log('🔊 WebRTC remote audio playing cleanly');
           })
           .catch((err) => {
-            console.warn('Autoplay prevented remote audio, waiting for user gesture unlock:', err);
+            console.warn('Autoplay prevented remote audio, attaching global unlock listeners:', err);
             const unlock = () => {
               if (audioEl) {
                 audioEl.muted = false;
@@ -304,15 +303,15 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               if (ctx && ctx.state === 'suspended') {
                 ctx.resume().catch(() => {});
               }
-              window.removeEventListener('click', unlock);
-              window.removeEventListener('touchstart', unlock);
-              window.removeEventListener('pointerdown', unlock);
-              window.removeEventListener('keydown', unlock);
+              ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach((evt) => {
+                window.removeEventListener(evt, unlock);
+                document.removeEventListener(evt, unlock);
+              });
             };
-            window.addEventListener('click', unlock, { once: true });
-            window.addEventListener('touchstart', unlock, { once: true });
-            window.addEventListener('pointerdown', unlock, { once: true });
-            window.addEventListener('keydown', unlock, { once: true });
+            ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach((evt) => {
+              window.addEventListener(evt, unlock, { once: true, passive: true });
+              document.addEventListener(evt, unlock, { once: true, passive: true });
+            });
           });
       }
     } catch (e) {
@@ -886,31 +885,22 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       event.track.enabled = true;
 
-      // Construct a new MediaStream instance to trigger React state updates
-      const current = remoteStreamRef.current ? new MediaStream(remoteStreamRef.current.getTracks()) : new MediaStream();
-      if (!current.getTracks().some((t) => t.id === event.track.id)) {
-        current.addTrack(event.track);
-      }
+      // Prefer native stream from event if available
+      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
       
-      // If event.streams[0] has tracks, merge any missing ones
-      if (event.streams && event.streams[0]) {
-        event.streams[0].getTracks().forEach((t) => {
-          t.enabled = true;
-          if (!current.getTracks().some((ct) => ct.id === t.id)) {
-            current.addTrack(t);
-          }
-        });
-      }
+      stream.getTracks().forEach((t) => {
+        t.enabled = true;
+      });
 
-      remoteStreamRef.current = current;
-      setRemoteStream(current);
+      remoteStreamRef.current = stream;
+      setRemoteStream(stream);
 
-      playRemoteAudio(current);
+      playRemoteAudio(stream);
 
       event.track.onunmute = () => {
         console.log('📡 Remote track unmuted, playing audio...');
         event.track.enabled = true;
-        playRemoteAudio(current);
+        playRemoteAudio(stream);
       };
     };
 
@@ -952,6 +942,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
+          channelCount: 1,
         },
         video: type === 'video' ? {
           facingMode: 'user',
@@ -996,7 +987,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    // Pre-unlock audio element within user click gesture
     soundService.unlockAudio();
+    const existingAudio = remoteAudioRef.current || (document.getElementById('webrtc-remote-audio') as HTMLAudioElement);
+    if (existingAudio) {
+      existingAudio.muted = false;
+      existingAudio.volume = 1.0;
+      existingAudio.play().catch(() => {});
+    }
 
     try {
       targetUserIdRef.current = targetUser.id;
@@ -1042,11 +1040,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const acceptCall = async () => {
     if (!socket || !callerInfo) return;
 
+    // Pre-unlock audio element within user click gesture
     soundService.unlockAudio();
     callSound.stopRingtone();
-
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.muted = false;
+    const existingAudio = remoteAudioRef.current || (document.getElementById('webrtc-remote-audio') as HTMLAudioElement);
+    if (existingAudio) {
+      existingAudio.muted = false;
+      existingAudio.volume = 1.0;
+      existingAudio.play().catch(() => {});
     }
 
     try {
@@ -1131,17 +1132,32 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Toggle Mute Mic
   const toggleMute = () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+
     if (localStreamRef.current) {
-      const audioTracks = localStreamRef.current.getAudioTracks();
-      const newMuted = !isMuted;
-      audioTracks.forEach((t) => (t.enabled = !newMuted));
-      setIsMuted(newMuted);
-      if (socket && targetUserIdRef.current) {
-        socket.emit('call:media-toggle', {
-          targetUserId: targetUserIdRef.current,
-          isMuted: newMuted,
-        });
-      }
+      localStreamRef.current.getAudioTracks().forEach((t) => {
+        t.enabled = !newMuted;
+      });
+    }
+    if (rawStreamRef.current) {
+      rawStreamRef.current.getAudioTracks().forEach((t) => {
+        t.enabled = !newMuted;
+      });
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.getSenders().forEach((sender) => {
+        if (sender.track && sender.track.kind === 'audio') {
+          sender.track.enabled = !newMuted;
+        }
+      });
+    }
+
+    if (socket && targetUserIdRef.current) {
+      socket.emit('call:media-toggle', {
+        targetUserId: targetUserIdRef.current,
+        isMuted: newMuted,
+      });
     }
   };
 
