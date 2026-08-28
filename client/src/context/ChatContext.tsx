@@ -203,9 +203,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const res = await messageApi.getConversations();
       setConversations(res.conversations);
 
-      // Auto-select first conversation if none selected
+      // On large desktop screens, auto-select first conversation if none selected.
+      // On mobile/phones, keep inbox open so user can pick!
       if (!activeConversation && res.conversations.length > 0) {
-        setActiveConversation(res.conversations[0]);
+        if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+          setActiveConversation(res.conversations[0]);
+        }
       }
     } catch (err) {
       console.error('Failed to load conversations:', err);
@@ -246,14 +249,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [fetchMessagesForActiveConv]);
 
   const selectConversation = (conv: ConversationItem) => {
+    // Always close sidebar on mobile to open chat screen immediately on phones
+    setIsSidebarOpen(false);
+
     if (activeConversation?.id === conv.id) return;
     if (socket && activeConversation?.id) {
       socket.emit('conversation:leave', activeConversation.id);
     }
     setActiveConversation(conv);
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
   };
 
   const startDirectChatWithUser = async (targetUser: User) => {
