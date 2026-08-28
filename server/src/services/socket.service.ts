@@ -446,6 +446,35 @@ export class SocketService {
     }
   }
 
+  static broadcastFriendRequestReceived(recipientUserId: string, requesterUser: any) {
+    if (!this.io) return;
+    try {
+      this.io.to(`user_${recipientUserId}`).emit('friend:request_received', { requester: requesterUser });
+    } catch (err) {
+      console.error('broadcastFriendRequestReceived error:', err);
+    }
+  }
+
+  static broadcastFriendRequestAccepted(userAId: string, userBId: string) {
+    if (!this.io) return;
+    try {
+      this.io.to(`user_${userAId}`).emit('friend:request_accepted', { friendId: userBId });
+      this.io.to(`user_${userBId}`).emit('friend:request_accepted', { friendId: userAId });
+    } catch (err) {
+      console.error('broadcastFriendRequestAccepted error:', err);
+    }
+  }
+
+  static broadcastFriendRemoved(userAId: string, userBId: string) {
+    if (!this.io) return;
+    try {
+      this.io.to(`user_${userAId}`).emit('friend:removed', { friendId: userBId });
+      this.io.to(`user_${userBId}`).emit('friend:removed', { friendId: userAId });
+    } catch (err) {
+      console.error('broadcastFriendRemoved error:', err);
+    }
+  }
+
   static isUserOnline(userId: string): boolean {
     const sockets = this.userSockets.get(userId);
     return Boolean(sockets && sockets.size > 0);

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware.js';
 import { FriendsService } from '../services/friends.service.js';
+import { SocketService } from '../services/socket.service.js';
 
 export class FriendsController {
   static async getOverview(req: AuthRequest, res: Response) {
@@ -19,10 +20,15 @@ export class FriendsController {
       if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
       const { target } = req.body; // username or userId
       if (!target) {
-        return res.status(400).json({ error: 'Target user is required' });
+        return res.status(400).json({ error: 'Target username or ID is required' });
       }
 
       const result = await FriendsService.sendFriendRequest(req.user.id, target);
+
+      if (result.friendUser) {
+        SocketService.broadcastFriendRequestReceived(result.friendUser.id, req.user);
+      }
+
       res.json(result);
     } catch (err: any) {
       res.status(400).json({ error: err.message || 'Failed to send friend request' });
@@ -42,6 +48,8 @@ export class FriendsController {
         return res.status(404).json({ error: 'Pending friend request not found' });
       }
 
+      SocketService.broadcastFriendRequestAccepted(req.user.id, requesterId);
+
       res.json({ success: true, message: 'Friend request accepted' });
     } catch (err: any) {
       res.status(500).json({ error: 'Failed to accept friend request' });
@@ -57,6 +65,8 @@ export class FriendsController {
       }
 
       await FriendsService.declineFriendRequest(req.user.id, requesterId);
+      SocketService.broadcastFriendRemoved(req.user.id, requesterId);
+
       res.json({ success: true, message: 'Friend request declined' });
     } catch (err: any) {
       res.status(500).json({ error: 'Failed to decline friend request' });
@@ -72,6 +82,8 @@ export class FriendsController {
       }
 
       await FriendsService.removeFriend(req.user.id, friendId);
+      SocketService.broadcastFriendRemoved(req.user.id, friendId);
+
       res.json({ success: true, message: 'Friend removed' });
     } catch (err: any) {
       res.status(500).json({ error: 'Failed to remove friend' });

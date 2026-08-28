@@ -388,16 +388,37 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       );
     };
 
+    const handleFriendRequestReceived = () => {
+      loadFriends();
+      soundService.playIncomingMessageSound();
+    };
+
+    const handleFriendRequestAccepted = () => {
+      loadFriends();
+      refreshConversations();
+    };
+
+    const handleFriendRemoved = () => {
+      loadFriends();
+      refreshConversations();
+    };
+
     socket.on('message:new', handleNewMessage);
     socket.on('message:updated', handleMessageUpdated);
     socket.on('message:deleted', handleMessageDeleted);
     socket.on('messages:status_updated', handleStatusUpdated);
+    socket.on('friend:request_received', handleFriendRequestReceived);
+    socket.on('friend:request_accepted', handleFriendRequestAccepted);
+    socket.on('friend:removed', handleFriendRemoved);
 
     return () => {
       socket.off('message:new', handleNewMessage);
       socket.off('message:updated', handleMessageUpdated);
       socket.off('message:deleted', handleMessageDeleted);
       socket.off('messages:status_updated', handleStatusUpdated);
+      socket.off('friend:request_received', handleFriendRequestReceived);
+      socket.off('friend:request_accepted', handleFriendRequestAccepted);
+      socket.off('friend:removed', handleFriendRemoved);
     };
   }, [socket, user, activeConversation, refreshConversations]);
 

@@ -1,7 +1,5 @@
-import http from 'http';
 import { io, Socket } from 'socket.io-client';
-import app from './index.js';
-import { SocketService } from './services/socket.service.js';
+import './index.js';
 import { ensureDatabaseReady } from './db/autoInit.js';
 
 async function runSuperComprehensiveTests() {
@@ -9,20 +7,12 @@ async function runSuperComprehensiveTests() {
   console.log('🚀 RUNNING 100% COMPREHENSIVE END-TO-END SYSTEM TESTS');
   console.log('================================================================\n');
 
-  const TEST_PORT = 4911;
-  const server = http.createServer(app);
-  SocketService.init(server);
+  const BASE_URL = 'http://localhost:4000';
   await ensureDatabaseReady();
-
-  await new Promise<void>((resolve) => {
-    server.listen(TEST_PORT, () => {
-      console.log(`📡 Test Server listening on http://localhost:${TEST_PORT}\n`);
-      resolve();
-    });
-  });
+  await new Promise((r) => setTimeout(r, 600));
 
   const apiFetch = async (endpoint: string, options: any = {}): Promise<any> => {
-    const res = await fetch(`http://localhost:${TEST_PORT}/api${endpoint}`, {
+    const res = await fetch(`${BASE_URL}/api${endpoint}`, {
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -48,7 +38,7 @@ async function runSuperComprehensiveTests() {
     // TEST 1: Server Health Check & System Status
     // ----------------------------------------------------
     console.log('[TEST 1/10] Server Health & System APIs...');
-    const healthRes = await fetch(`http://localhost:${TEST_PORT}/health`);
+    const healthRes = await fetch(`${BASE_URL}/health`);
     const healthData: any = await healthRes.json();
     if (healthData.status !== 'ok') throw new Error('Health check failed');
     console.log('  ✅ /health endpoint OK:', healthData);
@@ -139,11 +129,11 @@ async function runSuperComprehensiveTests() {
     // TEST 5: Full Friendship Lifecycle (Request -> Accept -> Friendship List)
     // ----------------------------------------------------
     console.log('\n[TEST 5/10] Friendship Lifecycle (Send Request, Accept, Verify)...');
-    // Charlie sends friend request to Diana
+    // Charlie sends friend request to Diana (testing with uppercase and @)
     const reqRes = await apiFetch('/friends/request', {
       method: 'POST',
       token: charlieToken,
-      body: { target: userB.user.username },
+      body: { target: `@${userB.user.username.toUpperCase()}` },
     });
     console.log('  ✅ Charlie -> Diana request sent:', reqRes.message);
 
@@ -236,12 +226,12 @@ async function runSuperComprehensiveTests() {
     // TEST 8: Real-Time WebSocket Gateway & Event Propagation
     // ----------------------------------------------------
     console.log('\n[TEST 8/10] Real-time Socket.IO Messaging & Events...');
-    const socketCharlie: Socket = io(`http://localhost:${TEST_PORT}`, {
+    const socketCharlie: Socket = io(BASE_URL, {
       auth: { token: charlieToken },
       transports: ['websocket'],
     });
 
-    const socketDiana: Socket = io(`http://localhost:${TEST_PORT}`, {
+    const socketDiana: Socket = io(BASE_URL, {
       auth: { token: dianaToken },
       transports: ['websocket'],
     });
@@ -259,6 +249,7 @@ async function runSuperComprehensiveTests() {
 
     socketCharlie.emit('conversation:join', directChatRes.conversation.id);
     socketDiana.emit('conversation:join', directChatRes.conversation.id);
+    await new Promise((r) => setTimeout(r, 150));
 
     // Diana listens for incoming message
     const dianaMsgPromise = new Promise<any>((resolve) => {
@@ -367,7 +358,6 @@ async function runSuperComprehensiveTests() {
     console.error('\n❌ TEST FAILED:', err.data || err.message);
     process.exit(1);
   } finally {
-    server.close();
     process.exit(0);
   }
 }

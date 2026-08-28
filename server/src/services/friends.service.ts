@@ -73,30 +73,32 @@ export class FriendsService {
   }
 
   /**
-   * Send a friend request
+   * Send a friend request (supports @username, lowercase/uppercase, or user ID)
    */
   static async sendFriendRequest(requesterId: string, targetIdentifier: string): Promise<{ success: boolean; message: string; friendUser?: FriendUser }> {
-    // Find target user by ID or Username
-    const targetUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { id: targetIdentifier },
-          { username: targetIdentifier.toLowerCase().replace('@', '').trim() },
-        ],
-      },
-      select: {
-        id: true,
-        username: true,
-        displayName: true,
-        avatarUrl: true,
-        customStatus: true,
-        lastSeen: true,
-      },
-    });
+    const rawTarget = targetIdentifier.trim();
+    const cleanTarget = rawTarget.toLowerCase().replace('@', '').trim();
 
-    if (!targetUser) {
-      throw new Error('User not found');
+    if (!cleanTarget) {
+      throw new Error('Please provide a valid username or ID');
     }
+
+    // Find target user case-insensitively
+    const matchingUsers: any[] = await prisma.$queryRawUnsafe(
+      `SELECT id, username, "displayName", "avatarUrl", "customStatus", "lastSeen" 
+       FROM "User" 
+       WHERE id = ? OR LOWER(username) = LOWER(?) OR LOWER("displayName") = LOWER(?) 
+       LIMIT 1`,
+      rawTarget,
+      cleanTarget,
+      rawTarget
+    );
+
+    if (!matchingUsers || matchingUsers.length === 0) {
+      throw new Error(`User "${rawTarget}" not found. Please check the spelling.`);
+    }
+
+    const targetUser: FriendUser = matchingUsers[0];
 
     if (targetUser.id === requesterId) {
       throw new Error('You cannot send a friend request to yourself');
@@ -116,18 +118,18 @@ export class FriendsService {
     if (existing.length > 0) {
       const rel = existing[0];
       if (rel.status === 'accepted') {
-        return { success: true, message: 'You are already friends!', friendUser: targetUser };
+        return { success: true, message: `You and @${targetUser.username} are already friends!`, friendUser: targetUser };
       }
       if (rel.status === 'pending') {
         if (rel.requesterId === requesterId) {
-          return { success: true, message: 'Friend request already sent and pending', friendUser: targetUser };
+          return { success: true, message: `Friend request already sent to @${targetUser.username} (Pending)`, friendUser: targetUser };
         }
         // If they already sent us a request, auto-accept it!
         await prisma.$executeRawUnsafe(
           `UPDATE "Friendship" SET status = 'accepted', "updatedAt" = CURRENT_TIMESTAMP WHERE id = ?`,
           rel.id
         );
-        return { success: true, message: 'Friend request accepted!', friendUser: targetUser };
+        return { success: true, message: `Friend request accepted! You and @${targetUser.username} are now friends.`, friendUser: targetUser };
       }
     }
 
@@ -143,7 +145,7 @@ export class FriendsService {
 
     return {
       success: true,
-      message: 'Friend request sent successfully',
+      message: `Friend request sent to @${targetUser.username}!`,
       friendUser: targetUser,
     };
   }
@@ -155,9 +157,12 @@ export class FriendsService {
     const res = await prisma.$executeRawUnsafe(
       `UPDATE "Friendship" 
        SET status = 'accepted', "updatedAt" = CURRENT_TIMESTAMP
-       WHERE "requesterId" = ? AND "addresseeId" = ? AND status = 'pending'`,
+       WHERE (("requesterId" = ? AND "addresseeId" = ?) OR ("requesterId" = ? AND "addresseeId" = ?))
+         AND status = 'pending'`,
       requesterId,
-      userId
+      userId,
+      userId,
+      requesterId
     );
     return res > 0;
   }
@@ -168,9 +173,12 @@ export class FriendsService {
   static async declineFriendRequest(userId: string, requesterId: string): Promise<boolean> {
     const res = await prisma.$executeRawUnsafe(
       `DELETE FROM "Friendship"
-       WHERE "requesterId" = ? AND "addresseeId" = ? AND status = 'pending'`,
+       WHERE (("requesterId" = ? AND "addresseeId" = ?) OR ("requesterId" = ? AND "addresseeId" = ?))
+         AND status = 'pending'`,
       requesterId,
-      userId
+      userId,
+      userId,
+      requesterId
     );
     return res > 0;
   }
